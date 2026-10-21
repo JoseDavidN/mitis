@@ -1,0 +1,37 @@
+# Compilación
+build/
+build-*/
+out/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+CMakeUserPresets.json
+compile_commands.json
+
+# Qt / Qt Creator
+*.user
+*.user.*
+*.autosave
+.qtc_clangd/
+.qmlls.ini
+*.qmlc
+*.jsc
+
+# Binarios y objetos
+*.o
+*.obj
+*.so
+*.dll
+*.dylib
+*.exe
+*.app/
+*.pdb
+
+# Editores
+.vscode/
+.idea/
+.vs/
+
+# Sistema
+.DS_Store
+Thumbs.db
