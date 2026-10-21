@@ -1,0 +1,155 @@
+import QtQuick
+
+// Controles inferiores: botones y campo de dirección independientes que
+// flotan sobre la página, sin barra de fondo. Los huecos entre ellos dejan
+// pasar los clics a la página.
+// Botones y campo forman un solo grupo centrado: los botones van pegados
+// al campo con la misma separación, sea pequeño o grande.
+// Comparten un solo degradado (controlsStart → controlsEnd) de lado a lado
+// del grupo: cada control pinta el tramo que le toca según su posición.
+Item {
+    id: root
+
+    // Estado de la pestaña activa
+    property url currentUrl
+    property string pageTitle: ""
+    property bool canGoBack: false
+    property bool canGoForward: false
+    property bool loading: false
+    property int loadProgress: 0
+    property int tabCount: 1
+
+    // Botones para anclar las listas desplegables
+    readonly property Item tabsButton: tabsButton
+    readonly property Item bookmarksButton: bookmarksButton
+    readonly property Item optionsButton: optionsButton
+
+    signal backRequested()
+    signal forwardRequested()
+    signal reloadRequested()
+    signal stopRequested()
+    signal navigateRequested(url target)
+    signal tabsRequested()
+    signal bookmarksRequested()
+    signal optionsRequested()
+
+    function focusAddress() {
+        address.focusAndSelect()
+    }
+
+    // Color del degradado compartido en la posición x del grupo
+    function tone(x) {
+        const t = cluster.width > 0 ? Math.max(0, Math.min(1, x / cluster.width)) : 0
+        const a = Theme.controlsStart
+        const b = Theme.controlsEnd
+        return Qt.rgba(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t,
+                       a.b + (b.b - a.b) * t, a.a + (b.a - a.a) * t)
+    }
+
+    implicitHeight: Theme.controlHeight + 2 * Theme.floatingMargin
+
+    // Espacio máximo que puede ocupar el grupo
+    readonly property real maxWidth: Math.min(width - 2 * Theme.floatingMargin, Theme.bottomBarMaxWidth)
+
+    Item {
+        id: cluster
+
+        // Separación entre el campo y los botones, igual en ambos modos
+        readonly property real gap: 2 * Theme.spacing
+        // Ancho máximo del campo de dirección: lo que dejan los botones
+        readonly property real available: root.maxWidth - leftGroup.width - rightGroup.width - 2 * gap
+
+        anchors.centerIn: parent
+        width: leftGroup.width + address.width + rightGroup.width + 2 * gap
+        height: Theme.controlHeight
+
+        Row {
+            id: leftGroup
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Theme.spacing
+
+            IconButton {
+                fillStart: root.tone(leftGroup.x + x)
+                fillEnd: root.tone(leftGroup.x + x + width)
+                icon: "back"
+                tooltip: "Atrás"
+                shortcut: "Alt+←"
+                enabled: root.canGoBack
+                onClicked: root.backRequested()
+            }
+            IconButton {
+                fillStart: root.tone(leftGroup.x + x)
+                fillEnd: root.tone(leftGroup.x + x + width)
+                icon: "forward"
+                tooltip: "Adelante"
+                shortcut: "Alt+→"
+                enabled: root.canGoForward
+                onClicked: root.forwardRequested()
+            }
+            IconButton {
+                fillStart: root.tone(leftGroup.x + x)
+                fillEnd: root.tone(leftGroup.x + x + width)
+                icon: root.loading ? "close" : "reload"
+                tooltip: root.loading ? "Detener" : "Recargar"
+                shortcut: root.loading ? "" : "Ctrl+R"
+                onClicked: root.loading ? root.stopRequested() : root.reloadRequested()
+            }
+        }
+
+        // Ocupa todo el espacio al escribir; en reposo se encoge al título
+        AddressBar {
+            id: address
+            anchors.verticalCenter: parent.verticalCenter
+            width: editing ? cluster.available : Math.min(compactWidth, cluster.available)
+            x: leftGroup.width + cluster.gap
+            fillStart: root.tone(x)
+            fillEnd: root.tone(x + width)
+            currentUrl: root.currentUrl
+            pageTitle: root.pageTitle
+            loading: root.loading
+            loadProgress: root.loadProgress
+            onNavigate: target => root.navigateRequested(target)
+
+            Behavior on width {
+                NumberAnimation {
+                    duration: Theme.durationBase
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: Theme.easeOut
+                }
+            }
+        }
+
+        Row {
+            id: rightGroup
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Theme.spacing
+
+            IconButton {
+                id: tabsButton
+                fillStart: root.tone(rightGroup.x + x)
+                fillEnd: root.tone(rightGroup.x + x + width)
+                glyph: root.tabCount > 99 ? "∞" : root.tabCount.toString()
+                tooltip: "Pestañas"
+                shortcut: "Ctrl+Shift+A"
+                onClicked: root.tabsRequested()
+            }
+            IconButton {
+                id: bookmarksButton
+                fillStart: root.tone(rightGroup.x + x)
+                fillEnd: root.tone(rightGroup.x + x + width)
+                icon: "bookmarks"
+                tooltip: "Marcadores"
+                onClicked: root.bookmarksRequested()
+            }
+            IconButton {
+                id: optionsButton
+                fillStart: root.tone(rightGroup.x + x)
+                fillEnd: root.tone(rightGroup.x + x + width)
+                icon: "options"
+                tooltip: "Opciones"
+                onClicked: root.optionsRequested()
+            }
+        }
+    }
+}
