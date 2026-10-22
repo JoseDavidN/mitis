@@ -180,7 +180,8 @@ packaging/linux/ PKGBUILD (Arch, mitis-git), appimage.sh (+ apprun-sandbox.sh), 
    ```bash
    python3 -c 'import ctypes as c,sys; x=c.CDLL("libX11.so.6"); t=c.CDLL("libXtst.so.6"); x.XOpenDisplay.restype=c.c_void_p; d=c.c_void_p(x.XOpenDisplay(b":7")); t.XTestFakeMotionEvent(d,-1,int(sys.argv[1]),int(sys.argv[2]),0); x.XFlush(d)' 1252 20
    ``` Para probar estados (varias pestañas, listas abiertas) sin xdotool, cambiar temporalmente el `Component.onCompleted` de `Main.qml` en `--dev` y restaurarlo después.
-5. Si se toca `devreloader.*`, probar: editar un QML con la app abierta, introducir un error a propósito (la app no debe cerrarse) y corregirlo, y cambiar un valor de `Theme.qml`.
+5. GitHub Actions compila con **Qt 6.10** (en desarrollo, 6.11): su `qmlcachegen` rechaza cosas que 6.11 acepta (p. ej. `short` como nombre de variable, palabra reservada en JavaScript antiguo). Ante la duda, instalar su `qmlcachegen` con aqtinstall (`aqt install-qt linux desktop 6.10.3 linux_gcc_64 --archives qtbase qtdeclarative icu`) y compilar cada QML con `--only-bytecode --resource-path /qt/qml/Mitis/<archivo>`.
+6. Si se toca `devreloader.*`, probar: editar un QML con la app abierta, introducir un error a propósito (la app no debe cerrarse) y corregirlo, y cambiar un valor de `Theme.qml`.
 
 ## Problemas conocidos ya resueltos (no reintroducir)
 

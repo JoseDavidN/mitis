@@ -107,10 +107,10 @@ Popup {
             ])
         } else if (menuInfo.selectedText.trim() !== "") {
             const text = menuInfo.selectedText.trim().replace(/\s+/g, " ")
-            const short = text.length > searchTextMax ? text.slice(0, searchTextMax).trimEnd() + "…" : text
+            const corto = text.length > searchTextMax ? text.slice(0, searchTextMax).trimEnd() + "…" : text
             groups.push([
                 row("copy", "Copiar", "copy", "Ctrl+C"),
-                row("search", "Buscar “" + short + "” en " + SearchEngines.name, "search")
+                row("search", "Buscar “" + corto + "” en " + SearchEngines.name, "search")
             ])
         }
         if (groups.length === 0) {
