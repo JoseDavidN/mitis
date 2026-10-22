@@ -20,9 +20,12 @@ on:
         default: windows
 
 env:
-  # La misma versión de Qt que en desarrollo (el mínimo es la 6.8). La variable
-  # del repositorio QT_VERSION la fija (p. ej. 6.11.2) para usar Qt con códecs
-  QT_VERSION: ${{ vars.QT_VERSION || '6.11.*' }}
+  # Qt 6.10 (el mínimo es la 6.8; en desarrollo, 6.11): desde la 6.11 Qt
+  # reorganizó su repositorio de descargas y aqtinstall 3.3.0, el último
+  # publicado, aún no sabe instalarla en Windows («Failed to locate XML
+  # data»). Subir a 6.11 cuando salga aqtinstall 3.4. La variable del
+  # repositorio QT_VERSION la fija (p. ej. para usar Qt con códecs).
+  QT_VERSION: ${{ vars.QT_VERSION || '6.10.*' }}
   QT_MODULES: "qtwebengine qtwebchannel qtpositioning"
   # Qt WebEngine con códecs propietarios (H.264, AAC), compilado aparte
   # (docs/codecs.md): release con los archivos. Vacío: el Qt oficial, sin códecs

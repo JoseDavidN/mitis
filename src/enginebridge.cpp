@@ -11,6 +11,25 @@
 #include "contentblocker.h"
 #include "requestinterceptor.h"
 
+namespace {
+// Un perfil con nombre de almacenamiento (vacío: sin disco). Qt 6.9 lo
+// recibe en el constructor y así no arranca un instante sin disco; en 6.8,
+// después de crearlo.
+QQuickWebEngineProfile *newProfile(const QString &storageName, QObject *parent)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    return new QQuickWebEngineProfile(storageName, parent);
+#else
+    auto *profile = new QQuickWebEngineProfile(parent);
+    if (!storageName.isEmpty()) {
+        profile->setStorageName(storageName);
+        profile->setOffTheRecord(false);
+    }
+    return profile;
+#endif
+}
+}
+
 EngineBridge::EngineBridge(const QString &widevinePath, QObject *parent)
     : QObject(parent)
     , m_blocker(new ContentBlocker(this))
@@ -22,7 +41,7 @@ EngineBridge::EngineBridge(const QString &widevinePath, QObject *parent)
 
     // En disco, en la carpeta de datos de Mitis (QtWebEngine/Mitis): la misma
     // que usaba el perfil creado en QML, así se conservan cookies y permisos
-    m_profile = new QQuickWebEngineProfile(QStringLiteral("Mitis"), this);
+    m_profile = newProfile(QStringLiteral("Mitis"), this);
     m_profile->setHttpCacheType(QQuickWebEngineProfile::DiskHttpCache);
     m_profile->setPersistentCookiesPolicy(QQuickWebEngineProfile::AllowPersistentCookies);
     // Permisos concedidos o bloqueados (ubicación, notificaciones…): los
@@ -41,8 +60,8 @@ EngineBridge::~EngineBridge()
 QQuickWebEngineProfile *EngineBridge::createPrivateProfile()
 {
     // Nombre de almacenamiento vacío: sin disco. (El constructor sin nombre
-    // también lo haría, pero Qt avisa de que quedará obsoleto.)
-    auto *profile = new QQuickWebEngineProfile(QString(), this);
+    // también lo haría, pero desde Qt 6.9 avisa de que quedará obsoleto.)
+    auto *profile = newProfile(QString(), this);
     profile->setHttpCacheType(QQuickWebEngineProfile::MemoryHttpCache);
     profile->setPersistentCookiesPolicy(QQuickWebEngineProfile::NoPersistentCookies);
     profile->setPersistentPermissionsPolicy(QQuickWebEngineProfile::PersistentPermissionsPolicy::StoreInMemory);
