@@ -1,6 +1,8 @@
-# Compila Mitis en Linux, Windows y macOS en cada push y en cada pull request.
-# En Windows crea además el instalador propio (installer/) y en macOS el .dmg.
-# Con una etiqueta «v*» (p. ej. v0.2.0) los publica en un release de GitHub.
+# Compila Mitis y crea sus paquetes. Por ahora, en cada push y pull request
+# solo Windows (instalador propio, installer/); Linux (AppImage) y macOS
+# (.dmg) se compilan a mano: pestaña Actions → Compilar → Run workflow →
+# «todos». Con una etiqueta «v*» (p. ej. v0.5.0) publica el instalador en un
+# release de GitHub.
 name: Compilar
 
 on:
@@ -14,8 +16,8 @@ on:
       sistemas:
         description: "Qué compilar"
         type: choice
-        options: [todos, windows]
-        default: todos
+        options: [windows, todos]
+        default: windows
 
 env:
   # La misma versión de Qt que en desarrollo (el mínimo es la 6.8). La variable
@@ -32,7 +34,8 @@ env:
 jobs:
   linux:
     name: Linux
-    if: github.event_name != 'workflow_dispatch' || inputs.sistemas == 'todos'
+    # Solo a mano, eligiendo «todos» (por ahora la versión es solo para Windows)
+    if: github.event_name == 'workflow_dispatch' && inputs.sistemas == 'todos'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -156,7 +159,8 @@ jobs:
 
   macos:
     name: macOS (.dmg)
-    if: github.event_name != 'workflow_dispatch' || inputs.sistemas == 'todos'
+    # Solo a mano, eligiendo «todos» (por ahora la versión es solo para Windows)
+    if: github.event_name == 'workflow_dispatch' && inputs.sistemas == 'todos'
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
@@ -219,7 +223,7 @@ jobs:
   release:
     name: Publicar
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [linux, windows, macos]
+    needs: [windows]
     runs-on: ubuntu-24.04
     permissions:
       contents: write

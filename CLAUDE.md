@@ -105,7 +105,7 @@ installer/      Instalador de Windows (proyecto CMake aparte, Win32 + GDI+, sin 
 assets/branding/ Icono provisional de Mitis (mitis.svg → mitis.png, mitis.ico; mitis.rc lo pone en Mitis.exe) y logo de StartCode para el instalador
 packaging/macos/ Info.plist.in (abre http/https y HTML: navegador predeterminado)
 packaging/linux/ PKGBUILD (Arch, mitis-git), appimage.sh (+ apprun-sandbox.sh), mitis.desktop, mitis.svg (icono provisional)
-.github/workflows/compilar.yml  Compila en Linux, Windows y macOS; instalador y .dmg; release con etiqueta v*
+.github/workflows/compilar.yml  En cada push, solo Windows (instalador); Linux y macOS a mano («todos»); release con etiqueta v*
 ```
 
 ## Diseño de la interfaz
