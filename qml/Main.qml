@@ -1,10 +1,12 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Window
-import QtWebEngine
+
+import "urls.js" as Urls
 
 // Ventana principal de Mitis. Sin marco del sistema: la barra de título,
-// los botones y el redimensionado son propios.
+// los botones y el redimensionado son propios. No conoce el motor web: cada
+// pestaña es un BrowserTab (ver BrowserTab.qml).
 Window {
     id: win
     // Tamaño inicial ajustado a la pantalla, para que la barra inferior
@@ -20,9 +22,16 @@ Window {
     color: Theme.bgBase
     title: currentView && currentView.title ? currentView.title + " — Mitis" : "Mitis"
 
+    // Las herramientas de desarrollo se cierran antes: si siguieran abiertas,
+    // la aplicación no se daría por cerrada y quedaría sin ventanas
+    onClosing: {
+        for (let i = 0; i < views.count; i++)
+            closeDevTools(views.itemAt(i))
+    }
+
 
     property int currentIndex: 0
-    property WebEngineView currentView: null
+    property BrowserTab currentView: null
 
     // Pestañas cerradas, la última al final: { url, title }
     property var closedTabs: []
@@ -38,15 +47,15 @@ Window {
             currentIndex = at
         else if (at <= currentIndex)
             currentIndex++     // la activa se ha desplazado una posición
-        return views.itemAt(at)
+        return views.itemAt(at) as BrowserTab
     }
 
     // Enlaces abiertos desde una pestaña: van a su derecha y, si se abren
     // varios seguidos, cada uno tras el anterior (como Chrome). La serie se
     // reinicia al cambiar de pestaña activa o de pestaña de origen.
-    property WebEngineView linkOpener: null
-    property WebEngineView linkLast: null
-    property WebEngineView linkActive: null
+    property BrowserTab linkOpener: null
+    property BrowserTab linkLast: null
+    property BrowserTab linkActive: null
 
     function linkTabPosition(opener, openerIndex) {
         if (opener === linkOpener && currentView === linkActive && linkLast !== null) {
@@ -58,6 +67,108 @@ Window {
         return openerIndex + 1
     }
 
+    // Abre `target` en una pestaña nueva a la derecha de `opener`; en segundo
+    // plano continúa la serie de enlaces. Devuelve la pestaña nueva.
+    function openFromTab(opener, openerIndex, target, background) {
+        const created = newTab(target, !background, linkTabPosition(opener, openerIndex))
+        if (background) {
+            linkOpener = opener
+            linkLast = created
+            linkActive = currentView
+        }
+        return created
+    }
+
+    // ── Menú contextual ──────────────────────────────────────────────
+    // Pestaña en la que se abrió el menú (las acciones van a ella)
+    property BrowserTab contextTab: null
+
+    // Sitios a los que ya se explicó que falta Widevine (host → true)
+    property var protectedContentNoticed: ({})
+
+    function openContextMenu(tab, info) {
+        contextTab = tab
+        const point = tab.mapToItem(win.contentItem, info.x, info.y)
+        const menuInfo = Object.assign({}, info, { canGoBack: tab.canGoBack, canGoForward: tab.canGoForward })
+        contextMenu.show(menuInfo, point.x, point.y)
+    }
+
+    function contextAction(action) {
+        const tab = contextTab
+        if (!tab)
+            return
+        let index = -1
+        for (let i = 0; i < tabs.count; i++) {
+            if (views.itemAt(i) === tab)
+                index = i
+        }
+        if (index < 0)
+            return    // la pestaña se cerró con el menú abierto
+        const info = contextMenu.info
+        switch (action) {
+        case "openLinkBackground":
+            openFromTab(tab, index, info.linkUrl, true)
+            break
+        case "openLink":
+            openFromTab(tab, index, info.linkUrl, false)
+            break
+        case "openImage":
+            openFromTab(tab, index, info.mediaUrl, true)
+            break
+        case "inspect":
+            // El motor necesita el panel abierto para señalar el elemento
+            openDevTools(tab)
+            tab.runAction("inspect")
+            break
+        case "search":
+            newTab(SearchEngines.searchUrl(info.selectedText.trim()), true, index + 1)
+            break
+        default:
+            // Cortar, pegar… actúan sobre el elemento con foco de la página
+            tab.focusPage()
+            tab.runAction(action)
+        }
+    }
+
+    // ── Herramientas de desarrollo (F12) ─────────────────────────────
+    // Una ventana por pestaña; se crea al abrirla y se destruye al cerrarla,
+    // con lo que el motor libera el panel
+    Component {
+        id: devToolsComponent
+        DevToolsWindow {}
+    }
+    function openDevTools(tab) {
+        if (tab.devToolsWindow) {
+            tab.devToolsWindow.raise()
+            tab.devToolsWindow.requestActivate()
+            return
+        }
+        const devtools = devToolsComponent.createObject(win, {
+            pageTitle: Qt.binding(() => tab.title),
+            // Al lado de la ventana principal, sin salirse de la pantalla
+            x: Math.min(win.x + win.width / 2, Screen.desktopAvailableWidth - Theme.devtoolsWidth),
+            y: win.y + Theme.titleBarHeight
+        }) as DevToolsWindow
+        tab.devToolsWindow = devtools
+        devtools.dismissed.connect(() => win.closeDevTools(tab))
+        tab.openDevTools(devtools.container)
+        devtools.show()
+    }
+    function closeDevTools(tab) {
+        const devtools = tab.devToolsWindow
+        if (!devtools)
+            return
+        tab.devToolsWindow = null
+        tab.closeDevTools()
+        devtools.destroy()
+    }
+    function toggleDevTools(tab) {
+        if (tab.devToolsWindow)
+            closeDevTools(tab)
+        else
+            openDevTools(tab)
+    }
+
     // Las fijadas no se cierran (ni con Ctrl+W ni desde la página): hay que desfijarlas antes
     function closeTab(index) {
         if (tabs.get(index).pinned)
@@ -66,6 +177,8 @@ Window {
             win.close()
             return
         }
+        if (views.itemAt(index) === fullScreenTab)
+            exitPageFullScreen()
         const closing = tabs.get(index)
         if (closing.url !== "")
             closedTabs = closedTabs.concat([{ url: closing.url, title: closing.title }])
@@ -95,6 +208,45 @@ Window {
 
     // Una pestaña sin dirección muestra la página de nueva pestaña
     readonly property bool showingNewTabPage: currentView !== null && currentView.url.toString() === ""
+
+    // ── Buscar en la página ──────────────────────────────────────────
+    // Pestaña en la que se está buscando (la barra se cierra al cambiar de pestaña)
+    property BrowserTab findTab: null
+
+    function openFind() {
+        if (showingNewTabPage || pageFullScreen)
+            return
+        findTab = currentView
+        findBar.openAndFocus()
+    }
+
+    onCurrentViewChanged: findBar.close()
+
+    // ── Zoom ─────────────────────────────────────────────────────────
+    // Los mismos pasos que Chrome
+    readonly property var zoomSteps: [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1,
+                                      1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5]
+
+    // `direction`: 1 acerca, -1 aleja, 0 vuelve al 100 %
+    function zoomBy(direction) {
+        if (!currentView || showingNewTabPage)
+            return
+        const level = currentView.zoom
+        let next = 1
+        if (direction > 0)
+            next = zoomSteps.find(step => step > level + 0.001) ?? zoomSteps[zoomSteps.length - 1]
+        else if (direction < 0)
+            next = zoomSteps.slice().reverse().find(step => step < level - 0.001) ?? zoomSteps[0]
+        currentView.setZoom(next)
+        zoomIndicator.flash()
+    }
+
+    // Cualquier cambio de zoom de la pestaña activa (también Ctrl+rueda) muestra
+    // el indicador; cambiar de pestaña no
+    Connections {
+        target: win.currentView
+        function onZoomChanged() { zoomIndicator.flash() }
+    }
 
     function selectTab(index) {
         currentIndex = (index + tabs.count) % tabs.count
@@ -137,50 +289,136 @@ Window {
         pinnedCount += pinned ? 1 : -1
     }
 
-    // Perfil persistente: cookies, sesiones y caché sobreviven al cierre
-    WebEngineProfile {
-        id: profile
-        storageName: "Mitis"
-        offTheRecord: false
-        httpCacheType: WebEngineProfile.DiskHttpCache
-        persistentCookiesPolicy: WebEngineProfile.AllowPersistentCookies
+    // ── Pantalla completa ────────────────────────────────────────────
+    // Dos modos independientes: la de página (un vídeo la pide; la página
+    // ocupa toda la ventana y no hay controles) y la de ventana (F11; los
+    // controles inferiores aparecen al llevar el ratón al borde inferior).
+    // Con cualquiera de las dos la ventana pasa a pantalla completa y, al
+    // salir de ambas, vuelve a como estaba (normal o maximizada).
+    property BrowserTab fullScreenTab: null
+    property bool windowFullScreen: false
+    readonly property bool pageFullScreen: fullScreenTab !== null
+    readonly property bool immersive: pageFullScreen || windowFullScreen
+    property int visibilityBeforeFullScreen: Window.Windowed
+
+    // Controles inferiores visibles. En F11 solo mientras el ratón está en
+    // el borde inferior o sobre ellos, se escribe en la dirección o hay una
+    // lista suya abierta. `revealControls` los fuerza (p. ej. Ctrl+L).
+    property bool revealControls: false
+    readonly property bool controlsShown: !immersive
+        || (!pageFullScreen && (revealControls || revealHover.hovered || barHover.hovered
+                                || playerHover.hovered || bottomBar.editing
+                                || tabsPopup.opened || bookmarksPopup.opened || optionsPopup.opened
+                                || downloadsPopup.opened || downloadPanel.opened))
+
+    onImmersiveChanged: {
+        if (immersive) {
+            if (visibility !== Window.FullScreen) {
+                visibilityBeforeFullScreen = visibility === Window.Maximized ? Window.Maximized
+                                                                              : Window.Windowed
+                showFullScreen()
+            }
+        } else {
+            fullscreenHint.hide()
+            if (visibility === Window.FullScreen) {
+                if (visibilityBeforeFullScreen === Window.Maximized)
+                    showMaximized()
+                else
+                    showNormal()
+            }
+        }
+    }
+
+    // Una pestaña entra o sale de pantalla completa (ya aceptado por ella)
+    function setPageFullScreen(tab, on) {
+        if (!on) {
+            if (tab === fullScreenTab) {
+                fullScreenTab = null
+                // Vuelve a F11: el aviso de Esc ya no vale
+                fullscreenHint.hide()
+            }
+            return
+        }
+        // Una pestaña en segundo plano no se queda con la ventana
+        if (tab !== currentView) {
+            tab.exitFullScreen()
+            return
+        }
+        // La página tapa toda la interfaz: nada queda abierto encima
+        findBar.close()
+        tabsPopup.close()
+        bookmarksPopup.close()
+        optionsPopup.close()
+        downloadsPopup.close()
+        downloadPanel.close()
+        contextMenu.close()
+        searchEngineDialog.close()
+        fullScreenTab = tab
+        fullscreenHint.show("Pulsa Esc para salir de la pantalla completa")
+    }
+
+    function exitPageFullScreen() {
+        const tab = fullScreenTab
+        fullScreenTab = null
+        if (tab)
+            tab.exitFullScreen()
+    }
+
+    // F11. Durante la de página, sale de toda pantalla completa.
+    function toggleWindowFullScreen() {
+        if (pageFullScreen) {
+            windowFullScreen = false
+            exitPageFullScreen()
+            return
+        }
+        windowFullScreen = !windowFullScreen
+        if (windowFullScreen)
+            fullscreenHint.show("Pulsa F11 para salir de la pantalla completa")
+    }
+
+    // Cambiar de pestaña saca de la pantalla completa de página
+    Connections {
+        target: win
+        function onCurrentViewChanged() {
+            if (win.fullScreenTab && win.fullScreenTab !== win.currentView)
+                win.exitPageFullScreen()
+        }
     }
 
     // ── Multimedia ───────────────────────────────────────────────────
     // La última pestaña que sonó y lo que reproduce, según el script
     // assets/scripts/media.js inyectado en cada página. `media` es null si
     // no hay nada: entonces el mini reproductor se oculta.
-    property WebEngineView mediaView: null
+    property BrowserTab mediaView: null
     property var media: null
 
     function pollMedia() {
-        const view = mediaView
-        if (!view)
+        const tab = mediaView
+        if (!tab)
             return
-        view.runJavaScript("window.__mitisMedia ? window.__mitisMedia.state() : null", result => {
-            if (view !== win.mediaView)
+        tab.mediaState(state => {
+            if (tab !== win.mediaView)
                 return
-            win.media = result ?? null
+            win.media = state
             // La página ya no tiene nada que reproducir
-            if (!result)
+            if (!state)
                 win.mediaView = null
         })
     }
 
     function mediaControl(action) {
-        const view = mediaView
-        if (!view)
+        const tab = mediaView
+        if (!tab)
             return
-        view.runJavaScript("window.__mitisMedia ? window.__mitisMedia.control('" + action + "') : null",
-                           result => {
-            if (view === win.mediaView && result)
-                win.media = result
+        tab.mediaControl(action, state => {
+            if (tab === win.mediaView && state)
+                win.media = state
         })
     }
 
-    function selectView(view) {
+    function selectView(tab) {
         for (let i = 0; i < tabs.count; i++) {
-            if (views.itemAt(i) === view)
+            if (views.itemAt(i) === tab)
                 selectTab(i)
         }
     }
@@ -206,6 +444,10 @@ Window {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
+        // En pantalla completa desaparece y la página (y lo anclado a la
+        // barra, como la búsqueda) sube hasta el borde superior
+        height: win.immersive ? 0 : implicitHeight
+        visible: !win.immersive
     }
 
     // Flota sobre la página: se dibuja encima de ella
@@ -224,18 +466,36 @@ Window {
         loading: win.currentView ? win.currentView.loading : false
         loadProgress: win.currentView ? win.currentView.loadProgress : 0
         tabCount: tabs.count
+        downloadsShown: downloadPanel.active
+        download: downloadPanel.item
+        downloadPanelOpen: downloadPanel.visible
+
+        // Pantalla completa: se oculta con fundido y bajando un poco
+        visible: win.controlsShown || opacity > 0
+        opacity: win.controlsShown ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: Theme.durationBase } }
+        transform: Translate {
+            y: win.controlsShown ? 0 : Theme.spacing
+            Behavior on y {
+                NumberAnimation { duration: Theme.durationBase; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeOut }
+            }
+        }
+        HoverHandler { id: barHover }
 
         onBackRequested: win.currentView.goBack()
         onForwardRequested: win.currentView.goForward()
         onReloadRequested: win.currentView.reload()
         onStopRequested: win.currentView.stop()
         onNavigateRequested: target => {
-            win.currentView.url = target
-            win.currentView.forceActiveFocus()
+            win.currentView.navigate(target)
+            win.currentView.focusPage()
         }
+        onDownloadsRequested: downloadPanel.opened ? downloadPanel.close() : downloadPanel.show()
         onTabsRequested: tabsPopup.opened ? tabsPopup.close() : tabsPopup.open()
         onBookmarksRequested: bookmarksPopup.opened ? bookmarksPopup.close() : bookmarksPopup.open()
-        onOptionsRequested: optionsPopup.opened ? optionsPopup.close() : optionsPopup.open()
+        // Con el listado de descargas abierto, el botón de opciones lo cierra
+        onOptionsRequested: downloadsPopup.opened ? downloadsPopup.close()
+                          : optionsPopup.opened ? optionsPopup.close() : optionsPopup.open()
     }
 
     Item {
@@ -249,56 +509,91 @@ Window {
             id: views
             model: tabs
 
-            delegate: WebEngineView {
-                id: view
+            delegate: BrowserTab {
+                id: tab
 
                 required property int index
-                required property string initialUrl
+                required initialUrl
 
                 readonly property bool current: index === win.currentIndex
 
                 anchors.fill: parent
-                profile: profile
                 visible: current
 
-                onCurrentChanged: if (current) win.currentView = view
-                Component.onCompleted: {
-                    if (initialUrl !== "")
-                        url = initialUrl
-                    if (current)
-                        win.currentView = view
-                }
+                onCurrentChanged: if (current) win.currentView = tab
+                Component.onCompleted: if (current) win.currentView = tab
 
                 onUrlChanged: tabs.setProperty(index, "url", url.toString())
                 onTitleChanged: tabs.setProperty(index, "title", title)
                 onIconChanged: tabs.setProperty(index, "icon", icon.toString())
-                onAudioMutedChanged: tabs.setProperty(index, "muted", view.audioMuted)
-                onRecentlyAudibleChanged: {
-                    tabs.setProperty(index, "audible", view.recentlyAudible)
-                    if (view.recentlyAudible) {
-                        win.mediaView = view
+                onMutedChanged: tabs.setProperty(index, "muted", tab.muted)
+                onAudibleChanged: {
+                    tabs.setProperty(index, "audible", tab.audible)
+                    if (tab.audible) {
+                        win.mediaView = tab
                         win.pollMedia()
                     }
                 }
 
                 // Enlaces y ventanas emergentes se abren como pestañas, a la
-                // derecha de esta. Chromium decide el destino según el clic:
-                //  · central o Ctrl+clic → InNewBackgroundTab: segundo plano
-                //  · Ctrl+Mayús+clic, target=_blank → InNewTab: primer plano
-                //  · Mayús+clic → InNewWindow; window.open → InNewDialog/InNewWindow.
-                //    Mitis aún no tiene varias ventanas: de momento, pestaña en primer plano.
-                onNewWindowRequested: request => {
-                    const background = request.destination === WebEngineNewWindowRequest.InNewBackgroundTab
-                    const target = win.newTab("", !background, win.linkTabPosition(view, index))
-                    if (background) {
-                        win.linkOpener = view
-                        win.linkLast = target as WebEngineView
-                        win.linkActive = win.currentView
-                    }
-                    request.openIn(target)
+                // derecha de esta (en serie si se abren varios seguidos)
+                onNewTabRequested: (background, request) => {
+                    win.openFromTab(tab, index, "", background).adopt(request)
                 }
 
-                onWindowCloseRequested: win.closeTab(index)
+                onCloseRequested: win.closeTab(index)
+                onPageFullScreenRequested: on => win.setPageFullScreen(tab, on)
+                onContextMenuRequested: info => win.openContextMenu(tab, info)
+
+                // Cámara, micrófono, ubicación…: se pregunta sobre la página
+                onPermissionRequested: permission => permissionDialog.ask(permission)
+
+                PermissionDialog {
+                    id: permissionDialog
+                    pageUrl: tab.url
+                    onFinished: tab.focusPage()
+                }
+
+                // Certificado inválido: aviso propio sobre la página
+                onCertificateErrorRequested: error => certificateDialog.ask(error)
+                onCertificateErrorPendingChanged: if (!certificateErrorPending) certificateDialog.dismiss()
+
+                CertificateDialog {
+                    id: certificateDialog
+                    onBackRequested: tab.focusPage()
+                    onProceeded: tab.focusPage()
+                }
+
+                // alert, confirm, prompt y aviso de salir de la página
+                onJavaScriptDialogRequested: dialog => jsDialog.enqueue(dialog)
+                onJavaScriptDialogCancelled: dialog => jsDialog.cancel(dialog)
+                onFileDialogRequested: dialog => filePicker.ask(tab, dialog)
+                Component.onDestruction: {
+                    filePicker.dismiss(tab)
+                    win.closeDevTools(tab)
+                }
+
+                // Contenido protegido sin Widevine: se explica una vez por sitio y sesión
+                onProtectedContentUnavailable: {
+                    const host = Urls.host(tab.url.toString())
+                    if (win.protectedContentNoticed[host])
+                        return
+                    win.protectedContentNoticed = Object.assign({}, win.protectedContentNoticed, { [host]: true })
+                    protectedContentNotice.ask(host)
+                }
+
+                ProtectedContentNotice {
+                    id: protectedContentNotice
+                    onClosed: if (tab.current) tab.focusPage()
+                }
+
+                // Herramientas de desarrollo de esta pestaña (F12), si están abiertas
+                property DevToolsWindow devToolsWindow: null
+
+                JsDialog {
+                    id: jsDialog
+                    onClosed: if (tab.current) tab.focusPage()
+                }
             }
         }
 
@@ -309,10 +604,23 @@ Window {
             anchors.fill: parent
             visible: win.showingNewTabPage
             onNavigate: target => {
-                win.currentView.url = target
-                win.currentView.forceActiveFocus()
+                win.currentView.navigate(target)
+                win.currentView.focusPage()
             }
         }
+    }
+
+    // Selector de archivos de las páginas (<input type=file>), uno para todas
+    FilePicker {
+        id: filePicker
+    }
+
+    // Descarga actual: se abre sola al empezar y al terminar una descarga
+    DownloadPanel {
+        id: downloadPanel
+        parent: bottomBar.downloadsButton
+        x: parent.width - width
+        y: -height - Theme.floatingMargin
     }
 
     TabsPopup {
@@ -330,8 +638,8 @@ Window {
         onTabSelected: index => win.selectTab(index)
         onTabCloseRequested: index => win.closeTab(index)
         onTabMuteToggled: index => {
-            const view = views.itemAt(index) as WebEngineView
-            view.audioMuted = !view.audioMuted
+            const tab = views.itemAt(index) as BrowserTab
+            tab.muted = !tab.muted
         }
         onNewTabRequested: {
             win.openNewTabPage()
@@ -355,6 +663,73 @@ Window {
         parent: bottomBar.optionsButton
         x: parent.width - width
         y: -height - Theme.floatingMargin
+        onOptionSelected: key => {
+            if (key === "downloads")
+                downloadsPopup.open()
+            else if (key === "search")
+                searchEngineDialog.open()
+        }
+    }
+
+    // Elegir el motor de búsqueda (hasta que exista la página de Configuración)
+    SearchEngineDialog {
+        id: searchEngineDialog
+    }
+
+    DownloadsPopup {
+        id: downloadsPopup
+        parent: bottomBar.optionsButton
+        x: parent.width - width
+        y: -height - Theme.floatingMargin
+    }
+
+    // Clic derecho en la página: se coloca en openContextMenu()
+    ContextMenu {
+        id: contextMenu
+        onActionSelected: action => win.contextAction(action)
+        // El teclado vuelve a la página al cerrar (salvo si ya se reabrió)
+        onClosed: {
+            if (!contextMenu.visible && win.contextTab && win.contextTab === win.currentView)
+                win.contextTab.focusPage()
+        }
+    }
+
+    FindBar {
+        id: findBar
+        z: 1
+        anchors.top: titleBar.bottom
+        anchors.topMargin: Theme.floatingMargin
+        anchors.horizontalCenter: parent.horizontalCenter
+
+        matches: win.findTab ? win.findTab.findMatches : 0
+        active: win.findTab ? win.findTab.findActive : 0
+        onSearchRequested: (text, backward) => {
+            if (win.findTab)
+                win.findTab.find(text, backward)
+        }
+        onClosed: {
+            if (win.findTab) {
+                win.findTab.stopFind()
+                // Al cerrar con Esc o con la ✕, el teclado vuelve a la página
+                if (win.findTab === win.currentView)
+                    win.findTab.focusPage()
+            }
+            win.findTab = null
+        }
+    }
+
+    ZoomIndicator {
+        id: zoomIndicator
+        z: 1
+        anchors.top: titleBar.bottom
+        anchors.topMargin: Theme.floatingMargin
+        anchors.right: parent.right
+        anchors.rightMargin: Theme.margin
+        visible: opacity > 0 && !win.pageFullScreen
+        zoom: win.currentView ? win.currentView.zoom : 1
+        onZoomInRequested: win.zoomBy(1)
+        onZoomOutRequested: win.zoomBy(-1)
+        onResetRequested: win.zoomBy(0)
     }
 
     MiniPlayer {
@@ -364,8 +739,10 @@ Window {
         anchors.bottom: bottomBar.top
         anchors.bottomMargin: Theme.spacing - Theme.floatingMargin
         visible: opacity > 0
-        opacity: win.media ? 1 : 0
+        // Va con los controles inferiores: en pantalla completa se oculta con ellos
+        opacity: win.media && win.controlsShown ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: Theme.durationBase } }
+        HoverHandler { id: playerHover }
 
         iconSource: win.mediaView ? win.mediaView.icon : ""
         title: win.media ? (win.media.artist ? win.media.title + " · " + win.media.artist
@@ -379,8 +756,52 @@ Window {
         onActivated: win.selectView(win.mediaView)
     }
 
+    // F11: franja fina del borde inferior que muestra los controles. No
+    // bloquea el ratón: la página sigue recibiendo el hover y los clics.
+    Item {
+        z: 2
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        height: Theme.fullscreenRevealEdge
+        visible: win.windowFullScreen && !win.pageFullScreen
+        HoverHandler { id: revealHover }
+    }
+
+    FullscreenHint {
+        id: fullscreenHint
+        z: 2
+        anchors.top: parent.top
+        anchors.topMargin: Theme.floatingMargin
+        anchors.horizontalCenter: parent.horizontalCenter
+    }
+
     ResizeHandles {
         window: win
+    }
+
+    // Pantalla completa. Esc solo se atiende durante la de página (así
+    // también sale con el foco fuera de ella); el resto del tiempo es de
+    // la página y de las listas. F11 entra y sale de la de ventana.
+    Shortcut {
+        sequence: "Esc"
+        context: Qt.ApplicationShortcut
+        enabled: win.pageFullScreen
+        onActivated: win.exitPageFullScreen()
+        onActivatedAmbiguously: win.exitPageFullScreen()
+    }
+    Shortcut {
+        sequence: "F12"
+        context: Qt.ApplicationShortcut
+        enabled: win.currentView !== null && !win.showingNewTabPage
+        onActivated: win.toggleDevTools(win.currentView)
+        onActivatedAmbiguously: win.toggleDevTools(win.currentView)
+    }
+    Shortcut {
+        sequence: "F11"
+        context: Qt.ApplicationShortcut
+        onActivated: win.toggleWindowFullScreen()
+        onActivatedAmbiguously: win.toggleWindowFullScreen()
     }
 
     // Atajos de teclado
@@ -404,7 +825,12 @@ Window {
     Shortcut {
         sequence: "Ctrl+L"
         context: Qt.ApplicationShortcut
-        onActivated: bottomBar.focusAddress()
+        onActivated: {
+            // En F11 la barra está oculta: se muestra antes de darle el foco
+            win.revealControls = true
+            bottomBar.focusAddress()
+            win.revealControls = false
+        }
     }
     Shortcut {
         sequence: "Ctrl+Tab"
@@ -412,14 +838,59 @@ Window {
         onActivated: win.selectTab(win.currentIndex + 1)
     }
     Shortcut {
-        sequences: ["Ctrl+Shift+Tab", "Ctrl+Backtab"]
+        // Una sola secuencia: "Ctrl+Backtab" y similares coinciden con la misma
+        // pulsación y Qt las declara ambiguas (no emite onActivated). Si otro
+        // sistema la reporta ambigua igualmente, se atiende igual.
+        sequence: "Ctrl+Shift+Tab"
         context: Qt.ApplicationShortcut
         onActivated: win.selectTab(win.currentIndex - 1)
+        onActivatedAmbiguously: win.selectTab(win.currentIndex - 1)
     }
     Shortcut {
         sequence: "Ctrl+Shift+A"
         context: Qt.ApplicationShortcut
         onActivated: tabsPopup.opened ? tabsPopup.close() : tabsPopup.open()
+    }
+    Shortcut {
+        sequence: "Ctrl+F"
+        context: Qt.ApplicationShortcut
+        onActivated: win.openFind()
+    }
+    Shortcut {
+        sequences: ["F3", "Ctrl+G"]
+        context: Qt.ApplicationShortcut
+        onActivated: findBar.isOpen ? findBar.findNext() : win.openFind()
+    }
+    Shortcut {
+        sequences: ["Shift+F3", "Ctrl+Shift+G"]
+        context: Qt.ApplicationShortcut
+        onActivated: findBar.isOpen ? findBar.findPrevious() : win.openFind()
+    }
+    // Zoom: un Shortcut por secuencia (varias equivalentes en uno solo son
+    // ambiguas). "Ctrl+=" es el "+" sin Mayús de los teclados en inglés.
+    Shortcut {
+        sequence: "Ctrl++"
+        context: Qt.ApplicationShortcut
+        onActivated: win.zoomBy(1)
+        onActivatedAmbiguously: win.zoomBy(1)
+    }
+    Shortcut {
+        sequence: "Ctrl+="
+        context: Qt.ApplicationShortcut
+        onActivated: win.zoomBy(1)
+        onActivatedAmbiguously: win.zoomBy(1)
+    }
+    Shortcut {
+        sequence: "Ctrl+-"
+        context: Qt.ApplicationShortcut
+        onActivated: win.zoomBy(-1)
+        onActivatedAmbiguously: win.zoomBy(-1)
+    }
+    Shortcut {
+        sequence: "Ctrl+0"
+        context: Qt.ApplicationShortcut
+        onActivated: win.zoomBy(0)
+        onActivatedAmbiguously: win.zoomBy(0)
     }
     Shortcut {
         sequences: ["Ctrl+R", "F5"]
@@ -437,20 +908,5 @@ Window {
         onActivated: win.currentView.goForward()
     }
 
-    Component.onCompleted: {
-        // Mitis se presenta como un Chrome normal: el User-Agent de serie incluye
-        // "QtWebEngine/x.y.z", que algunos sitios (WhatsApp Web) no reconocen y
-        // rechazan. Se conserva la versión real de Chromium.
-        profile.httpUserAgent = profile.httpUserAgent.replace(/ QtWebEngine\/\S+/, "")
-
-        // Puente con el contenido multimedia, en todas las páginas
-        const script = WebEngine.script()
-        script.name = "mitis-media"
-        script.sourceUrl = "qrc:/scripts/media.js"
-        script.injectionPoint = WebEngineScript.DocumentCreation
-        script.worldId = WebEngineScript.MainWorld
-        profile.userScripts.insert(script)
-
-        openNewTabPage()
-    }
+    Component.onCompleted: openNewTabPage()
 }

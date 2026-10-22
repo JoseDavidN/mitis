@@ -10,6 +10,8 @@ Rectangle {
     required property Window window
 
     readonly property bool maximized: window.visibility === Window.Maximized
+    // En pantalla completa la ventana no se mueve ni se maximiza desde aquí
+    readonly property bool fullScreen: window.visibility === Window.FullScreen
 
     function toggleMaximized() {
         if (maximized)
@@ -39,11 +41,13 @@ Rectangle {
     // Zona de arrastre: los botones quedan por encima y no la activan
     DragHandler {
         target: null
+        enabled: !root.fullScreen
         grabPermissions: PointerHandler.CanTakeOverFromAnything
         onActiveChanged: if (active) root.window.startSystemMove()
     }
     TapHandler {
         gesturePolicy: TapHandler.DragThreshold
+        enabled: !root.fullScreen
         onDoubleTapped: root.toggleMaximized()
     }
 

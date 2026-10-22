@@ -34,7 +34,7 @@ mitis/
 
 ## Requisitos
 
-- **Qt 6.5 o superior** con los módulos **Qt WebEngine** y **Qt SVG** (se instalan desde el Qt Online Installer; en Arch: `qt6-webengine qt6-svg`).
+- **Qt 6.8 o superior** con los módulos **Qt WebEngine** y **Qt SVG** (se instalan desde el Qt Online Installer; en Arch: `qt6-webengine qt6-svg`).
 - CMake 3.21 o superior.
 - Compilador C++17:
   - **Windows:** MSVC (Visual Studio 2022). Qt WebEngine no funciona con MinGW.

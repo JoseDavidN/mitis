@@ -94,6 +94,8 @@ QtObject {
     readonly property int optionsWidth: 270
     readonly property int textButtonHeight: 32
     readonly property int dialogWidth: 360
+    // Aviso de certificado: más texto que un diálogo normal
+    readonly property int certificateDialogWidth: 440
     // Página de nueva pestaña
     readonly property int ntpMaxWidth: 720
     readonly property int ntpSearchWidth: 600
@@ -106,12 +108,24 @@ QtObject {
     readonly property int tileIconBackdrop: 34
     readonly property int quickLinksMax: 10
     readonly property int miniPlayerWidth: 270
+    readonly property int findBarWidth: 440
+    readonly property int zoomLabelWidth: 52
     readonly property int miniPlayerHeight: 34
+    // Descarga actual: panel, barra de progreso y anillo del botón
+    readonly property int downloadPanelWidth: 340
+    readonly property int downloadBarHeight: 4
+    readonly property int progressRingWidth: 2
+    // Sin total conocido: tramo que recorre la barra y arco que gira (fracción)
+    readonly property real progressIndeterminateSpan: 0.3
     readonly property int tooltipPaddingX: 10
     readonly property int tooltipPaddingY: 5
     // Reordenar pestañas arrastrando: línea de destino y paso del auto-scroll
     readonly property int dropIndicatorHeight: 2
     readonly property int dragScrollStep: 6
+    // Listado de descargas: fila de dos líneas (nombre y estado)
+    readonly property int downloadRowHeight: 52
+    // Pantalla completa (F11): franja del borde inferior que muestra los controles
+    readonly property int fullscreenRevealEdge: 4
 
     // ── Tipografía ───────────────────────────────────────────────────
     readonly property int fontSizeLarge: 16
@@ -120,12 +134,45 @@ QtObject {
     readonly property int fontSizeSmall: 12
     readonly property int fontSizeIcon: 15
 
+    // ── Herramientas de desarrollo (F12) ─────────────────────────────
+    // Paleta propia, igual en todos los temas: negro puro, blanco y un acento
+    // fuerte. A propósito sin los violetas y rosas de la marca: es una
+    // herramienta de trabajo y debe distinguirse de la página.
+    readonly property color devtoolsBg: "#000000"
+    readonly property color devtoolsSurface: "#161616"
+    readonly property color devtoolsSurfaceHover: "#262626"
+    readonly property color devtoolsLine: Qt.rgba(1, 1, 1, 0.16)
+    readonly property color devtoolsInk: "#ffffff"
+    readonly property color devtoolsInkSoft: Qt.rgba(1, 1, 1, 0.62)
+    readonly property color devtoolsAccent: "#00e5ff"
+    readonly property color devtoolsOnAccent: "#000000"
+    readonly property color devtoolsDanger: "#ff3b30"
+    readonly property int devtoolsTitleBarHeight: 44
+    readonly property int devtoolsRadius: 16
+    readonly property int devtoolsButtonSize: 28
+    // Margen entre el borde redondeado de la ventana y el panel del motor
+    readonly property int devtoolsInset: 6
+    readonly property int devtoolsWidth: 1000
+    readonly property int devtoolsHeight: 680
+
     // ── Movimiento (igual en todos los temas) ────────────────────────
     readonly property int durationFast: 140
     readonly property int durationBase: 200
     readonly property int durationSlow: 260
     // Espera antes de mostrar un tooltip: evita que salten al cruzar la barra
     readonly property int tooltipDelay: 1000
+    // El indicador de zoom se queda visible este tiempo tras el último cambio
+    readonly property int zoomIndicatorHold: 2000
+    // Al terminar una descarga, su panel y el botón se quedan este tiempo
+    readonly property int downloadPanelHold: 10000
+    // Aviso «Pulsa Esc/F11 para salir de la pantalla completa»
+    readonly property int fullscreenHintHold: 3000
+    // Una vuelta del anillo de progreso sin total conocido
+    readonly property int durationSpin: 1000
+    // Una vuelta de la barra de progreso sin total conocido
+    readonly property int durationIndeterminate: 1200
+    // Cada cuánto se actualiza «hace 5 min» con el listado de descargas abierto
+    readonly property int relativeTimeRefresh: 30000
     readonly property var easeOut: [0.22, 1, 0.36, 1, 1, 1]
     readonly property var easeInOut: [0.4, 0, 0.2, 1, 1, 1]
     readonly property real hoverScale: 1.06

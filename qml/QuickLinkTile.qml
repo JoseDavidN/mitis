@@ -12,12 +12,7 @@ Item {
     property string url: ""
     property bool adder: false
 
-    // Favicon del servicio de iconos de DuckDuckGo: el mismo buscador de
-    // Mitis, sin rastreo; la caché en disco evita pedirlo en cada arranque
-    readonly property string faviconUrl: {
-        const host = Urls.host(url)
-        return host !== "" ? "https://icons.duckduckgo.com/ip3/" + host + ".ico" : ""
-    }
+    readonly property string faviconUrl: Urls.favicon(url)
 
     signal opened()
     signal removeRequested()

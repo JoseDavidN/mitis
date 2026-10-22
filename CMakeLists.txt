@@ -9,9 +9,9 @@ project(Mitis
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Quick Network WebEngineQuick Svg)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Quick Network WebEngineCore WebEngineQuick Svg)
 
-qt_standard_project_setup(REQUIRES 6.5)
+qt_standard_project_setup(REQUIRES 6.8)
 
 qt_add_executable(mitis
     src/main.cpp
@@ -21,6 +21,12 @@ qt_add_executable(mitis
     src/iconprovider.cpp
     src/networkfactory.h
     src/networkfactory.cpp
+    src/requestinterceptor.h
+    src/requestinterceptor.cpp
+    src/enginebridge.h
+    src/enginebridge.cpp
+    src/widevine.h
+    src/widevine.cpp
 )
 
 # Iconos SVG (Lucide, ISC: assets/icons/LICENSE), empaquetados en :/icons
@@ -35,7 +41,7 @@ qt_add_resources(mitis "icons"
 qt_add_resources(mitis "scripts"
     PREFIX "/scripts"
     BASE assets/scripts
-    FILES assets/scripts/media.js
+    FILES assets/scripts/media.js assets/scripts/devtools.js assets/scripts/drm.js
 )
 
 # Fuente de la interfaz: Nunito (SIL OFL: assets/fonts/OFL.txt), en :/fonts
@@ -48,6 +54,9 @@ qt_add_resources(mitis "fonts"
 # Los QML viven en qml/, pero se registran en la raíz del módulo
 set(MITIS_QML_FILES
     qml/Main.qml
+    qml/BrowserTab.qml
+    qml/BrowserProfile.qml
+    qml/Downloads.qml
     qml/Theme.qml
     qml/TitleBar.qml
     qml/BottomBar.qml
@@ -67,10 +76,27 @@ set(MITIS_QML_FILES
     qml/NewsCard.qml
     qml/News.qml
     qml/MiniPlayer.qml
+    qml/FindBar.qml
+    qml/ZoomIndicator.qml
+    qml/DownloadPanel.qml
+    qml/ProgressBar.qml
+    qml/ProgressRing.qml
+    qml/DownloadsPopup.qml
     qml/urls.js
+    qml/SearchEngines.qml
+    qml/SearchEngineDialog.qml
     qml/ResizeHandles.qml
+    qml/FullscreenHint.qml
+    qml/DevToolsWindow.qml
+    qml/ProtectedContentNotice.qml
+    qml/PageDialog.qml
+    qml/PermissionDialog.qml
+    qml/CertificateDialog.qml
+    qml/JsDialog.qml
+    qml/FilePicker.qml
+    qml/ContextMenu.qml
 )
-set_source_files_properties(qml/Theme.qml qml/News.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+set_source_files_properties(qml/Theme.qml qml/News.qml qml/BrowserProfile.qml qml/Downloads.qml qml/SearchEngines.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 foreach(qml_file IN LISTS MITIS_QML_FILES)
     get_filename_component(qml_name ${qml_file} NAME)
     set_source_files_properties(${qml_file} PROPERTIES QT_RESOURCE_ALIAS ${qml_name})
@@ -93,6 +119,7 @@ target_compile_definitions(mitis PRIVATE
 target_link_libraries(mitis PRIVATE
     Qt6::Quick
     Qt6::Network
+    Qt6::WebEngineCore
     Qt6::WebEngineQuick
     Qt6::Svg
 )

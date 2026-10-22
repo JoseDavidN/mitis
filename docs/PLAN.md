@@ -60,22 +60,23 @@ Objetivo: que Mitis se vea como un producto propio y no como un prototipo.
 
 ## Fase 3 · Navegación completa
 
-- [ ] **Separar la conexión con el motor** antes de añadir más: un componente `BrowserTab.qml` que envuelva `WebEngineView` y ofrezca a la interfaz solo lo que usa (`url`, `title`, `icon`, `loading`, `loadProgress`, `canGoBack/Forward`, `goBack()`, `reload()`, `muted`, `audible`, estado y control multimedia, ventanas nuevas), y el perfil (`WebEngineProfile`, User-Agent, scripts inyectados) en un solo sitio. Ningún otro archivo debe usar tipos de `QtWebEngine`. Así, cambiar de motor en el futuro es reescribir ese componente sin tocar la interfaz.
-- [ ] Buscar en la página (Ctrl+F) con barra propia: siguiente, anterior, contador de coincidencias.
-- [ ] Zoom por pestaña (Ctrl+ +/-/0), con indicador en la barra.
-- [ ] Pantalla completa de páginas (vídeos) y F11 para la ventana.
-- [ ] Menú contextual propio (clic derecho): abrir en pestaña nueva, copiar enlace, guardar imagen, inspeccionar.
-- [ ] Descargas: gestionar `downloadRequested`, panel de descargas con progreso, abrir carpeta.
-- [ ] Permisos (cámara, micrófono, ubicación, notificaciones) con diálogo propio.
-- [ ] Diálogos JavaScript propios (alert, confirm, prompt) y selector de archivos.
-- [ ] Certificados inválidos: aviso propio antes de continuar.
-- [ ] DevTools (F12) en ventana aparte.
-- [ ] Motor de búsqueda configurable.
-- [ ] Contenido protegido (DRM) con **Widevine**, para Netflix, Spotify web, Disney+, Prime Video, etc. Qt WebEngine lo admite pero no lo incluye: la biblioteca de Widevine (`libwidevinecdm`) es de Google y no se puede redistribuir con Mitis. Hay que:
-  - Comprobar que el Qt WebEngine de cada plataforma está compilado con soporte de Widevine y con códecs propietarios (H.264, AAC); si no, Spotify y Netflix no reproducen aunque esté la biblioteca.
-  - Localizar la biblioteca ya instalada (la de Google Chrome, o en Arch el paquete `chromium-widevine` de AUR) y pasarla al motor con `--widevine-path` en `QTWEBENGINE_CHROMIUM_FLAGS` antes de iniciar WebEngine.
-  - Si no se encuentra, avisar con un mensaje propio en la página que lo pide, explicando cómo instalarlo.
-  - Probar con Spotify web y el mini reproductor.
+- [x] **Separar la conexión con el motor** antes de añadir más: un componente `BrowserTab.qml` que envuelva `WebEngineView` y ofrezca a la interfaz solo lo que usa (`url`, `title`, `icon`, `loading`, `loadProgress`, `canGoBack/Forward`, `goBack()`, `reload()`, `muted`, `audible`, estado y control multimedia, ventanas nuevas), y el perfil (`WebEngineProfile`, User-Agent, scripts inyectados) en un solo sitio. Ningún otro archivo debe usar tipos de `QtWebEngine`. Así, cambiar de motor en el futuro es reescribir ese componente sin tocar la interfaz.
+- [x] Buscar en la página (Ctrl+F) con barra propia: siguiente, anterior, contador de coincidencias. Barra flotante centrada bajo la barra de título; F3/Ctrl+G y Mayús+F3/Ctrl+Mayús+G.
+- [x] Zoom por pestaña (Ctrl+ +/-/0), con indicador arriba a la derecha que se cierra solo a los 2 s. Se mantiene al navegar dentro de la pestaña.
+- [x] Pantalla completa de páginas (vídeos) y F11 para la ventana. Se oculta toda la interfaz con un aviso de cómo salir (Esc / F11); en F11 los controles aparecen al acercar el ratón al borde inferior.
+- [x] Menú contextual propio (clic derecho): enlace, imagen, vídeo/audio, texto seleccionado, campo editable y página. «Inspeccionar» abre las herramientas de desarrollo.
+- [x] Descargas: gestionar `downloadRequested`, panel de descargas con progreso, abrir carpeta. Botón que aparece solo al descargar (con anillo de progreso), panel de la descarga actual (se queda 10 s al terminar) y listado en Opciones → Descargas, guardado entre sesiones.
+- [x] Permisos (cámara, micrófono, ubicación, notificaciones) con diálogo propio. `PermissionDialog` sobre la página de la pestaña («ejemplo.com quiere usar tu cámara», Bloquear/Permitir), con cola; la respuesta la guarda el motor por sitio (`persistentPermissionsPolicy` en disco) y, para cámara y micrófono, que el motor no guarda, `BrowserProfile` (Settings, categoría `Permissions`). Bloquear el ratón se concede sin preguntar. Sube el mínimo a Qt 6.8 (`permissionRequested`).
+- [x] Diálogos JavaScript propios (alert, confirm, prompt) y selector de archivos. `JsDialog` sobre la página de la pestaña («ejemplo.com dice»), en cola, con el aviso de salir con cambios sin guardar (`beforeunload`); se cancelan al cargar otra página. `<input type=file>` abre el diálogo del sistema (`FilePicker`) con el filtro de tipos de la página.
+- [x] Certificados inválidos: aviso propio antes de continuar. `CertificateDialog` sobre la página de la pestaña, con el host y el motivo en español; «Volver» (la opción segura, vuelve a la página anterior) o «Continuar de todos modos» si se puede. Un host aceptado no vuelve a preguntar en la sesión y `BrowserTab.certificateBypassed` lo indica.
+- [x] DevTools (F12) en ventana aparte. `DevToolsWindow`, una por pestaña, sin marco, redondeada y con paleta propia (negro, blanco y acento cian, letra gruesa), también para el panel de Chromium (`assets/scripts/devtools.js`). F12 abre y cierra; «Inspeccionar» en el menú contextual.
+- [x] Motor de búsqueda configurable. Singleton `SearchEngines` (DuckDuckGo por defecto, Google, Bing, Brave Search, Ecosia, Startpage y uno personalizado con `%s`), guardado entre sesiones; se elige en Opciones → Motor de búsqueda y lo usan la barra de dirección, la nueva pestaña y el menú contextual.
+- [x] Contenido protegido (DRM) con **Widevine**, para Netflix, Spotify web, Disney+, Prime Video, etc. Qt WebEngine lo admite pero no lo incluye: la biblioteca de Widevine (`libwidevinecdm`) es de Google y no se puede redistribuir con Mitis.
+  - Qt WebEngine de Arch: compilado con Widevine y códecs propietarios (H.264, AAC). Windows y macOS: ver *Códecs propietarios* en la Fase 6.
+  - `src/widevine.*` busca la biblioteca que dejaron Google Chrome, Chromium (`chromium-widevine` en Arch) o Firefox en Linux, Windows y macOS, elige la de versión más alta y se la pasa al motor con `--widevine-path` antes de iniciarlo (respeta una ruta puesta a mano en `QTWEBENGINE_CHROMIUM_FLAGS`).
+  - Sin ella, `assets/scripts/drm.js` detecta la página que pide Widevine y `ProtectedContentNotice` explica cómo instalarlo (una vez por sitio y sesión).
+  - Probado con el módulo oficial (4.10.2891.0): un vídeo cifrado con Widevine se descifra y reproduce. En Linux el módulo es de nivel L3 (por software): los servicios limitan la calidad (Netflix, 720p).
+  - [ ] Pendiente: probar con Spotify web y el mini reproductor (hace falta una cuenta y un equipo con Widevine instalado).
 
 **Criterios:** se puede usar Mitis como navegador principal un día completo sin abrir otro.
 
@@ -91,6 +92,8 @@ Objetivo: que Mitis se vea como un producto propio y no como un prototipo.
 - [ ] Marcadores: añadir (Ctrl+D), listar, buscar, eliminar. Se conectan al botón ☆ y a su lista (`bookmarksPopup` en `Main.qml`).
 - [ ] Ventana privada (perfil `offTheRecord`).
 - [ ] Página de ajustes en QML.
+  - Mover ahí la elección del **motor de búsqueda**: hoy se elige en Opciones → Motor de búsqueda (`SearchEngineDialog`) de forma provisional. Al hacerlo, quitar esa entrada del menú de opciones y pasar la categoría `Search` de `SearchEngines.qml` al singleton `Settings`.
+  - Opción **«Herramientas de desarrollo»** (desactivada por defecto): solo con ella activa aparecen «Inspeccionar» en el menú contextual y funciona F12. Hoy están siempre disponibles (`ContextMenu.qml`, atajo F12 en `Main.qml`).
 
 **Criterios:** cerrar y abrir Mitis deja todo como estaba, y el arranque con 30 pestañas restauradas usa casi la misma RAM que con una.
 
@@ -117,6 +120,11 @@ El diferencial de Mitis. Medir antes y después de cada cambio.
 - [ ] Empaquetado: `windeployqt` + instalador en Windows, `macdeployqt` + `.dmg` en macOS, AppImage y `PKGBUILD` para Arch. El usuario final no instala Qt: va dentro del paquete (unos 150–250 MB instalado, por Chromium).
 - [ ] **Códecs propietarios (H.264, AAC):** el Qt WebEngine oficial de Windows y macOS no los incluye. Sin ellos no funcionan Spotify, Netflix ni muchos vídeos. Hay que compilar Qt WebEngine con `-DFEATURE_webengine_proprietary_codecs=ON` (varias horas) y revisar el licenciamiento de patentes de esos códecs para los países de distribución. En Arch no hace falta: el paquete de la distribución ya los trae.
 - [ ] Cumplir la LGPL de Qt: enlazar Qt de forma dinámica, incluir su licencia y permitir sustituir sus bibliotecas.
+- [ ] **Inicio de sesión de Google** (Gmail, YouTube…): Google lo rechaza ("Es posible que el navegador o la aplicación no sean seguros", página `/signin/rejected`). *Pendiente.* Ya probado sin éxito, solo en `accounts.google.com`:
+  - Quitar `QtWebEngine/x.y.z` del User-Agent (se hace en todas las páginas; arregló WhatsApp Web, no Google).
+  - Presentarse como Firefox (User-Agent y JavaScript): incoherente, la conexión es de Chromium y las Client Hints siguen diciendo "Chromium".
+  - Presentarse como Google Chrome: marca "Google Chrome" en `sec-ch-ua`/`sec-ch-ua-full-version-list` (interceptor) y en `navigator.userAgentData` (script), visor de PDF activo (`navigator.plugins` = 5) y versión declarada 153 (el motor es 140). Es lo que hay ahora en el código (`RequestInterceptor`, `BrowserProfile`).
+  - Próximos pasos: comprobar si un Chromium real es rechazado en el mismo entorno (servidor por VNC, sin GPU ni audio): si lo es, la causa es el entorno y no Mitis; probar desde un escritorio normal; probar con Qt WebEngine más reciente (motor ≥ versión que Google admita); revisar otras señales (`window.chrome.*`, WebGL, `navigator.credentials`/FedCM).
 - [ ] Versionado y changelog.
 - [ ] Licencia.
 

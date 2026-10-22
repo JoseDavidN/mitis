@@ -4,7 +4,7 @@ import QtQuick.Controls.Basic
 import "urls.js" as Urls
 
 // Campo de dirección y búsqueda. Si lo escrito no parece una URL,
-// se busca en DuckDuckGo.
+// se busca en el buscador elegido (SearchEngines).
 // Dos modos: al escribir (con foco) muestra la dirección y ocupa todo el
 // ancho; en reposo muestra el título corto de la página y se encoge a su
 // tamaño (compactWidth). Quien lo coloca decide el ancho (ver BottomBar).
@@ -153,7 +153,7 @@ TextField {
     }
 
     onAccepted: {
-        const target = Urls.resolve(text)
+        const target = SearchEngines.resolve(text)
         if (target !== "") {
             focus = false
             navigate(target)

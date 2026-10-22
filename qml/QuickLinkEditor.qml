@@ -18,7 +18,7 @@ Popup {
     }
 
     function accept() {
-        const url = Urls.resolve(urlField.text)
+        const url = SearchEngines.resolve(urlField.text)
         if (url === "" || urlField.text.trim().indexOf(" ") >= 0)
             return
         const name = nameField.text.trim() || Urls.host(url) || url

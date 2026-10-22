@@ -1,2 +1,5 @@
 singleton Theme 1.0 Theme.qml
 singleton News 1.0 News.qml
+singleton BrowserProfile 1.0 BrowserProfile.qml
+singleton Downloads 1.0 Downloads.qml
+singleton SearchEngines 1.0 SearchEngines.qml

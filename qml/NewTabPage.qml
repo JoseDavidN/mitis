@@ -5,8 +5,6 @@ import QtQuick.Controls.Basic
 import QtQuick.Dialogs
 import QtQuick.Shapes
 
-import "urls.js" as Urls
-
 // Página de nueva pestaña, en QML: buscador en el centro, accesos rápidos
 // y noticias de tecnología, sobre el fondo del tema o una imagen propia.
 // Una sola instancia para todas las pestañas (ver Main.qml).
@@ -131,7 +129,7 @@ Item {
                 rightPadding: Theme.margin * 2
                 verticalAlignment: TextInput.AlignVCenter
                 color: Theme.ink
-                placeholderText: "Buscar en DuckDuckGo o escribir una dirección"
+                placeholderText: "Buscar en " + SearchEngines.name + " o escribir una dirección"
                 placeholderTextColor: Theme.inkMuted
                 selectionColor: Theme.selection
                 selectedTextColor: Theme.ink
@@ -161,7 +159,7 @@ Item {
                 }
 
                 onAccepted: {
-                    const target = Urls.resolve(text)
+                    const target = SearchEngines.resolve(text)
                     if (target !== "") {
                         text = ""
                         root.navigate(target)

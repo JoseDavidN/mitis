@@ -2,15 +2,16 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
 
-// Menú de opciones. Por ahora solo lista lo que vendrá en fases posteriores.
+// Menú de opciones. Lo que aún no está disponible sale como «Próximamente».
 Popup {
     id: root
 
     // Cada opción: { key, label, icon, available }
     property var options: [
         { key: "history", label: "Historial", icon: "history", available: false },
-        { key: "downloads", label: "Descargas", icon: "downloads", available: false },
+        { key: "downloads", label: "Descargas", icon: "downloads", available: true },
         { key: "profile", label: "Perfil", icon: "profile", available: false },
+        { key: "search", label: "Motor de búsqueda", icon: "search", available: true },
         { key: "settings", label: "Configuración", icon: "settings", available: false }
     ]
 
@@ -84,6 +85,9 @@ Popup {
                 HoverHandler { id: rowHover }
                 TapHandler {
                     enabled: row.modelData.available
+                    // Agarre exclusivo al pulsar: si no, la página de debajo
+                    // (p. ej. una noticia de la nueva pestaña) recibe también el clic
+                    gesturePolicy: TapHandler.ReleaseWithinBounds
                     onTapped: {
                         root.optionSelected(row.modelData.key)
                         root.close()

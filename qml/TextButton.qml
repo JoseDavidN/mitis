@@ -1,12 +1,14 @@
 import QtQuick
 
 // Botón con texto, en píldora. `primary` es la acción principal de un
-// diálogo: degradado de marca y texto onBrand.
+// diálogo: degradado de marca y texto onBrand. `danger` (sin primary) es una
+// acción arriesgada y secundaria: texto en danger y borde en danger al pasar.
 Item {
     id: root
 
     property string text: ""
     property bool primary: false
+    property bool danger: false
 
     signal clicked()
 
@@ -22,7 +24,8 @@ Item {
         visible: !root.primary
         color: root.hovered ? Theme.tintActive : Theme.tintHover
         border.width: 1
-        border.color: root.hovered ? Theme.hairlineHover : Theme.hairline
+        border.color: root.danger && root.hovered ? Theme.danger
+                    : root.hovered ? Theme.hairlineHover : Theme.hairline
         Behavior on color { ColorAnimation { duration: Theme.durationFast } }
     }
 
@@ -48,7 +51,7 @@ Item {
         id: label
         anchors.centerIn: parent
         text: root.text
-        color: root.primary ? Theme.onBrand : Theme.ink
+        color: root.primary ? Theme.onBrand : root.danger ? Theme.danger : Theme.ink
         font.pixelSize: Theme.fontSize
         font.weight: root.primary ? Font.DemiBold : Font.Normal
     }
@@ -58,6 +61,8 @@ Item {
         cursorShape: Qt.PointingHandCursor
     }
     TapHandler {
+        // Agarre exclusivo: si no, lo que hay debajo recibe también el clic
+        gesturePolicy: TapHandler.ReleaseWithinBounds
         onTapped: root.clicked()
     }
 }

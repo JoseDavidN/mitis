@@ -119,6 +119,16 @@ Alturas: botones inferiores `buttonSize` (32), campo de dirección `controlHeigh
 
 Arrastre de filas: `dragOpacity` (0,85) opacidad de la fila levantada, `dropIndicatorHeight` (2) grosor de la línea de destino, `dragScrollStep` (6 px por paso) velocidad del auto-scroll.
 
+Descargas: `downloadRowHeight` (52) fila de dos líneas del listado, `durationIndeterminate` (1,2 s) vuelta de la barra de progreso sin total conocido, `relativeTimeRefresh` (30 s) refresco de «hace 5 min» en el listado.
+
+Descarga actual: `downloadPanelWidth` (340) ancho del panel, `downloadBarHeight` (4) grosor de su barra, `progressRingWidth` (2) trazo del anillo del botón, `progressIndeterminateSpan` (0,3) fracción que ocupan el tramo de la barra y el arco del anillo sin total conocido, `durationSpin` (1 s) vuelta del anillo sin total, `downloadPanelHold` (10 s) lo que se quedan panel y botón al terminar.
+
+Aviso de certificado: `certificateDialogWidth` (440) ancho de la tarjeta, algo más que `dialogWidth` (360) porque explica más.
+
+Herramientas de desarrollo: `devtoolsTitleBarHeight` (44) barra de la ventana, `devtoolsRadius` (16) esquinas de la ventana, `devtoolsButtonSize` (28) botones y etiqueta, `devtoolsInset` (6) separación entre el borde y el panel, `devtoolsWidth` × `devtoolsHeight` (1000 × 680) tamaño inicial. Sus colores, en *Herramientas de desarrollo* (Componentes).
+
+Pantalla completa: `fullscreenRevealEdge` (4) franja del borde inferior que muestra los controles en F11, `fullscreenHintHold` (3 s) lo que se queda el aviso «Pulsa Esc/F11 para salir».
+
 Radios: `radius` (12) para listas y paneles, `radiusSmall` (8) para filas dentro de ellos. Botones y campo de dirección son totalmente redondos (`height / 2`).
 
 ---
@@ -131,7 +141,7 @@ Window (bgBase, sin marco)
 │                 logo (degradado de marca) + "Mitis" (inkSoft) · minimizar / maximizar / cerrar
 ├── páginas       WebEngineView, de la barra de título hasta el borde inferior
 └── BottomBar     controles sueltos flotando sobre la página, sin fondo
-                  un solo grupo centrado: [← → ⟳] · campo de dirección · [pestañas, marcadores, opciones]
+                  un solo grupo centrado: [← → ⟳] · campo de dirección · [(descargas), pestañas, marcadores, opciones]
                   los botones van pegados al campo y se mueven con él al crecer o encogerse
                   un solo degradado controlsStart → controlsEnd repartido entre todos
 ```
@@ -154,7 +164,7 @@ Window (bgBase, sin marco)
 | `back`, `forward`, `reload` | `arrow-left`, `arrow-right`, `rotate-cw` | Navegación |
 | `close` | `x` | Cerrar ventana o pestaña, detener la carga |
 | `minimize`, `maximize`, `restore` | `minus`, `square`, `copy` | Controles de ventana |
-| `search` | `search` | Campo de dirección al escribir |
+| `search` | `search` | Campo de dirección al escribir; menú de opciones y diálogo «Motor de búsqueda» (también en lugar del favicon de un buscador que no carga) |
 | `bookmarks`, `bookmark-add`, `bookmark` | `star`, `bookmark-plus`, `bookmark` | Botón y lista de marcadores |
 | `options` | `ellipsis` | Botón de opciones |
 | `new-tab`, `reopen` | `plus`, `undo-2` | Lista de pestañas: nueva y reabrir cerrada |
@@ -162,7 +172,17 @@ Window (bgBase, sin marco)
 | `background`, `background-reset`, `news` | `image`, `image-off`, `newspaper` | Página de nueva pestaña |
 | `music`, `play`, `pause`, `previous`, `next` | `music`, `play`, `pause`, `skip-back`, `skip-forward` | Mini reproductor |
 | `sound`, `muted` | `volume-2`, `volume-x` | Pestaña que suena / silenciada |
+| `find-previous`, `find-next` | `chevron-up`, `chevron-down` | Buscar en la página |
+| `zoom-out`, `zoom-in` | `minus`, `plus` | Indicador de zoom |
 | `pin`, `unpin` | `pin`, `pin-off` | Lista de pestañas: fijar / desfijar |
+| `download-done`, `download-failed`, `download-cancel` | `circle-check`, `circle-alert`, `circle-x` | Panel de la descarga actual: terminada, fallida, cancelada (y botón cancelar) |
+| `file`, `open-file`, `folder` | `file-down`, `external-link`, `folder-open` | Listado de descargas: archivo, abrirlo, mostrar en la carpeta |
+| `open-link`, `open-image`, `copy-link`, `copy`, `save` | `external-link`, `image`, `link`, `copy`, `download` | Menú contextual: abrir enlace e imagen, copiar dirección, copiar, guardar (enlace, imagen, archivo, página) |
+| `undo`, `redo`, `cut`, `paste`, `select-all` | `undo`, `redo`, `scissors`, `clipboard-paste`, `text-select` | Menú contextual de un campo editable |
+| `not-secure` | `shield-alert` | Aviso de certificado inválido |
+| `camera`, `microphone`, `camera-microphone`, `screen`, `location`, `notifications`, `clipboard`, `fonts` | `camera`, `mic`, `video`, `monitor`, `map-pin`, `bell`, `clipboard`, `type` | Diálogo de permisos: qué pide el sitio |
+| `protected-content` | `monitor-play` | Aviso de que falta Widevine (contenido protegido) |
+| `devtools`, `inspect` | `code-xml`, `scan-search` | Ventana de herramientas de desarrollo (etiqueta «DevTools»); «Inspeccionar» del menú contextual |
 
 ### `IconButton` — botón flotante
 - `icon` (nombre de `assets/icons/`, tamaño `iconSize`) o, si no, `glyph` (texto corto: el contador de pestañas).
@@ -178,6 +198,19 @@ Window (bgBase, sin marco)
 - Dos partes: la acción en `ink` y, si tiene, el atajo en `inkMuted` (`Atrás  Alt+←`).
 - Siempre en una sola línea. Aparece tras `tooltipDelay` (1 s), con fundido `durationFast`; se oculta al pulsar. Encima del control; debajo en la barra de título (`below`). Nunca se sale de la ventana.
 - **Todo botón de solo icono lleva tooltip.** En `IconButton`: `tooltip`, `shortcut` y `tooltipBelow`. El texto es un verbo o sustantivo corto en español; el atajo, el mismo que define `Main.qml`.
+
+### `FindBar` — buscar en la página
+- Píldora flotante de `findBarWidth` × `controlHeight`, **centrada bajo la barra de título** (a `floatingMargin`), con el degradado `controlsStart → controlsEnd` de los controles y borde `hairline` (`focusRing` con el foco en el campo).
+- Contenido: icono de búsqueda (`brandLight1` con foco), campo sin fondo, contador en `inkMuted` ("2 de 7") o "Sin coincidencias" en `danger`, y tres `IconButton` planos: anterior, siguiente, cerrar. Sus tooltips salen hacia abajo.
+- Aparece con fundido (`durationBase`) y un pequeño desplazamiento desde arriba.
+- Busca mientras se escribe. Intro: siguiente; Mayús+Intro: anterior; Esc: cerrar (el teclado vuelve a la página y se quita el resaltado).
+- Atajos globales: Ctrl+F abre (con el texto anterior seleccionado); F3/Ctrl+G siguiente; Mayús+F3/Ctrl+Mayús+G anterior. No se abre en la página de nueva pestaña. Se cierra al cambiar de pestaña.
+
+### `ZoomIndicator` — zoom de la pestaña
+- Píldora de `controlHeight` **arriba a la derecha**, bajo la barra de título (a `floatingMargin` de ella y `margin` del borde), con el degradado de los controles y borde `hairline`.
+- Contenido: `IconButton` plano "−", el porcentaje (`ink`, DemiBold, ancho fijo `zoomLabelWidth` para que no baile), "+" y, si no está al 100 %, un separador `line` y "Restablecer" (`inkSecondary`, `ink` al pasar por encima).
+- Aparece (fundido y desplazamiento, `durationBase`) con cada cambio de zoom de la pestaña activa; se queda `zoomIndicatorHold` (2 s) desde el último cambio y se cierra solo. Con el ratón encima no se cierra; al salir vuelve a contar. Cambiar de pestaña no lo muestra.
+- Pasos de Chrome: 25, 33, 50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200, 250, 300, 400, 500 %. Atajos: Ctrl + `+` / `=` / `+` numérico, Ctrl + `-`, Ctrl + `0`. El zoom es de la pestaña y se mantiene al navegar dentro de ella.
 
 ### `MiniPlayer` — mini reproductor
 - Aparece (fundido `durationBase`) centrado justo encima de la barra de búsqueda mientras una pestaña reproduce algo; desaparece si la página ya no tiene nada que reproducir.
@@ -231,9 +264,41 @@ Window (bgBase, sin marco)
 - **Noticias:** encabezado con icono `news` en `brandLight1`, tarjetas `NewsCard` (titular de hasta dos líneas en `ink`, fuente y antigüedad en `inkMuted`), en dos columnas desde `ntpNewsTwoColumnsWidth`.
 - **Botones de fondo** arriba a la derecha: cambiar (abre el selector de archivos) y quitar (solo con imagen propia).
 
-### Diálogos (`QuickLinkEditor`)
+### Diálogos (`QuickLinkEditor`, `SearchEngineDialog`)
 - `Popup` modal centrado, ancho `dialogWidth`, fondo `PopupBackground`, velo `backgroundScrim` detrás.
 - Título en `fontSizeTitle` DemiBold, campos `FormField` (fondo `tintSunken`, radio `radiusSmall`, borde `focusRing` con foco), botones `TextButton` abajo a la derecha: cancelar primero, la acción principal (`primary`, degradado de marca) al final.
+- `TextButton` con `danger` (sin `primary`): acción arriesgada y secundaria. Mismo fondo que un botón normal, texto en `danger` y, al pasar por encima, borde en `danger`.
+
+### `SearchEngineDialog` — motor de búsqueda
+- Se abre desde el menú de opciones → «Motor de búsqueda» (hasta que exista la página de Configuración). Diálogo como los demás: título «Motor de búsqueda».
+- Lista de buscadores en filas de `popupRowHeight` (radio `radiusSmall`, hover `tintHover`): favicon de `faviconSize` del servicio de iconos de DuckDuckGo (sin él, el icono `search` en `inkSoft`), nombre en `ink` y dominio a la derecha en `fontSizeSmall` `inkMuted`. El elegido: fondo `tintActive`, barra `markerWidth` con el degradado de marca y nombre DemiBold. **Pulsar una fila lo elige al momento y cierra.**
+- Debajo, separador `line` y «Personalizado» (`fontSizeSmall` `inkSecondary`): dos `FormField` (nombre opcional y dirección con `%s` donde va el texto; sin esquema se añade `https://`) y una nota `fontSizeSmall` `inkMuted` con un ejemplo, que pasa a `danger` si la dirección no vale. Botones «Cerrar» y «Usar personalizado» (`primary`). Una vez guardado, el personalizado aparece como última fila de la lista.
+- Las filas clicables de un `Popup` sobre la página usan `TapHandler` con `gesturePolicy: TapHandler.ReleaseWithinBounds` (agarre exclusivo): con la política por defecto, lo que hay debajo (una noticia, un acceso rápido de la nueva pestaña) recibe también el clic.
+
+### `CertificateDialog` — certificado inválido
+- `PageDialog` con `danger`: tarjeta de `certificateDialogWidth` sobre la página de su pestaña (se oculta y vuelve con ella), icono `not-secure` y título «La conexión no es privada» en `danger`.
+- Mensaje en `inkSoft`: quién podría hacerse pasar por el host y qué datos podrían ver otros. Debajo, el motivo concreto en `fontSizeSmall` `inkMuted` (caducado, otro sitio, autoridad no fiable…), siempre en español.
+- Botones: «Continuar de todos modos» (`danger`, solo si el motor permite continuar) y «Volver» (`primary`, la opción segura). Enter y Esc vuelven. Al cerrar, el foco pasa a la página.
+
+### `PermissionDialog` — permisos de un sitio
+- `PageDialog` de `dialogWidth` sobre la página de su pestaña (se oculta y vuelve con ella). Icono del permiso en `brandLight1` y título «ejemplo.com quiere usar tu cámara» (dominio sin `www.`).
+- Mensaje en `inkSoft`: «Mitis recordará tu decisión para este sitio» o, en los de un solo uso (compartir pantalla), «Se volverá a preguntar la próxima vez».
+- Botones: «Bloquear» y «Permitir» (`primary`). Esc bloquea; Enter no hace nada (un Enter que se estaba pulsando en la página no debe conceder nada). Al cerrar, el foco pasa a la página.
+- Varias peticiones seguidas esperan en cola y se muestran de una en una. Si la pestaña pasa a otro sitio o se cierra, lo pendiente se descarta sin guardar respuesta.
+
+### `ProtectedContentNotice` — falta Widevine
+- `PageDialog` sobre la página que pidió contenido protegido sin Widevine en el motor: icono `protected-content` en `brandLight1`, título «Este sitio necesita Widevine», mensaje con el dominio y qué es Widevine, y debajo, en `fontSizeSmall` `inkSecondary`, cómo instalarlo según el sistema (Linux: Google Chrome, `chromium-widevine` en Arch o Firefox con DRM; Windows y macOS: Google Chrome). Ancho `certificateDialogWidth`.
+- Un solo botón, «Entendido» (`primary`); Enter y Esc también cierran. Una vez por sitio y sesión.
+
+### `JsDialog` — alert, confirm y prompt
+- `PageDialog` de `dialogWidth` sobre la página de su pestaña (se oculta y vuelve con ella), sin icono. Título «localhost dice» / «ejemplo.com dice» (dominio de origen sin `www.`; sin dominio, «Esta página dice») y el mensaje de la página en `inkSoft`, siempre como texto plano.
+- `alert`: solo «Aceptar» (`primary`). `confirm`: «Cancelar» y «Aceptar». `prompt`: además un `FormField` con el texto por defecto seleccionado y el foco. Enter acepta; Esc cancela (en `alert`, cierra).
+- Aviso de salir (`beforeunload`): título «¿Salir de este sitio?», mensaje «Puede que no se guarden los cambios que hayas hecho», botones «Cancelar» y «Salir» (`primary`).
+- Varios seguidos esperan en cola y se muestran de uno en uno. Si la pestaña empieza a cargar otra página se cancelan (salvo el de salir) y, si se cierra, desaparecen con ella. Al cerrar el último, el foco pasa a la página. El diálogo se crea la primera vez que una pestaña lo necesita.
+
+### `FilePicker` — selector de archivos
+- `<input type=file>` abre el diálogo de archivos del sistema (`FileDialog`/`FolderDialog` de Qt Quick Dialogs; en Linux sin portal, el de Qt). Uno para toda la ventana: es modal y las peticiones esperan su turno.
+- Los tipos de `accept` (`image/*`, `.pdf`…) se convierten en el filtro «Archivos admitidos (*.png *.jpg…)», con «Todos los archivos (*)» como alternativa.
 
 ### `AddressBar` — campo de dirección
 - Píldora de `controlHeight`, relleno degradado `fillStart → fillEnd`, borde `hairline`.
@@ -249,6 +314,24 @@ Window (bgBase, sin marco)
 - No se pinta un degradado grande recortado con máscara (costaría GPU): cada control recibe en `fillStart`/`fillEnd` el tramo que le corresponde según su posición, con `tone(x)`.
 - Un control nuevo en la fila debe recibir también `fillStart: root.tone(x)` y `fillEnd: root.tone(x + width)`.
 
+### Botón de descargas y `ProgressRing`
+- `IconButton` `downloads` («Descargas») **justo antes del de pestañas**. No existe hasta que empieza una descarga y desaparece cuando el panel de la descarga actual se cierra solo (ver abajo). Recibe su tramo del degradado con `tone(x)`, como los demás.
+- Aparece y desaparece animando el **ancho de su hueco** (de 0 a `buttonSize + spacing`) con `durationBase` y `easeOut`, junto con su opacidad: el grupo, centrado, se recoloca de forma continua y el degradado se reparte de nuevo sin saltos.
+- Pulsarlo abre o cierra el panel de la descarga actual.
+- **Anillo de progreso** (`ProgressRing`): con el panel cerrado y la descarga en curso, un arco de `progressRingWidth` sobre el borde del botón, desde arriba en el sentido del reloj, en `brandLight1` sobre una pista `tintActive`, que avanza con el porcentaje. Sin total conocido, un arco de `progressIndeterminateSpan` gira (`durationSpin`). En pausa, el arco en `inkMuted` y quieto. Aparece con fundido (`durationBase`) y acompaña la escala del botón al pasar por encima o pulsar.
+- Se dibuja con `QtQuick.Shapes` (`PathAngleArc`; `CurveRenderer` para bordes suaves con Qt 6.6+), sin efectos de GPU ni sombras. Un trazo de `ShapePath` no admite degradado: por eso el color plano de marca.
+
+### `DownloadPanel` — descarga actual
+- `Popup` hacia arriba anclado al botón de descargas (borde derecho alineado, `floatingMargin` de separación), ancho `downloadPanelWidth`, fondo `PopupBackground`, relleno `margin`. Fundido `durationFast`. No toma el foco del teclado (se abre solo mientras se navega). Se cierra con su ✕ o pulsando fuera.
+- Muestra **solo la descarga más reciente** (`Downloads.currentId`):
+  - Arriba: icono de estado (`downloads` en `brandLight1` en curso, `inkMuted` en pausa o cancelada; `download-done` en `ok`; `download-failed` en `danger`), nombre del archivo en `ink` DemiBold acortado por el centro con «…» (conserva la extensión) y un `IconButton` plano `close` («Cerrar»).
+  - `ProgressBar` (en curso, en pausa y completa): `downloadBarHeight`, pista `tintActive`, relleno con el degradado de marca `brand1 → brand2`; sin total conocido, un tramo de `progressIndeterminateSpan` recorre la pista (`durationIndeterminate`).
+  - Estado en `fontSizeSmall` `inkSecondary`: «3,2 MB de 10 MB» (solo lo recibido sin total), «… · En pausa», «Completada · 10 MB», «Cancelada»; «Error: …» en `danger`.
+  - En curso, a la derecha del estado: `IconButton` planos de `buttonSizeSmall` pausar/reanudar (`pause`/`play`) y cancelar (`download-cancel`, `danger`).
+  - Terminada: `TextButton` «Abrir carpeta» y «Abrir» (`primary`: abre o ejecuta el archivo), alineados a la derecha.
+- **Ciclo:** se abre solo al empezar una descarga. Al terminar (bien, con error o cancelada) se vuelve a abrir aunque se hubiera cerrado y se queda `downloadPanelHold` (10 s); luego se cierran el panel y el botón. Con el ratón encima no se cierra; al salir vuelve a contar. Reabrirlo con el botón durante esa espera reinicia la cuenta. Si empieza otra descarga mientras tanto, el panel pasa a la nueva y el botón se queda. Si al cerrarse queda otra descarga en curso, el botón se queda con ella.
+- `ProgressBar` (`value` 0..1, `indeterminate`) es reutilizable.
+
 ### Listas desplegables (`TabsPopup`, `OptionsPopup`)
 - Fondo `PopupBackground`: `surfacePopup`, borde `hairlineStrong`, radio `radius`.
 - Las etiquetas largas se recortan con "…"; nunca se montan sobre el texto de la derecha (atajo, "Próximamente").
@@ -258,13 +341,69 @@ Window (bgBase, sin marco)
 - Se abren hacia arriba desde su botón, con `floatingMargin` de separación.
 - Las acciones al pie de una lista (nueva pestaña, reabrir) son `PopupAction`: icono `inkSoft`, texto `ink`, atajo `inkMuted` a la derecha. Una acción sin efecto posible se oculta (reabrir sin pestañas cerradas).
 
+### `ContextMenu` — menú contextual de la página
+- Sustituye al menú de Chromium al hacer clic derecho en la página. `BrowserTab` avisa con `contextMenuRequested(info)` (datos neutrales) y ejecuta con `runAction(nombre)`; `ContextMenu` decide las opciones.
+- Mismo aspecto que las listas desplegables: `PopupBackground`, relleno `spacing`, filas de `popupRowHeight` (radio `radiusSmall`) con icono `inkSoft`, texto `ink` y atajo `fontSizeSmall` `inkMuted` a la derecha. Resaltado `tintHover`. Fila desactivada: icono, texto y atajo en `inkDisabled`, sin resaltado. Entre grupos, separador `line` en un hueco de `spacing`. Fundido `durationFast`.
+- Ancho según la fila más larga, entre `optionsWidth` y `popupWidth` (lo que no quepa termina en «…»).
+- **Posición:** la esquina superior izquierda en el cursor. Si no cabe a la derecha se abre hacia la izquierda; si no cabe abajo, hacia arriba. Nunca se sale de la ventana.
+- Se cierra con Esc, pulsando fuera o al elegir una opción; el teclado vuelve a la página. ↑/↓ recorren las filas disponibles (dando la vuelta) y Enter elige.
+- **Grupos**, en este orden y solo los que apliquen:
+  | Contexto | Opciones |
+  |---|---|
+  | Enlace | Abrir en pestaña nueva (segundo plano, a la derecha, en serie como los enlaces) · Abrir en pestaña nueva y cambiar a ella · Copiar dirección del enlace · Guardar enlace |
+  | Imagen | Abrir imagen en pestaña nueva (segundo plano) · Copiar imagen · Copiar dirección de la imagen · Guardar imagen |
+  | Vídeo o audio | Copiar dirección del archivo · Guardar archivo |
+  | Campo editable | Deshacer `Ctrl+Z` · Rehacer `Ctrl+Mayús+Z` · Cortar `Ctrl+X` · Copiar `Ctrl+C` · Pegar `Ctrl+V` · Seleccionar todo `Ctrl+A`, cada una activa según lo que permita el campo |
+  | Texto seleccionado (fuera de un campo) | Copiar `Ctrl+C` · Buscar “…” en <buscador elegido> (texto acortado a 24 caracteres; pestaña nueva en primer plano) |
+  | Página (solo si no hay ninguno de los anteriores, como Chrome) | Atrás `Alt+←` · Adelante `Alt+→` (desactivadas si no hay historial) · Recargar `Ctrl+R` · Guardar página |
+- Guardar no pregunta: va al sistema de descargas como cualquier otra descarga (por eso sin «…»).
+- Siempre, como último grupo: Inspeccionar `F12` (abre las herramientas de desarrollo con el elemento bajo el cursor seleccionado).
+
+### `DownloadsPopup` — listado de descargas
+- Se abre desde el menú de opciones → «Descargas», hacia arriba y anclado al botón de opciones, como las demás listas (`PopupBackground`, ancho `popupWidth`). Con él abierto, el botón de opciones lo cierra.
+- **Cabecera** de `popupRowHeight`: «Descargas» en `fontSizeTitle` DemiBold `ink`; a la derecha «Limpiar» (`fontSizeSmall`, `inkSecondary`, `ink` al pasar por encima), solo si hay terminadas, fallidas o canceladas: las quita del listado (los archivos no se borran). Debajo, separador `hairline`.
+- Sin descargas: «Aún no hay descargas» en `inkMuted`, centrado, en una fila de `popupRowHeight`.
+- **Filas** de `downloadRowHeight`, la más reciente arriba, radio `radiusSmall`, hover `tintHover`. Con más filas de las que caben, la lista se desplaza; todo el desplegable tiene `popupMaxHeight` de tope.
+  - Icono `file` (`inkSoft`; `inkMuted` si falló o se canceló), nombre en `fontSize` (`ink`; `inkSecondary` si falló o se canceló) recortado por el centro con «…» para conservar la extensión.
+  - Línea secundaria en `fontSizeSmall` `inkMuted`: en curso «3,2 MB de 10 MB» (solo lo recibido si no se sabe el total); en pausa «En pausa · 3,2 MB de 10 MB»; terminada «10 MB · hace 5 min» («ahora mismo», «hace 2 h», «ayer, 14:32» o «12 oct, 14:32»); fallida «Error: …» en `danger`; cancelada «Cancelada».
+  - En curso y en pausa, bajo el texto, un `ProgressBar` (el mismo del panel de la descarga actual). Sin total conocido, en curso, va indeterminado. En pausa, la barra se atenúa y se detiene.
+  - Acciones: `IconButton` planos de `buttonSizeSmall` con icono `iconSizeSmall` y tooltip. En curso, siempre visibles: pausar/reanudar (`pause`/`play`) y cancelar (`close`, `danger`). Terminada, al pasar por la fila: abrir (`open-file`), mostrar en la carpeta (`folder`) y quitar del listado (`close`). Fallida o cancelada, al pasar por la fila: quitar del listado.
+  - Clic en una terminada: abre el archivo (cursor de mano). Abrir el archivo o la carpeta cierra el listado.
+
 ### `TitleBar`
 - Fondo con el degradado oscuro `titleBarStart → titleBarEnd` (violeta profundo → rosa ciruela). Nada de colores de marca vivos como fondo.
 - Logo con el degradado de marca vivo y nombre en `inkSoft`.
 - Los controles de ventana son `IconButton` con `flat: true`: solo iconos; el círculo aparece al pasar por encima.
-- Solo marca y controles de ventana. Toda la barra es zona de arrastre; doble clic maximiza.
+- Solo marca y controles de ventana. Toda la barra es zona de arrastre; doble clic maximiza. En pantalla completa no se arrastra ni maximiza (además, está oculta).
+
+### Pantalla completa
+Dos modos independientes. Con cualquiera de ellos la ventana pasa a pantalla completa; al salir de ambos vuelve a su estado anterior (normal o maximizada). `ResizeHandles` no existe en pantalla completa.
+- **De página** (la pide la página, p. ej. el botón de un vídeo; se acepta siempre): la página ocupa toda la ventana. Se ocultan la barra de título, los controles inferiores, el mini reproductor, la búsqueda en la página (se cierra) y el indicador de zoom; las listas abiertas se cierran. Ctrl+F no abre la búsqueda.
+  - Sale con **Esc** (también con el foco fuera de la página), con el botón del propio vídeo o cuando lo decide la página. Cambiar de pestaña o cerrar la que está en pantalla completa también sale. Una pestaña en segundo plano que la pida sale al momento.
+- **De ventana** (**F11**, alterna): se ocultan la barra de título y los controles inferiores (con el mini reproductor); la página ocupa todo. Al llevar el ratón a la franja inferior (`fullscreenRevealEdge`, 4 px) los controles aparecen flotando (fundido y desplazamiento, `durationBase`) y se esconden al alejarse de ellos. Siguen visibles mientras se escribe en la dirección (Ctrl+L los muestra) o hay una lista suya abierta. La búsqueda y el zoom funcionan igual, pegados al borde superior.
+  - Sale solo con **F11**: Esc queda para la página y las listas (cerrar un diálogo web, una lista o la búsqueda no debe sacar de la pantalla completa).
+  - Un vídeo puede entrar en pantalla completa de página desde F11; al salir de ella se vuelve a F11. F11 durante la de página sale de las dos.
+- **Aviso** (`FullscreenHint`): al entrar, una píldora centrada arriba (a `floatingMargin`) de `controlHeight`, degradado `controlsStart → controlsEnd`, borde `hairline` y texto `ink`: «Pulsa Esc para salir de la pantalla completa» (página) o «Pulsa F11 para salir de la pantalla completa» (ventana). Aparece con fundido y desplazamiento (`durationBase`), se queda `fullscreenHintHold` (3 s) y se desvanece. No recibe clics. Desaparece al salir.
 
 ---
+
+### `DevToolsWindow` — herramientas de desarrollo (F12)
+- **Ventana aparte**, una por pestaña: F12 la abre o la cierra (también desde la propia ventana), «Inspeccionar» del menú contextual la abre con el elemento seleccionado. Se cierra sola al cerrar su pestaña o la ventana principal. Mientras no está abierta no existe: no gasta memoria.
+- **Estética propia, distinta a propósito del resto de Mitis:** negro puro, blanco y un acento fuerte, sin los violetas y rosas de la marca; es una herramienta de trabajo y no debe confundirse con la página. Tokens `devtools*`, iguales en todos los temas:
+  | Token | Valor | Uso |
+  |---|---|---|
+  | `devtoolsBg` | `#000000` | Marco de la ventana y fondo del panel |
+  | `devtoolsSurface` | `#161616` | Botones en reposo; barras del panel |
+  | `devtoolsSurfaceHover` | `#262626` | Superficies elevadas del panel |
+  | `devtoolsLine` | blanco 16 % | Borde de la ventana y del panel; separadores del panel |
+  | `devtoolsInk` | `#ffffff` | Título e iconos; texto del panel |
+  | `devtoolsInkSoft` | blanco 62 % | Texto secundario del panel |
+  | `devtoolsAccent` | `#00e5ff` | Etiqueta «DevTools», botones al pasar por encima, selección y foco del panel |
+  | `devtoolsOnAccent` | `#000000` | Texto e iconos sobre el acento |
+  | `devtoolsDanger` | `#ff3b30` | Botón cerrar al pasar por encima |
+- **Ventana** sin marco del sistema, esquinas de `devtoolsRadius` (rectas maximizada), borde `devtoolsLine`. Se mueve arrastrando la barra, doble clic maximiza y se redimensiona por los bordes (`ResizeHandles`).
+- **Barra** de `devtoolsTitleBarHeight`: a la izquierda, la etiqueta en píldora de acento (icono `devtools` y «DevTools» en Black, `devtoolsOnAccent`) y el título de la página en Bold `devtoolsInk`; a la derecha, minimizar, maximizar y cerrar: círculos de `devtoolsButtonSize` en `devtoolsSurface` que al pasar por encima se llenan de acento (cerrar, de `devtoolsDanger`) con el icono en negro. Tooltip con atajo (cerrar: F12).
+- **Panel**: el de Chromium, separado `devtoolsInset` del borde para no tapar las esquinas, con borde `devtoolsLine` y radio `radiusSmall`. Se fuerza en oscuro y se tiñe con los mismos tokens, con letra gruesa (600): ver `assets/scripts/devtools.js`.
 
 ## Reglas de implementación
 

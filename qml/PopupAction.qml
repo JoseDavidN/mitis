@@ -57,6 +57,8 @@ Item {
         cursorShape: Qt.PointingHandCursor
     }
     TapHandler {
+        // Agarre exclusivo: si no, lo que hay debajo recibe también el clic
+        gesturePolicy: TapHandler.ReleaseWithinBounds
         onTapped: root.triggered()
     }
 }
