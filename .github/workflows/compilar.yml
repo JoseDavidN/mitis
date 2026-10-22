@@ -20,14 +20,19 @@ on:
         default: windows
 
 env:
-  # La Qt más reciente (el mínimo es la 6.8). La variable del repositorio
-  # QT_VERSION la fija (p. ej. para usar Qt con códecs).
-  QT_VERSION: ${{ vars.QT_VERSION || '6.12.*' }}
+  # Qt 6.11.3 (el mínimo es la 6.8; en desarrollo, la 6.11 de Arch). No la
+  # más alta: Qt WebEngine 6.11.3 y 6.12.0 usan el mismo Chromium (140),
+  # pero la 6.11.3 lleva parches de seguridad hasta el 155 y la 6.12.0 solo
+  # hasta el 147 (comprobado en 2026-10). Al cambiar de versión, mirar el
+  # archivo CHROMIUM_VERSION de qtwebengine en esa etiqueta. La variable del
+  # repositorio QT_VERSION la fija (p. ej. para usar Qt con códecs).
+  QT_VERSION: ${{ vars.QT_VERSION || '6.11.3' }}
   # Desde la 6.11, Qt reorganizó su repositorio de descargas y aqtinstall
   # 3.3.0 (el último publicado) no sabe instalarla en Windows («Failed to
   # locate XML data»). Su versión en desarrollo sí («Support Qt 6.11+ for
   # Windows X64»): se instala desde este commit fijo (comprobado con
-  # 6.12.0). Quitar cuando salga aqtinstall 3.4.
+  # 6.12.0, que tiene el mismo formato que la 6.11.3). Quitar cuando salga
+  # aqtinstall 3.4.
   AQT_SOURCE: "git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7"
   QT_MODULES: "qtwebengine qtwebchannel qtpositioning"
   # Qt WebEngine con códecs propietarios (H.264, AAC), compilado aparte
