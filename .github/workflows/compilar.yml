@@ -20,12 +20,15 @@ on:
         default: windows
 
 env:
-  # Qt 6.10 (el mínimo es la 6.8; en desarrollo, 6.11): desde la 6.11 Qt
-  # reorganizó su repositorio de descargas y aqtinstall 3.3.0, el último
-  # publicado, aún no sabe instalarla en Windows («Failed to locate XML
-  # data»). Subir a 6.11 cuando salga aqtinstall 3.4. La variable del
-  # repositorio QT_VERSION la fija (p. ej. para usar Qt con códecs).
-  QT_VERSION: ${{ vars.QT_VERSION || '6.10.*' }}
+  # La Qt más reciente (el mínimo es la 6.8). La variable del repositorio
+  # QT_VERSION la fija (p. ej. para usar Qt con códecs).
+  QT_VERSION: ${{ vars.QT_VERSION || '6.12.*' }}
+  # Desde la 6.11, Qt reorganizó su repositorio de descargas y aqtinstall
+  # 3.3.0 (el último publicado) no sabe instalarla en Windows («Failed to
+  # locate XML data»). Su versión en desarrollo sí («Support Qt 6.11+ for
+  # Windows X64»): se instala desde este commit fijo (comprobado con
+  # 6.12.0). Quitar cuando salga aqtinstall 3.4.
+  AQT_SOURCE: "git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7"
   QT_MODULES: "qtwebengine qtwebchannel qtpositioning"
   # Qt WebEngine con códecs propietarios (H.264, AAC), compilado aparte
   # (docs/codecs.md): release con los archivos. Vacío: el Qt oficial, sin códecs
@@ -56,6 +59,7 @@ jobs:
           target: desktop
           arch: linux_gcc_64
           modules: ${{ env.QT_MODULES }}
+          aqtsource: ${{ env.AQT_SOURCE }}
           cache: true
           cache-key-prefix: ${{ env.QT_CACHE_PREFIX }}
 
@@ -102,6 +106,7 @@ jobs:
           target: desktop
           arch: win64_msvc2022_64
           modules: ${{ env.QT_MODULES }}
+          aqtsource: ${{ env.AQT_SOURCE }}
           cache: true
           cache-key-prefix: ${{ env.QT_CACHE_PREFIX }}
 
@@ -176,6 +181,7 @@ jobs:
           target: desktop
           arch: clang_64
           modules: ${{ env.QT_MODULES }}
+          aqtsource: ${{ env.AQT_SOURCE }}
           cache: true
           cache-key-prefix: ${{ env.QT_CACHE_PREFIX }}
 
