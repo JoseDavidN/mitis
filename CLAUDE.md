@@ -52,7 +52,7 @@ qml/            Interfaz. Todos los archivos planos en esta carpeta.
   BottomBar.qml       Controles inferiores flotantes: navegación, dirección, pestañas, marcadores, opciones
   AddressBar.qml      Campo de dirección/búsqueda, con sugerencias de marcadores e historial
   TabsPopup.qml       Lista desplegable de pestañas
-  OptionsPopup.qml    Menú de opciones (ventana privada, historial, descargas, configuración)
+  OptionsPopup.qml    Menú de opciones (ventana privada, historial, descargas, perfil, configuración)
   BookmarksPopup.qml  Lista de marcadores: guardar la página actual (Ctrl+D), buscar, abrir, quitar
   HistoryPopup.qml    Historial (Opciones → Historial): lo visitado, reabrir la última cerrada, ir a Configuración
   PageRow.qml         Fila de una página guardada (favicon, título, detalle, quitar)
@@ -78,6 +78,7 @@ qml/            Interfaz. Todos los archivos planos en esta carpeta.
   MiniPlayer.qml      Mini reproductor sobre la barra de búsqueda
   FindBar.qml         Buscar en la página (Ctrl+F)
   ZoomIndicator.qml   Indicador de zoom (arriba a la derecha, se cierra solo)
+  Avatar.qml          Avatar del perfil: foto recortada en círculo (Canvas) o inicial sobre su color
   MemoryPanel.qml     Panel de memoria (desarrollo, Shift+Esc): total, por tipo de proceso y por pestaña
   News.qml            Singleton: noticias de tecnología (RSS), compartidas por todas las pestañas
   TextButton.qml      Botón con texto (primary = degradado de marca; danger = acción arriesgada)
@@ -101,7 +102,7 @@ tools/codecs/   Compilar Qt WebEngine con códecs propietarios (H.264, AAC) para
 tools/          medir_ram.py: mide la RAM de Mitis, Chrome o Firefox con las páginas de paginas.txt
 installer/      Instalador de Windows (proyecto CMake aparte, Win32 + GDI+, sin Qt): src/main.cpp (ventana),
                 src/instalacion.* (extraer, accesos, registro, desinstalar), empaquetar.ps1 (pega el ZIP al .exe)
-assets/branding/ Logos para el instalador (startcode.png)
+assets/branding/ Icono provisional de Mitis (mitis.svg → mitis.png, mitis.ico; mitis.rc lo pone en Mitis.exe) y logo de StartCode para el instalador
 packaging/macos/ Info.plist.in (abre http/https y HTML: navegador predeterminado)
 packaging/linux/ PKGBUILD (Arch, mitis-git), appimage.sh (+ apprun-sandbox.sh), mitis.desktop, mitis.svg (icono provisional)
 .github/workflows/compilar.yml  Compila en Linux, Windows y macOS; instalador y .dmg; release con etiqueta v*
@@ -109,7 +110,7 @@ packaging/linux/ PKGBUILD (Arch, mitis-git), appimage.sh (+ apprun-sandbox.sh), 
 
 ## Diseño de la interfaz
 
-- **Arriba:** barra de título con el icono y el nombre "Mitis" a la izquierda, y minimizar/maximizar/cerrar a la derecha. Nada más. Se arrastra para mover y con doble clic maximiza.
+- **Arriba:** barra de título con el icono y el nombre "Mitis" a la izquierda, y a la derecha el avatar del perfil (abre Configuración → Perfil; no en ventanas privadas) y minimizar/maximizar/cerrar. Nada más. Se arrastra para mover y con doble clic maximiza.
 - **Abajo:** controles independientes que flotan sobre la página, **sin barra ni fondo**: atrás, adelante, recargar, campo de dirección, pestañas, marcadores y opciones. La página llega hasta el borde inferior de la ventana y cada control lleva su propio fondo y borde, sin sombra. El progreso de carga va dentro del campo de dirección.
 - Botones redondeados y flotantes (`IconButton`). Las listas desplegables de la barra inferior se abren hacia arriba.
 
@@ -158,7 +159,7 @@ packaging/linux/ PKGBUILD (Arch, mitis-git), appimage.sh (+ apprun-sandbox.sh), 
 - Textos de la interfaz en español.
 - Mensajes de commit en español, en imperativo ("Añade...", "Corrige...").
 - Un componente de terceros nuevo (biblioteca, fuente, iconos, lista descargada): añadirlo a `licencias/AVISOS.md` con su licencia y, si se distribuye, su texto en `licencias/`. Qt siempre enlazado dinámicamente (LGPL).
-- **Versiones y cambios:** la versión solo se cambia en `project(VERSION)` de `CMakeLists.txt`. Todo cambio que note el usuario se apunta en `CHANGELOG.md`, sección «Sin publicar», en el mismo commit y redactado para usuarios. Para publicar: `docs/versiones.md`.
+- **Versiones y cambios:** la versión solo se cambia en `project(VERSION)` de `CMakeLists.txt`; la etapa, en `MITIS_VERSION_SUFFIX` (`-beta`: versión 0.5.0-beta y «Beta» en la barra de título y el instalador; vacío en las versiones finales). Todo cambio que note el usuario se apunta en `CHANGELOG.md`, sección «Sin publicar», en el mismo commit y redactado para usuarios. Para publicar: `docs/versiones.md`.
 
 ## Cómo verificar cambios
 

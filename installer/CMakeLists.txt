@@ -32,6 +32,7 @@ target_include_directories(miniz PUBLIC ${miniz_SOURCE_DIR})
 # Recursos: manifiesto, fuente Nunito y logo de StartCode (rutas absolutas)
 set(MITIS_FUENTE "${CMAKE_CURRENT_SOURCE_DIR}/../assets/fonts/Nunito.ttf")
 set(MITIS_STARTCODE "${CMAKE_CURRENT_SOURCE_DIR}/../assets/branding/startcode.png")
+set(MITIS_ICONO "${CMAKE_CURRENT_SOURCE_DIR}/../assets/branding/mitis.ico")
 set(MITIS_MANIFIESTO "${CMAKE_CURRENT_SOURCE_DIR}/instalador.manifest")
 configure_file(recursos.rc.in "${CMAKE_CURRENT_BINARY_DIR}/recursos.rc")
 

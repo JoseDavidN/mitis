@@ -23,6 +23,7 @@ Window {
     color: Theme.bgBase
     title: (currentView && currentView.title ? currentView.title + " — " : "")
            + (privateMode ? "Mitis (ventana privada)" : "Mitis")
+           + (Qt.application.version.indexOf("beta") >= 0 ? " Beta" : "")
 
     // Ventana privada: perfil sin disco, sin historial ni sesión guardada
     property bool privateMode: false
@@ -762,6 +763,7 @@ Window {
         id: titleBar
         window: win
         privateMode: win.privateMode
+        onProfileRequested: win.openSettings("profile")
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
@@ -1053,6 +1055,8 @@ Window {
                 win.openPrivateWindow()
             else if (key === "settings")
                 win.openSettings()
+            else if (key === "profile")
+                win.openSettings("profile")
             else if (key === "memory")
                 win.toggleMemoryPanel()
         }

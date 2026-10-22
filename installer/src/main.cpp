@@ -49,6 +49,7 @@ constexpr int Ancho = 480;
 constexpr int Alto = 340;
 
 // Recursos (recursos.rc.in)
+constexpr int RecursoIcono = 100;
 constexpr int RecursoFuente = 101;
 constexpr int RecursoStartCode = 102;
 
@@ -176,7 +177,9 @@ void dibujar(HDC hdc, int ancho, int alto)
     const RectF logo = rectangulo((Ancho - 64) / 2.0f, 46, 64, 64);
     LinearGradientBrush marca(logo, Brand1, Brand2, LinearGradientModeForwardDiagonal);
     g.FillEllipse(&marca, logo);
-    texto(g, L"Mitis", rectangulo(0, 118, Ancho, 40), 28, FontStyleBold, Ink);
+    // «Mitis Beta» mientras la versión sea beta (0.5.0-beta)
+    const bool beta = std::string(MITIS_VERSION).find("beta") != std::string::npos;
+    texto(g, beta ? L"Mitis Beta" : L"Mitis", rectangulo(0, 118, Ancho, 40), 28, FontStyleBold, Ink);
 
     // Estado
     std::wstring linea;
@@ -375,7 +378,7 @@ int WINAPI wWinMain(HINSTANCE instancia, HINSTANCE, PWSTR linea, int)
     clase.lpfnWndProc = procedimiento;
     clase.hInstance = instancia;
     clase.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-    clase.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
+    clase.hIcon = LoadIconW(instancia, MAKEINTRESOURCEW(RecursoIcono));
     clase.lpszClassName = L"MitisInstalador";
     RegisterClassExW(&clase);
 

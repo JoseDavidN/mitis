@@ -13,6 +13,10 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS Quick Network Sql WebEngineCore WebEngi
 
 qt_standard_project_setup(REQUIRES 6.8)
 
+# Etapa de la versión: con "-beta", Mitis se presenta como beta (versión
+# 0.5.0-beta, «Beta» en la barra de título). Vacío en las versiones finales.
+set(MITIS_VERSION_SUFFIX "-beta" CACHE STRING "Sufijo de la versión (-beta, vacío en las finales)")
+
 # Windows: <windows.h> (memorymonitor.cpp) no debe definir min/max, y MSVC
 # debe leer el código como UTF-8 (textos con tildes)
 if(WIN32)
@@ -75,6 +79,17 @@ qt_add_resources(mitis "icons"
 )
 
 # Scripts que Mitis inyecta en las páginas (puente multimedia), en :/scripts
+# Icono de la aplicación (provisional): ventana en todos los sistemas
+# (:/branding/mitis.png) y, en Windows, el del ejecutable
+qt_add_resources(mitis "branding"
+    PREFIX "/branding"
+    BASE assets/branding
+    FILES assets/branding/mitis.png
+)
+if(WIN32)
+    target_sources(mitis PRIVATE assets/branding/mitis.rc)
+endif()
+
 qt_add_resources(mitis "scripts"
     PREFIX "/scripts"
     BASE assets/scripts
@@ -128,6 +143,7 @@ set(MITIS_QML_FILES
     qml/CheckMark.qml
     qml/PageRow.qml
     qml/MemoryPanel.qml
+    qml/Avatar.qml
     qml/BookmarksPopup.qml
     qml/HistoryPopup.qml
     qml/ResizeHandles.qml
@@ -155,7 +171,7 @@ qt_add_qml_module(mitis
 )
 
 target_compile_definitions(mitis PRIVATE
-    MITIS_VERSION="${PROJECT_VERSION}"
+    MITIS_VERSION="${PROJECT_VERSION}${MITIS_VERSION_SUFFIX}"
     # Ruta a qml/ en el código fuente, usada por el modo desarrollo (--dev)
     MITIS_QML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/qml"
     # Iconos desde el código fuente en modo desarrollo

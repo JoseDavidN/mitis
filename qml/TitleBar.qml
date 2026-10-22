@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 import QtQuick.Window
 
 // Barra de título de Mitis: marca a la izquierda y controles de ventana
@@ -10,6 +11,12 @@ Rectangle {
     required property Window window
     // Ventana privada: lo indica junto al nombre
     property bool privateMode: false
+
+    // Versión de prueba («0.5.0-beta»): se marca junto al nombre
+    readonly property bool beta: Qt.application.version.indexOf("beta") >= 0
+
+    // Pulsó su avatar (abre Configuración → Perfil)
+    signal profileRequested()
 
     readonly property bool maximized: window.visibility === Window.Maximized
     // En pantalla completa la ventana no se mueve ni se maximiza desde aquí
@@ -79,6 +86,26 @@ Rectangle {
             font.weight: Font.DemiBold
             anchors.verticalCenter: parent.verticalCenter
         }
+        // «Beta» mientras la versión lo sea (CMakeLists.txt: MITIS_VERSION_SUFFIX)
+        Rectangle {
+            visible: root.beta
+            anchors.verticalCenter: parent.verticalCenter
+            width: betaText.width + 2 * Theme.spacing
+            height: Theme.logoSize
+            radius: height / 2
+            color: Theme.tintActive
+            border.width: 1
+            border.color: Theme.hairlineStrong
+
+            Text {
+                id: betaText
+                anchors.centerIn: parent
+                text: "Beta"
+                color: Theme.inkSecondary
+                font.pixelSize: Theme.fontSizeSmall
+                font.weight: Font.Bold
+            }
+        }
         // «Privada», en píldora con el color de la marca
         Rectangle {
             visible: root.privateMode
@@ -112,8 +139,42 @@ Rectangle {
         }
     }
 
+    // Avatar del perfil, delante de los controles de ventana (no en las
+    // ventanas privadas: no son del perfil)
+    Item {
+        visible: !root.privateMode
+        anchors.right: windowControls.left
+        anchors.rightMargin: Theme.spacing
+        anchors.verticalCenter: parent.verticalCenter
+        width: Theme.titleButtonSize
+        height: Theme.titleButtonSize
+
+        Avatar {
+            anchors.centerIn: parent
+            size: Theme.logoSize
+            name: Settings.profileName
+            photo: Settings.profilePhoto
+            colorKey: Settings.profileColor
+            scale: avatarHover.hovered ? Theme.hoverScale : 1
+            Behavior on scale { NumberAnimation { duration: Theme.durationFast } }
+        }
+        HoverHandler {
+            id: avatarHover
+            cursorShape: Qt.PointingHandCursor
+        }
+        TapHandler {
+            onTapped: root.profileRequested()
+        }
+        Tooltip {
+            text: Settings.profileName !== "" ? Settings.profileName + " · Perfil" : "Perfil"
+            below: true
+            visible: avatarHover.hovered
+        }
+    }
+
     // Controles de ventana: solo el icono; el círculo aparece al pasar por encima
     Row {
+        id: windowControls
         anchors.right: parent.right
         anchors.rightMargin: Theme.margin
         anchors.verticalCenter: parent.verticalCenter

@@ -69,6 +69,13 @@ class Settings : public QObject
     // "microphone", "notifications", "clipboard", "screen"
     Q_PROPERTY(QStringList blockedPermissions READ blockedPermissions WRITE setBlockedPermissions NOTIFY blockedPermissionsChanged)
 
+    // Perfil (solo en este equipo): nombre, foto (dirección file://) y color
+    // del avatar (clave de Theme.avatarColors). Son datos del usuario, como
+    // los permisos: resetPreferences() no los borra
+    Q_PROPERTY(QString profileName READ profileName WRITE setProfileName NOTIFY profileNameChanged)
+    Q_PROPERTY(QString profilePhoto READ profilePhoto WRITE setProfilePhoto NOTIFY profilePhotoChanged)
+    Q_PROPERTY(QString profileColor READ profileColor WRITE setProfileColor NOTIFY profileColorChanged)
+
     // Tema de la interfaz: "nocturno" (de serie), "oscuro" o "claro" (Theme.qml)
     Q_PROPERTY(QString theme READ theme WRITE setTheme NOTIFY themeChanged)
 
@@ -132,6 +139,12 @@ public:
     void setAutoplay(bool value);
     QStringList blockedPermissions() const;
     void setBlockedPermissions(const QStringList &value);
+    QString profileName() const;
+    void setProfileName(const QString &value);
+    QString profilePhoto() const;
+    void setProfilePhoto(const QString &value);
+    QString profileColor() const;
+    void setProfileColor(const QString &value);
     QString theme() const;
     void setTheme(const QString &value);
     bool blockAds() const;
@@ -175,6 +188,9 @@ signals:
     void blockPopupsChanged();
     void autoplayChanged();
     void blockedPermissionsChanged();
+    void profileNameChanged();
+    void profilePhotoChanged();
+    void profileColorChanged();
     void themeChanged();
     void blockAdsChanged();
     void stripTrackingParamsChanged();

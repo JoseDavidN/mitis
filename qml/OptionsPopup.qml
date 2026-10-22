@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
+import Mitis.Core
 
 // Menú de opciones. Lo que aún no está disponible sale como «Próximamente».
 Popup {
@@ -11,10 +12,11 @@ Popup {
 
     // Cada opción: { key, label, icon, available, shortcut (opcional) }
     readonly property var options: [
+        // Con el nombre del perfil, si tiene; el icono es su avatar
+        { key: "profile", label: Settings.profileName || "Perfil", icon: "profile", available: true },
         { key: "private", label: "Nueva ventana privada", icon: "private", available: true, shortcut: "Ctrl+Shift+N" },
         { key: "history", label: "Historial", icon: "history", available: true },
         { key: "downloads", label: "Descargas", icon: "downloads", available: true },
-        { key: "profile", label: "Perfil", icon: "profile", available: false },
         { key: "memory", label: "Uso de memoria", icon: "memory", available: true, shortcut: "Shift+Esc" },
         { key: "settings", label: "Configuración", icon: "settings", available: true }
     ].filter(option => developer || option.key !== "memory")
@@ -61,6 +63,15 @@ Popup {
                     anchors.verticalCenter: parent.verticalCenter
                     name: row.modelData.icon ?? ""
                     color: row.modelData.available ? Theme.inkSoft : Theme.inkMuted
+                    opacity: row.modelData.key === "profile" ? 0 : 1
+                }
+                Avatar {
+                    visible: row.modelData.key === "profile"
+                    anchors.centerIn: optionIcon
+                    size: Theme.logoSize
+                    name: Settings.profileName
+                    photo: Settings.profilePhoto
+                    colorKey: Settings.profileColor
                 }
 
                 Text {

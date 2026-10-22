@@ -21,6 +21,7 @@ FocusScope {
 
     // Secciones del índice, en el orden de la página
     readonly property var sections: [
+        { key: "profile", title: "Perfil", icon: "profile" },
         { key: "startup", title: "Al iniciar", icon: "reopen" },
         { key: "appearance", title: "Apariencia e idioma", icon: "appearance" },
         { key: "search", title: "Búsqueda", icon: "search" },
@@ -178,6 +179,7 @@ FocusScope {
 
     function sectionItem(key) {
         switch (key) {
+        case "profile": return profileSection
         case "startup": return startupSection
         case "appearance": return appearanceSection
         case "search": return searchSection
@@ -240,6 +242,7 @@ FocusScope {
         cleared = false
         resetPending = false
         startupField.text = Settings.startupUrl
+        profileNameField.text = Settings.profileName
         refreshSitePermissions()
         forceActiveFocus()
     }
@@ -268,6 +271,14 @@ FocusScope {
         nameFilters: ["Imágenes (*.png *.jpg *.jpeg *.webp *.bmp)"]
         currentFolder: Core.StandardPaths.standardLocations(Core.StandardPaths.PicturesLocation)[0]
         onAccepted: Settings.newTabBackground = selectedFile.toString()
+    }
+
+    FileDialog {
+        id: photoPicker
+        title: "Elegir foto de perfil"
+        nameFilters: ["Imágenes (*.png *.jpg *.jpeg *.webp *.bmp)"]
+        currentFolder: Core.StandardPaths.standardLocations(Core.StandardPaths.PicturesLocation)[0]
+        onAccepted: Settings.profilePhoto = selectedFile.toString()
     }
 
     FolderDialog {
@@ -441,6 +452,68 @@ FocusScope {
             x: root.layoutX + (root.wide ? Theme.settingsNavWidth + Theme.settingsSectionSpacing : 0)
             y: Theme.margin
             spacing: Theme.settingsSectionSpacing
+
+            SettingsSection {
+                id: profileSection
+                title: "Perfil"
+                icon: "profile"
+                description: "Cómo aparece tu perfil en Mitis. Se guarda solo en este equipo."
+
+                // Avatar grande y nombre
+                Item {
+                    width: parent ? parent.width : 0
+                    implicitHeight: Theme.avatarSizeLarge + 2 * Theme.margin
+
+                    Avatar {
+                        id: profileAvatar
+                        x: Theme.margin + Theme.spacing
+                        anchors.verticalCenter: parent.verticalCenter
+                        size: Theme.avatarSizeLarge
+                        name: profileNameField.text.trim()
+                        photo: Settings.profilePhoto
+                        colorKey: Settings.profileColor
+                    }
+                    Column {
+                        anchors.left: profileAvatar.right
+                        anchors.leftMargin: Theme.margin + Theme.spacing
+                        anchors.right: parent.right
+                        anchors.rightMargin: Theme.margin + Theme.spacing
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: Theme.spacing / 2
+
+                        Text {
+                            text: "Nombre"
+                            color: Theme.ink
+                            font.pixelSize: Theme.fontSize
+                            font.weight: Font.DemiBold
+                        }
+                        FormField {
+                            id: profileNameField
+                            width: parent.width
+                            placeholderText: "Tu nombre"
+                            maximumLength: 40
+                            onEditingFinished: Settings.profileName = text
+                        }
+                    }
+                }
+                SettingRow {
+                    title: "Foto"
+                    description: Settings.profilePhoto === ""
+                                 ? "Sin foto se ve tu inicial sobre el color de abajo."
+                                 : Urls.localPath(Settings.profilePhoto).split("/").pop()
+
+                    TextButton {
+                        visible: Settings.profilePhoto !== ""
+                        text: "Quitar"
+                        onClicked: Settings.profilePhoto = ""
+                    }
+                    TextButton {
+                        text: "Elegir foto…"
+                        onClicked: photoPicker.open()
+                    }
+                }
+                AvatarColorRow {}
+            }
 
             SettingsSection {
                 id: startupSection
@@ -1586,6 +1659,92 @@ FocusScope {
 
         HoverHandler {
             id: siteHover
+        }
+    }
+
+    // Color del avatar (sin foto): un círculo por color; el elegido, con anillo
+    component AvatarColorRow: Item {
+        width: parent ? parent.width : 0
+        implicitHeight: colorColumn.implicitHeight + 2 * Theme.margin
+
+        Rectangle {
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: Theme.margin
+            anchors.rightMargin: Theme.margin
+            height: 1
+            color: Theme.line
+        }
+
+        Column {
+            id: colorColumn
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: Theme.margin + Theme.spacing
+            anchors.rightMargin: Theme.margin + Theme.spacing
+            y: Theme.margin
+            spacing: Theme.spacing / 4
+
+            Text {
+                text: "Color"
+                color: Theme.ink
+                font.pixelSize: Theme.fontSize
+                font.weight: Font.DemiBold
+            }
+            Text {
+                width: parent.width
+                text: "El fondo de tu inicial cuando no hay foto."
+                color: Theme.inkMuted
+                font.pixelSize: Theme.fontSizeSmall
+                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+            }
+            Item {
+                width: 1
+                height: Theme.spacing / 2
+            }
+            Flow {
+                width: parent.width
+                spacing: Theme.spacing
+
+                Repeater {
+                    model: Theme.avatarColors
+
+                    delegate: Rectangle {
+                        id: swatch
+
+                        required property var modelData
+                        readonly property bool selected: Settings.profileColor === modelData.key
+
+                        width: Theme.buttonSize
+                        height: Theme.buttonSize
+                        radius: width / 2
+                        color: "transparent"
+                        border.width: 2
+                        border.color: selected ? Theme.focusRing
+                                               : (swatchHover.hovered ? Theme.hairlineHover : "transparent")
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: Theme.buttonSizeSmall
+                            height: Theme.buttonSizeSmall
+                            radius: width / 2
+                            color: swatch.modelData.color
+                        }
+                        HoverHandler {
+                            id: swatchHover
+                            cursorShape: Qt.PointingHandCursor
+                        }
+                        TapHandler {
+                            onTapped: Settings.profileColor = swatch.modelData.key
+                        }
+                        Tooltip {
+                            text: swatch.modelData.label
+                            visible: swatchHover.hovered
+                        }
+                    }
+                }
+            }
         }
     }
 

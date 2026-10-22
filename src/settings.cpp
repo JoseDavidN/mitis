@@ -25,6 +25,9 @@ const QString ImagesKey = QStringLiteral("Content/images");
 const QString BlockPopupsKey = QStringLiteral("Content/blockPopups");
 const QString AutoplayKey = QStringLiteral("Content/autoplay");
 const QString BlockedPermissionsKey = QStringLiteral("Permissions/blocked");
+const QString ProfileNameKey = QStringLiteral("Profile/name");
+const QString ProfilePhotoKey = QStringLiteral("Profile/photo");
+const QString ProfileColorKey = QStringLiteral("Profile/color");
 const QString ThemeKey = QStringLiteral("Appearance/theme");
 const QString BlockAdsKey = QStringLiteral("Blocker/enabled");
 const QString StripTrackingParamsKey = QStringLiteral("Blocker/stripParams");
@@ -313,6 +316,39 @@ void Settings::setBlockedPermissions(const QStringList &value)
         return;
     m_settings.setValue(BlockedPermissionsKey, value);
     emit blockedPermissionsChanged();
+}
+
+QString Settings::profileName() const
+{
+    return m_settings.value(ProfileNameKey).toString();
+}
+
+void Settings::setProfileName(const QString &value)
+{
+    if (store(ProfileNameKey, value.trimmed()))
+        emit profileNameChanged();
+}
+
+QString Settings::profilePhoto() const
+{
+    return m_settings.value(ProfilePhotoKey).toString();
+}
+
+void Settings::setProfilePhoto(const QString &value)
+{
+    if (store(ProfilePhotoKey, value))
+        emit profilePhotoChanged();
+}
+
+QString Settings::profileColor() const
+{
+    return m_settings.value(ProfileColorKey, QStringLiteral("violeta")).toString();
+}
+
+void Settings::setProfileColor(const QString &value)
+{
+    if (store(ProfileColorKey, value))
+        emit profileColorChanged();
 }
 
 QString Settings::theme() const

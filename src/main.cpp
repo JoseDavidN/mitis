@@ -2,6 +2,7 @@
 #include <QFont>
 #include <QFontDatabase>
 #include <QGuiApplication>
+#include <QIcon>
 #include <QLibraryInfo>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -99,6 +100,7 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
     QGuiApplication::setApplicationName("Mitis");
     QGuiApplication::setApplicationVersion(MITIS_VERSION);
+    QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/branding/mitis.png")));
     QGuiApplication::setOrganizationName("Mitis");
     // Con Wayland, el escritorio asocia la ventana a su entrada e icono (mitis.desktop)
     QGuiApplication::setDesktopFileName(QStringLiteral("mitis"));

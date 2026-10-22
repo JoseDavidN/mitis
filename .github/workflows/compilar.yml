@@ -8,7 +8,14 @@ on:
     branches: [main]
     tags: ["v*"]
   pull_request:
+  # A mano (pestaña Actions → Compilar → Run workflow): todo o solo Windows
   workflow_dispatch:
+    inputs:
+      sistemas:
+        description: "Qué compilar"
+        type: choice
+        options: [todos, windows]
+        default: todos
 
 env:
   # La misma versión de Qt que en desarrollo (el mínimo es la 6.8). La variable
@@ -25,6 +32,7 @@ env:
 jobs:
   linux:
     name: Linux
+    if: github.event_name != 'workflow_dispatch' || inputs.sistemas == 'todos'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -116,7 +124,11 @@ jobs:
       - name: Versión
         id: version
         shell: bash
-        run: echo "valor=$(sed -n '/^project(Mitis/,/)/s/^ *VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)" >> "$GITHUB_OUTPUT"
+        # Con el sufijo de la etapa (MITIS_VERSION_SUFFIX: 0.5.0-beta)
+        run: |
+          version=$(sed -n '/^project(Mitis/,/)/s/^ *VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
+          sufijo=$(sed -n 's/^set(MITIS_VERSION_SUFFIX "\([^"]*\)".*/\1/p' CMakeLists.txt)
+          echo "valor=$version$sufijo" >> "$GITHUB_OUTPUT"
 
       - name: Compilar Mitis
         run: |
@@ -144,6 +156,7 @@ jobs:
 
   macos:
     name: macOS (.dmg)
+    if: github.event_name != 'workflow_dispatch' || inputs.sistemas == 'todos'
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4

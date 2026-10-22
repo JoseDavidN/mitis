@@ -5,6 +5,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ## [Sin publicar]
 
+### Añadido
+
+- Icono propio de Mitis (provisional) en el ejecutable, el instalador y la ventana; «Beta» en la barra de título mientras sea una versión de prueba.
+- **Perfil:** Opciones → Perfil (o tu avatar en la barra de título) abre Configuración → Perfil, donde pones tu nombre y una foto o un color. Tu avatar aparece en la barra de título y en el menú de opciones. Se guarda solo en tu equipo.
+
 ## [0.5.0] - 2026-10-22
 
 ### Añadido

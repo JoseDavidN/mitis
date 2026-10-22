@@ -233,6 +233,19 @@ Window (bgBase, sin marco)
 - Busca mientras se escribe. Intro: siguiente; Mayús+Intro: anterior; Esc: cerrar (el teclado vuelve a la página y se quita el resaltado).
 - Atajos globales: Ctrl+F abre (con el texto anterior seleccionado); F3/Ctrl+G siguiente; Mayús+F3/Ctrl+Mayús+G anterior. No se abre en la página de nueva pestaña. Se cierra al cambiar de pestaña.
 
+### Etiqueta «Beta» (barra de título)
+- Mientras la versión sea beta (`MITIS_VERSION_SUFFIX`), junto a «Mitis»: píldora de `logoSize` de alto, `tintActive`, borde `hairlineStrong` y «Beta» Bold `fontSizeSmall` `inkSecondary`. La ventana se titula «… Mitis Beta» y el instalador muestra «Mitis Beta».
+
+### Icono de la aplicación (provisional)
+- `assets/branding/mitis.svg`: círculo con el degradado `brand1 → brand2` y una M blanca de trazo redondeado. De él salen `mitis.png` (256, icono de ventana) y `mitis.ico` (16–256, ejecutable e instalador de Windows) con `rsvg-convert`. Se sustituye cuando esté el definitivo.
+
+### `Avatar` — perfil
+- Círculo con la foto del perfil recortada al centro (sin deformar) o, sin foto, la inicial del nombre en Bold `onBrand` (45 % del tamaño) sobre su color (`Theme.avatarColors`: violeta, rosa, azul, verde, naranja, gris; iguales en todos los temas). Sin nombre ni foto, el icono `profile` en `onBrand`.
+- Tamaños: `logoSize` (18) en la barra de título y el menú de opciones; `avatarSizeLarge` (64) en Configuración → Perfil.
+- Barra de título: a la derecha, delante de los controles de ventana (hueco de `titleButtonSize`); al pasar, escala `hoverScale` y tooltip «Nombre · Perfil». No en las ventanas privadas.
+- Menú de opciones: «Perfil» es la primera opción, con el avatar en lugar del icono y el nombre como texto.
+- Configuración → Perfil (primera sección): avatar grande con el campo «Nombre» (`FormField`, se guarda al terminar de escribir), fila «Foto» («Elegir foto…», «Quitar») y fila «Color» (círculos de `buttonSizeSmall` con anillo de `buttonSize`: `focusRing` el elegido, `hairlineHover` al pasar; tooltip con el nombre del color).
+
 ### `MemoryPanel` — uso de memoria (desarrollo)
 - Solo con las herramientas de desarrollo activadas: Shift+Esc u Opciones → «Uso de memoria». Flota **arriba a la izquierda**, bajo la barra de título (a `floatingMargin` de ella y `margin` del borde), ancho `memoryPanelWidth`, fondo `PopupBackground`. Aparece con fundido y desplazamiento (`durationBase`). No se cierra al usar la página: con su ✕ o el mismo atajo.
 - Cabecera de `popupRowHeight`: icono `memory` en `brandLight1`, «Memoria» y el total Bold `ink`, ✕ plana. Debajo, el número de procesos en `fontSizeSmall` `inkMuted`.

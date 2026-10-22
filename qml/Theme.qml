@@ -219,6 +219,17 @@ QtObject {
     readonly property int settingsSectionSpacing: 32
     readonly property int settingsRowHeight: 60
     readonly property int settingsIconBox: 36
+    // Avatar del perfil: colores para la inicial (iguales en todos los temas,
+    // con texto onBrand encima) y tamaño grande (Configuración → Perfil)
+    readonly property var avatarColors: [
+        { key: "violeta", label: "Violeta", color: "#a855f7" },
+        { key: "rosa", label: "Rosa", color: "#ec4899" },
+        { key: "azul", label: "Azul", color: "#3b82f6" },
+        { key: "verde", label: "Verde", color: "#10b981" },
+        { key: "naranja", label: "Naranja", color: "#f97316" },
+        { key: "gris", label: "Gris", color: "#64748b" }
+    ]
+    readonly property int avatarSizeLarge: 64
     // Tarjeta de un tema en Configuración: ancho y alto de su vista previa
     readonly property int themeTileWidth: 150
     readonly property int themeTilePreviewHeight: 84
