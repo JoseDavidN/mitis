@@ -1,13 +1,13 @@
 pragma Singleton
-import QtCore
 import QtQuick
+import Mitis.Core
 
 import "urls.js" as Urls
 
 // Motor de búsqueda de Mitis: la lista de buscadores, el elegido y uno
 // personalizado. Lo usan la barra de dirección, la página de nueva pestaña,
-// el menú contextual y el editor de accesos rápidos. La elección se guarda
-// entre sesiones (Settings, categoría "Search").
+// el menú contextual y el editor de accesos rápidos. Se elige en la página
+// de Configuración y se guarda entre sesiones (Settings, categoría "Search").
 QtObject {
     id: root
 
@@ -22,13 +22,13 @@ QtObject {
     ]
 
     // Buscador personalizado ("" si no hay). Se cambia con setCustom().
-    property string customName: ""
-    property string customUrl: ""
+    readonly property string customName: Settings.searchCustomName
+    readonly property string customUrl: Settings.searchCustomUrl
     readonly property bool hasCustom: customUrl !== ""
 
     // El elegido: { key, name, url }. Si lo guardado ya no existe, el primero.
     readonly property var current: {
-        const key = _engine
+        const key = Settings.searchEngine
         if (key === "custom" && hasCustom)
             return { key: "custom", name: customName, url: customUrl }
         for (let i = 0; i < engines.length; i++) {
@@ -40,18 +40,8 @@ QtObject {
     readonly property string key: current.key
     readonly property string name: current.name
 
-    // Clave del elegido tal como se guarda
-    property string _engine: "duckduckgo"
-
-    readonly property Settings _settings: Settings {
-        category: "Search"
-        property alias engine: root._engine
-        property alias customName: root.customName
-        property alias customUrl: root.customUrl
-    }
-
     function select(key) {
-        _engine = key
+        Settings.searchEngine = key
     }
 
     // Plantilla válida: http(s), con dominio y con %s. Devuelve la plantilla
@@ -70,9 +60,9 @@ QtObject {
         const template = normalizeTemplate(url)
         if (template === "")
             return false
-        customName = name.trim() || Urls.host(template) || template
-        customUrl = template
-        _engine = "custom"
+        Settings.searchCustomName = name.trim() || Urls.host(template) || template
+        Settings.searchCustomUrl = template
+        Settings.searchEngine = "custom"
         return true
     }
 

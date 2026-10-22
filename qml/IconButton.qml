@@ -15,6 +15,8 @@ Item {
     property bool tooltipBelow: false
     property bool danger: false
     property bool flat: false
+    // Encendido (p. ej. la página actual ya está en marcadores): icono en brandLight1
+    property bool highlighted: false
 
     // Relleno: degradado horizontal. Quien lo coloca puede darle un tramo
     // de un degradado mayor (ver BottomBar)
@@ -78,6 +80,7 @@ Item {
         }
 
         readonly property color tint: !root.enabled ? Theme.inkDisabled
+                                    : root.highlighted ? Theme.brandLight1
                                     : (root.hovered ? (root.danger ? Theme.onBrand : Theme.ink)
                                                     : Theme.inkSoft)
 

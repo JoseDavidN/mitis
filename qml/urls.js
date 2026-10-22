@@ -17,8 +17,11 @@ function resolve(input, template) {
     // Ya trae esquema: https://, file://, about:, etc.
     if (/^[a-z][a-z0-9+.-]*:(\/\/)?\S/i.test(value) && !/^[^:]+:\d+(\/|$)/.test(value))
         return value
-    // localhost, IPs y dominios con punto (opcionalmente con puerto y ruta)
-    if (/^(localhost|\d{1,3}(\.\d{1,3}){3}|[^\s\/.]+(\.[^\s\/.]+)+)(:\d+)?(\/.*)?$/i.test(value))
+    // localhost e IPs: la red local casi nunca tiene https
+    if (/^(localhost|\d{1,3}(\.\d{1,3}){3})(:\d+)?(\/.*)?$/i.test(value))
+        return "http://" + value
+    // Dominios con punto (opcionalmente con puerto y ruta)
+    if (/^[^\s\/.]+(\.[^\s\/.]+)+(:\d+)?(\/.*)?$/i.test(value))
         return "https://" + value
     return searchUrl(value, template)
 }
@@ -34,4 +37,16 @@ function host(address) {
 function favicon(address) {
     var domain = host(address)
     return domain !== "" ? "https://icons.duckduckgo.com/ip3/" + domain + ".ico" : ""
+}
+
+// Ruta local de una URL file:// ("file:///C:/x" → "C:/x" en Windows)
+function localPath(fileUrl) {
+    var path = decodeURIComponent(fileUrl.toString().replace(/^file:\/\//, ""))
+    return /^\/[A-Za-z]:/.test(path) ? path.slice(1) : path
+}
+
+// URL file:// de una ruta local. En Windows la ruta empieza por la unidad
+// (C:/…) y necesita "file:///"
+function fileUrl(path) {
+    return (path.startsWith("/") ? "file://" : "file:///") + path
 }

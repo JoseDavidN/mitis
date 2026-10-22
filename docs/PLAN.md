@@ -70,7 +70,7 @@ Objetivo: que Mitis se vea como un producto propio y no como un prototipo.
 - [x] Diálogos JavaScript propios (alert, confirm, prompt) y selector de archivos. `JsDialog` sobre la página de la pestaña («ejemplo.com dice»), en cola, con el aviso de salir con cambios sin guardar (`beforeunload`); se cancelan al cargar otra página. `<input type=file>` abre el diálogo del sistema (`FilePicker`) con el filtro de tipos de la página.
 - [x] Certificados inválidos: aviso propio antes de continuar. `CertificateDialog` sobre la página de la pestaña, con el host y el motivo en español; «Volver» (la opción segura, vuelve a la página anterior) o «Continuar de todos modos» si se puede. Un host aceptado no vuelve a preguntar en la sesión y `BrowserTab.certificateBypassed` lo indica.
 - [x] DevTools (F12) en ventana aparte. `DevToolsWindow`, una por pestaña, sin marco, redondeada y con paleta propia (negro, blanco y acento cian, letra gruesa), también para el panel de Chromium (`assets/scripts/devtools.js`). F12 abre y cierra; «Inspeccionar» en el menú contextual.
-- [x] Motor de búsqueda configurable. Singleton `SearchEngines` (DuckDuckGo por defecto, Google, Bing, Brave Search, Ecosia, Startpage y uno personalizado con `%s`), guardado entre sesiones; se elige en Opciones → Motor de búsqueda y lo usan la barra de dirección, la nueva pestaña y el menú contextual.
+- [x] Motor de búsqueda configurable. Singleton `SearchEngines` (DuckDuckGo por defecto, Google, Bing, Brave Search, Ecosia, Startpage y uno personalizado con `%s`), guardado entre sesiones; se elige en Configuración → Búsqueda (en la Fase 3, de forma provisional, en Opciones → Motor de búsqueda) y lo usan la barra de dirección, la nueva pestaña y el menú contextual.
 - [x] Contenido protegido (DRM) con **Widevine**, para Netflix, Spotify web, Disney+, Prime Video, etc. Qt WebEngine lo admite pero no lo incluye: la biblioteca de Widevine (`libwidevinecdm`) es de Google y no se puede redistribuir con Mitis.
   - Qt WebEngine de Arch: compilado con Widevine y códecs propietarios (H.264, AAC). Windows y macOS: ver *Códecs propietarios* en la Fase 6.
   - `src/widevine.*` busca la biblioteca que dejaron Google Chrome, Chromium (`chromium-widevine` en Arch) o Firefox en Linux, Windows y macOS, elige la de versión más alta y se la pasa al motor con `--widevine-path` antes de iniciarlo (respeta una ruta puesta a mano en `QTWEBENGINE_CHROMIUM_FLAGS`).
@@ -84,16 +84,28 @@ Objetivo: que Mitis se vea como un producto propio y no como un prototipo.
 
 ## Fase 4 · Persistencia (C++)
 
-- [ ] Ajustes con `QSettings`, expuestos a QML como singleton `Settings`. Migrar las preferencias de la página de nueva pestaña (`NewTabPage.qml`, categoría `NewTab`).
+- [x] Ajustes con `QSettings`, expuestos a QML como singleton `Settings` (`src/settings.*`, módulo `Mitis.Core`, que también funciona en `--dev`). Usan las mismas claves que `Settings` de `QtCore`: lo ya guardado se conserva. Migradas la página de nueva pestaña (`NewTab`), el buscador (`Search`), el listado de descargas (`Downloads`) y los permisos de cámara y micrófono (`Permissions`).
 - [ ] Crear el perfil en C++ (hoy es un `WebEngineProfile` en `Main.qml`, que desde Qt 6.9 avisa de que quedará obsoleto y arranca un instante en modo incógnito antes de pasar a disco). Debe seguir accesible en `--dev`.
-- [ ] Restaurar sesión al abrir: pestañas y pestaña activa. Las pestañas restauradas **no cargan** hasta que se seleccionan.
-- [ ] Historial en SQLite (Qt SQL), con escritura en segundo plano.
-- [ ] Sugerencias en la barra de dirección a partir del historial y los marcadores.
-- [ ] Marcadores: añadir (Ctrl+D), listar, buscar, eliminar. Se conectan al botón ☆ y a su lista (`bookmarksPopup` en `Main.qml`).
-- [ ] Ventana privada (perfil `offTheRecord`).
-- [ ] Página de ajustes en QML.
-  - Mover ahí la elección del **motor de búsqueda**: hoy se elige en Opciones → Motor de búsqueda (`SearchEngineDialog`) de forma provisional. Al hacerlo, quitar esa entrada del menú de opciones y pasar la categoría `Search` de `SearchEngines.qml` al singleton `Settings`.
-  - Opción **«Herramientas de desarrollo»** (desactivada por defecto): solo con ella activa aparecen «Inspeccionar» en el menú contextual y funciona F12. Hoy están siempre disponibles (`ContextMenu.qml`, atajo F12 en `Main.qml`).
+- [x] Restaurar sesión al abrir: pestañas y pestaña activa. Las pestañas restauradas **no cargan** hasta que se seleccionan. Se guarda en `Settings` (`Session/tabs`: dirección, título, icono, fijada y la activa) un segundo después de cada cambio y al cerrar; `BrowserTab.deferred` + `load()`. Se puede desactivar en Configuración → Al iniciar.
+- [x] Historial en SQLite (Qt SQL), con escritura en segundo plano. Singleton `History` (`src/history.*`): una fila por dirección (título, última visita, visitas) en `history.sqlite`; escribe en un hilo propio (WAL) y lee en el de la interfaz. Cuenta cada página a la que se llega (`BrowserTab.pageLoaded`, también los cambios de dirección sin recarga). Nunca desde una ventana privada.
+  - Opciones → Historial (`HistoryPopup`, también Ctrl+H): solo el listado de lo visitado (abrir, quitar), «Reabrir la última pestaña cerrada» y «Historial en Configuración».
+  - Configuración → Borrar datos de navegación (historial y listado de descargas por periodo; cookies, caché y permisos de sitios, enteros).
+- [x] Sugerencias en la barra de dirección a partir del historial y los marcadores: al escribir, hasta 6 (marcadores primero; del historial, primero las que empiezan por lo escrito y las más visitadas). Flechas para elegir, Enter para abrir, Esc para cerrarlas. Pendiente: no distingue acentos («pag» no encuentra «Página»).
+- [x] Marcadores: añadir (Ctrl+D), listar, buscar, eliminar. Singleton `Bookmarks` (`src/bookmarks.*`, `bookmarks.sqlite`) y `BookmarksPopup` en el botón de marcadores, que se ilumina si la página está guardada.
+- [x] Ventana privada (perfil `offTheRecord`): Opciones → Nueva ventana privada o Ctrl+Shift+N. Otra ventana `Main` con «Privada» en la barra de título; su perfil (`BrowserProfile.privateProfile`, en memoria) se crea con la primera y se descarta al cerrar la última. No guarda historial, sesión ni sus descargas en el listado.
+- [x] Página de ajustes en QML. `SettingsPage`: Opciones → Configuración; página propia sobre las pestañas (no es una pestaña), con índice de secciones, en el estilo del tema. Se cierra con Esc, con la ✕ o al cambiar de pestaña.
+  - [x] Elección del **motor de búsqueda** en la sección Búsqueda (lista y buscador personalizado). Quitados `SearchEngineDialog` y su entrada del menú de opciones; la categoría `Search` pasa al singleton `Settings`.
+  - [x] Opción **«Herramientas de desarrollo»** (sección Desarrollo, desactivada por defecto): solo con ella activa aparecen «Inspeccionar» en el menú contextual y funciona F12. Al desactivarla se cierran las ventanas de DevTools abiertas.
+  - [x] Además: imagen de fondo de la nueva pestaña, carpeta de descargas y «Acerca de Mitis» (versión, Chromium, si hay Widevine).
+  - [x] Al iniciar (continuar donde lo dejaste) e Historial y privacidad (borrar datos de navegación por periodo), con las tareas de sesión e historial.
+  - [x] Ajustes básicos de un navegador, aplicados al momento y sin coste de memoria (los aplica el motor o el interceptor):
+    - Al iniciar: continuar donde lo dejaste, pestaña nueva o una página concreta.
+    - Apariencia e idioma: zoom predeterminado (Ctrl+0 vuelve a él), modo oscuro en las páginas (`forceDarkMode`), idiomas de las páginas (`Accept-Language`). El tamaño de letra no: `WebEngineSettings` no lo ofrece en QML.
+    - Privacidad: bloquear cookies de terceros (filtro del almacén de cookies), borrar cookies y caché al cerrar (y al abrir, por si el cierre no terminó), No rastrear (`DNT` y `Sec-GPC`), ocultar la IP local en WebRTC.
+    - Seguridad: conexiones seguras (`RequestInterceptor` pide por https las páginas http; si falla la conexión o el certificado, vuelve a http para ese host en la sesión; no en la red local), bloquear ventanas emergentes sin clic, JavaScript.
+    - Permisos de sitios: bloquear por tipo sin preguntar (ubicación, cámara, micrófono, notificaciones, portapapeles, pantalla) y lista de lo decidido para cada sitio, con «olvidar».
+    - Contenido: imágenes y reproducción automática. Descargas: preguntar en qué carpeta guardar. Acerca de: restablecer la configuración (se conservan los datos).
+    - Suspender pestañas y los flags de Chromium quedan para la Fase 5.
 
 **Criterios:** cerrar y abrir Mitis deja todo como estaba, y el arranque con 30 pestañas restauradas usa casi la misma RAM que con una.
 

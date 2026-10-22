@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Window
+import Mitis.Core
 
 import "urls.js" as Urls
 
@@ -20,13 +21,140 @@ Window {
     visible: true
     flags: Qt.Window | Qt.FramelessWindowHint
     color: Theme.bgBase
-    title: currentView && currentView.title ? currentView.title + " — Mitis" : "Mitis"
+    title: (currentView && currentView.title ? currentView.title + " — " : "")
+           + (privateMode ? "Mitis (ventana privada)" : "Mitis")
+
+    // Ventana privada: perfil sin disco, sin historial ni sesión guardada
+    property bool privateMode: false
+    // Ventanas privadas abiertas desde esta; cada una se quita al cerrarse
+    property var privateWindows: []
+    // Ventana que abrió esta (solo en las privadas)
+    property Window opener: null
+    // Los atajos son de aplicación (así funcionan también con el foco en la
+    // ventana de DevTools o sin gestor de ventanas que active ninguna), pero
+    // con varias ventanas solo los atiende una: la activa o, si no hay
+    // ninguna activa, la principal
+    readonly property bool ownsShortcuts: active
+        || (!privateMode && !privateWindows.some(window => window && window.active))
+    // Se está cerrando: lo que pase con las pestañas ya no es la sesión
+    property bool closingWindow: false
 
     // Las herramientas de desarrollo se cierran antes: si siguieran abiertas,
     // la aplicación no se daría por cerrada y quedaría sin ventanas
     onClosing: {
         for (let i = 0; i < views.count; i++)
             closeDevTools(views.itemAt(i))
+        if (privateMode) {
+            // Fuera la ventana y, con la última privada, su perfil
+            closingWindow = true
+            Qt.callLater(win.destroy)
+            return
+        }
+        saveSession()
+        if (Settings.clearOnExit) {
+            BrowserProfile.clearCookies()
+            BrowserProfile.clearCache()
+        }
+        closingWindow = true
+        // Si queda abierta una privada, Mitis sigue: las pestañas de esta no
+        // deben quedarse vivas (ni sonando) en una ventana oculta
+        if (privateWindows.some(window => window && window.visible))
+            tabs.clear()
+    }
+
+    Component.onCompleted: {
+        if (privateMode) {
+            BrowserProfile.retainPrivate()
+            openNewTabPage()
+        } else if (Settings.startupMode === "page" && Settings.startupUrl !== "") {
+            newTab(Settings.startupUrl)
+        } else if (!(Settings.startupMode === "restore" && restoreSession())) {
+            openNewTabPage()
+        }
+    }
+    Component.onDestruction: {
+        if (!privateMode)
+            return
+        BrowserProfile.releasePrivate()
+        const main = opener as Main
+        if (main)
+            main.privateWindows = main.privateWindows.filter(window => window !== win)
+    }
+
+    function openPrivateWindow() {
+        const component = Qt.createComponent("Main.qml")
+        const created = component.createObject(null, { privateMode: true, opener: win }) as Window
+        if (!created) {
+            console.warn("[Mitis] No se pudo abrir la ventana privada:", component.errorString())
+            return
+        }
+        privateWindows = privateWindows.concat([created])
+        created.requestActivate()
+    }
+
+    // ── Sesión ───────────────────────────────────────────────────────
+    // Las pestañas (dirección, título, icono, fijada) y la activa, en
+    // Settings ("Session/tabs"). Se guarda un momento después de cada cambio
+    // y al cerrar. Al abrir, solo carga la activa: las demás esperan a que se
+    // seleccionen (BrowserTab.deferred) y no gastan un proceso del motor.
+    function saveSession() {
+        if (privateMode || closingWindow)
+            return
+        const list = []
+        for (let i = 0; i < tabs.count; i++) {
+            const tab = tabs.get(i)
+            list.push({ url: tab.url, title: tab.title, icon: tab.icon, pinned: tab.pinned })
+        }
+        Settings.setValue("Session/tabs", JSON.stringify({ current: currentIndex, tabs: list }))
+    }
+
+    // false si no había nada que restaurar
+    function restoreSession() {
+        let saved = null
+        try {
+            saved = JSON.parse(Settings.value("Session/tabs", "null"))
+        } catch (error) {
+            console.warn("[Mitis] Sesión guardada no válida; se empieza de cero")
+        }
+        if (!saved || !Array.isArray(saved.tabs) || saved.tabs.length === 0)
+            return false
+        // La activa se fija antes de crear las pestañas: así solo carga ella
+        currentIndex = Math.max(0, Math.min(saved.tabs.length - 1, saved.current ?? 0))
+        for (let i = 0; i < saved.tabs.length; i++) {
+            const tab = saved.tabs[i]
+            const url = typeof tab.url === "string" ? tab.url : ""
+            const pinned = tab.pinned === true
+            tabs.append({ initialUrl: url, url: url, title: tab.title ?? "", icon: tab.icon ?? "",
+                          audible: false, muted: false, pinned: pinned,
+                          deferred: i !== currentIndex && url !== "" })
+            if (pinned)
+                pinnedCount++
+        }
+        if (showingNewTabPage)
+            Qt.callLater(newTabPage.focusSearch)
+        return true
+    }
+
+    Timer {
+        id: sessionSaver
+        interval: 1000
+        onTriggered: win.saveSession()
+    }
+    Connections {
+        target: tabs
+        enabled: !win.privateMode
+        function onCountChanged() { sessionSaver.restart() }
+        function onDataChanged() { sessionSaver.restart() }
+        function onRowsMoved() { sessionSaver.restart() }
+    }
+    onCurrentIndexChanged: if (!privateMode) sessionSaver.restart()
+
+    // ── Historial ────────────────────────────────────────────────────
+    // Cada página a la que se llega (BrowserTab.pageLoaded). Nunca desde una
+    // ventana privada.
+    function recordVisit(tab) {
+        if (!privateMode)
+            History.addVisit(tab.url.toString(), tab.title)
     }
 
 
@@ -41,8 +169,12 @@ Window {
     function newTab(target, activate, position) {
         // Una pestaña nueva nunca entra en el grupo de fijadas
         const at = Math.max(position === undefined ? tabs.count : position, pinnedCount)
-        tabs.insert(at, { initialUrl: target ? target.toString() : "", url: "", title: "", icon: "",
-                          audible: false, muted: false, pinned: false })
+        // Lo que se abra se ve: la Configuración se cierra
+        if (activate !== false)
+            closeSettings()
+        const address = target ? target.toString() : ""
+        tabs.insert(at, { initialUrl: address, url: address, title: "", icon: "",
+                          audible: false, muted: false, pinned: false, deferred: false })
         if (activate !== false)
             currentIndex = at
         else if (at <= currentIndex)
@@ -162,6 +294,22 @@ Window {
         tab.closeDevTools()
         devtools.destroy()
     }
+    // Al desactivarlas en Configuración, se cierran las abiertas
+    Connections {
+        target: Settings
+        function onDevToolsChanged() {
+            if (Settings.devTools)
+                return
+            for (let i = 0; i < views.count; i++)
+                win.closeDevTools(views.itemAt(i) as BrowserTab)
+        }
+    }
+
+    // La ventana de DevTools de `tab` es la activa
+    function devToolsFocused(tab) {
+        return tab !== null && tab.devToolsWindow !== null && tab.devToolsWindow.active
+    }
+
     function toggleDevTools(tab) {
         if (tab.devToolsWindow)
             closeDevTools(tab)
@@ -200,6 +348,17 @@ Window {
         newTab(last.url)
     }
 
+    // Abre una dirección guardada (marcador, historial): en la pestaña activa
+    // si es la nueva pestaña; si no, en una nueva a su derecha
+    function openUrl(url) {
+        if (currentView && showingNewTabPage) {
+            currentView.navigate(url)
+            currentView.focusPage()
+        } else {
+            newTab(url, true, currentIndex + 1)
+        }
+    }
+
     // Pestaña vacía: muestra la página de nueva pestaña con el foco en su buscador
     function openNewTabPage() {
         newTab("")
@@ -209,28 +368,62 @@ Window {
     // Una pestaña sin dirección muestra la página de nueva pestaña
     readonly property bool showingNewTabPage: currentView !== null && currentView.url.toString() === ""
 
+    // ── Configuración ────────────────────────────────────────────────
+    // Página sobre las pestañas (no es una pestaña): mientras está abierta,
+    // los controles inferiores se ocultan y la pestaña activa no recibe
+    // atajos de página (buscar, zoom, F12). Se cierra al cambiar de pestaña.
+    property bool settingsOpen: false
+
+    // `section`: la de Configuración a la que ir ("history"…); sin ella, arriba
+    function openSettings(section) {
+        findBar.close()
+        settingsOpen = true
+        if (section)
+            Qt.callLater(() => settingsPage.scrollTo(section))
+    }
+    function closeSettings() {
+        if (!settingsOpen)
+            return
+        settingsOpen = false
+        if (showingNewTabPage)
+            newTabPage.focusSearch()
+        else if (currentView)
+            currentView.focusPage()
+    }
+
+    // La página de la pestaña activa está tapada (nueva pestaña o Configuración)
+    readonly property bool pageHidden: showingNewTabPage || settingsOpen
+
     // ── Buscar en la página ──────────────────────────────────────────
     // Pestaña en la que se está buscando (la barra se cierra al cambiar de pestaña)
     property BrowserTab findTab: null
 
     function openFind() {
-        if (showingNewTabPage || pageFullScreen)
+        if (pageHidden || pageFullScreen)
             return
         findTab = currentView
         findBar.openAndFocus()
     }
 
-    onCurrentViewChanged: findBar.close()
+    onCurrentViewChanged: {
+        findBar.close()
+        closeSettings()
+    }
 
     // ── Zoom ─────────────────────────────────────────────────────────
     // Los mismos pasos que Chrome
     readonly property var zoomSteps: [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1,
                                       1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5]
 
-    // `direction`: 1 acerca, -1 aleja, 0 vuelve al 100 %
+    // `direction`: 1 acerca, -1 aleja, 0 vuelve al predeterminado (Configuración)
     function zoomBy(direction) {
-        if (!currentView || showingNewTabPage)
+        if (!currentView || pageHidden)
             return
+        if (direction === 0) {
+            currentView.resetZoom()
+            zoomIndicator.flash()
+            return
+        }
         const level = currentView.zoom
         let next = 1
         if (direction > 0)
@@ -245,7 +438,8 @@ Window {
     // el indicador; cambiar de pestaña no
     Connections {
         target: win.currentView
-        function onZoomChanged() { zoomIndicator.flash() }
+        // Con la página tapada es el zoom predeterminado cambiando en Configuración
+        function onZoomChanged() { if (!win.pageHidden) zoomIndicator.flash() }
     }
 
     function selectTab(index) {
@@ -305,11 +499,12 @@ Window {
     // el borde inferior o sobre ellos, se escribe en la dirección o hay una
     // lista suya abierta. `revealControls` los fuerza (p. ej. Ctrl+L).
     property bool revealControls: false
-    readonly property bool controlsShown: !immersive
+    readonly property bool controlsShown: !settingsOpen && (!immersive
         || (!pageFullScreen && (revealControls || revealHover.hovered || barHover.hovered
                                 || playerHover.hovered || bottomBar.editing
                                 || tabsPopup.opened || bookmarksPopup.opened || optionsPopup.opened
-                                || downloadsPopup.opened || downloadPanel.opened))
+                                || historyPopup.opened
+                                || downloadsPopup.opened || downloadPanel.opened)))
 
     onImmersiveChanged: {
         if (immersive) {
@@ -348,11 +543,12 @@ Window {
         findBar.close()
         tabsPopup.close()
         bookmarksPopup.close()
+        historyPopup.close()
         optionsPopup.close()
         downloadsPopup.close()
         downloadPanel.close()
         contextMenu.close()
-        searchEngineDialog.close()
+        closeSettings()
         fullScreenTab = tab
         fullscreenHint.show("Pulsa Esc para salir de la pantalla completa")
     }
@@ -441,6 +637,7 @@ Window {
     TitleBar {
         id: titleBar
         window: win
+        privateMode: win.privateMode
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
@@ -466,6 +663,7 @@ Window {
         loading: win.currentView ? win.currentView.loading : false
         loadProgress: win.currentView ? win.currentView.loadProgress : 0
         tabCount: tabs.count
+        bookmarked: win.currentView !== null && Bookmarks.urls.indexOf(win.currentView.url.toString()) >= 0
         downloadsShown: downloadPanel.active
         download: downloadPanel.item
         downloadPanelOpen: downloadPanel.visible
@@ -495,6 +693,7 @@ Window {
         onBookmarksRequested: bookmarksPopup.opened ? bookmarksPopup.close() : bookmarksPopup.open()
         // Con el listado de descargas abierto, el botón de opciones lo cierra
         onOptionsRequested: downloadsPopup.opened ? downloadsPopup.close()
+                          : historyPopup.opened ? historyPopup.close()
                           : optionsPopup.opened ? optionsPopup.close() : optionsPopup.open()
     }
 
@@ -514,17 +713,28 @@ Window {
 
                 required property int index
                 required initialUrl
+                required deferred
 
                 readonly property bool current: index === win.currentIndex
 
                 anchors.fill: parent
                 visible: current
+                privateMode: win.privateMode
 
-                onCurrentChanged: if (current) win.currentView = tab
+                // Una restaurada carga al seleccionarla
+                onCurrentChanged: if (current) {
+                    win.currentView = tab
+                    tab.load()
+                }
                 Component.onCompleted: if (current) win.currentView = tab
 
                 onUrlChanged: tabs.setProperty(index, "url", url.toString())
-                onTitleChanged: tabs.setProperty(index, "title", title)
+                onPageLoaded: win.recordVisit(tab)
+                onTitleChanged: {
+                    tabs.setProperty(index, "title", title)
+                    if (!win.privateMode)
+                        History.updateTitle(tab.url.toString(), title)
+                }
                 onIconChanged: tabs.setProperty(index, "icon", icon.toString())
                 onMutedChanged: tabs.setProperty(index, "muted", tab.muted)
                 onAudibleChanged: {
@@ -610,6 +820,35 @@ Window {
         }
     }
 
+    // Configuración: sobre las pestañas y los controles inferiores
+    SettingsPage {
+        id: settingsPage
+        z: 1
+        anchors.top: titleBar.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        open: win.settingsOpen
+        currentPageUrl: win.currentView && !win.privateMode ? win.currentView.url.toString() : ""
+        onCloseRequested: win.closeSettings()
+    }
+
+    // «Preguntar dónde guardar» (Configuración → Descargas): la carpeta se
+    // elige en la ventana que atiende los atajos (la activa)
+    Connections {
+        target: BrowserProfile
+        enabled: win.ownsShortcuts
+        function onDownloadFolderRequested(request) {
+            filePicker.ask(null, {
+                folder: true,
+                title: "Guardar «" + request.fileName + "» en",
+                startFolder: Urls.fileUrl(request.folder),
+                accept: urls => request.accept(Urls.localPath(urls[0])),
+                reject: () => request.reject()
+            })
+        }
+    }
+
     // Selector de archivos de las páginas (<input type=file>), uno para todas
     FilePicker {
         id: filePicker
@@ -646,16 +885,27 @@ Window {
         }
     }
 
-    // Marcadores: llegan en la Fase 4; por ahora solo se anuncian
-    OptionsPopup {
+    // Marcadores: la página actual, buscar, abrir y quitar
+    BookmarksPopup {
         id: bookmarksPopup
         parent: bottomBar.bookmarksButton
         x: parent.width - width
         y: -height - Theme.floatingMargin
-        options: [
-            { key: "bookmark-add", label: "Añadir esta página", icon: "bookmark-add", available: false },
-            { key: "bookmarks", label: "Ver marcadores", icon: "bookmark", available: false }
-        ]
+        pageUrl: win.currentView && !win.showingNewTabPage ? win.currentView.url.toString() : ""
+        pageTitle: win.currentView ? win.currentView.title : ""
+        onOpenRequested: url => win.openUrl(url)
+    }
+
+    // Historial: reabrir la última cerrada, lo visitado y el acceso a Configuración
+    HistoryPopup {
+        id: historyPopup
+        parent: bottomBar.optionsButton
+        x: parent.width - width
+        y: -height - Theme.floatingMargin
+        closedCount: win.closedTabs.length
+        onOpenRequested: url => win.openUrl(url)
+        onReopenRequested: win.reopenClosedTab()
+        onSettingsRequested: win.openSettings("history")
     }
 
     OptionsPopup {
@@ -666,14 +916,13 @@ Window {
         onOptionSelected: key => {
             if (key === "downloads")
                 downloadsPopup.open()
-            else if (key === "search")
-                searchEngineDialog.open()
+            else if (key === "history")
+                historyPopup.open()
+            else if (key === "private")
+                win.openPrivateWindow()
+            else if (key === "settings")
+                win.openSettings()
         }
-    }
-
-    // Elegir el motor de búsqueda (hasta que exista la página de Configuración)
-    SearchEngineDialog {
-        id: searchEngineDialog
     }
 
     DownloadsPopup {
@@ -686,6 +935,7 @@ Window {
     // Clic derecho en la página: se coloca en openContextMenu()
     ContextMenu {
         id: contextMenu
+        inspectAvailable: Settings.devTools
         onActionSelected: action => win.contextAction(action)
         // El teclado vuelve a la página al cerrar (salvo si ya se reabrió)
         onClosed: {
@@ -786,20 +1036,23 @@ Window {
     Shortcut {
         sequence: "Esc"
         context: Qt.ApplicationShortcut
-        enabled: win.pageFullScreen
+        enabled: win.ownsShortcuts && win.pageFullScreen
         onActivated: win.exitPageFullScreen()
         onActivatedAmbiguously: win.exitPageFullScreen()
     }
     Shortcut {
         sequence: "F12"
+        // También desde la ventana de DevTools de esta pestaña, para cerrarla
         context: Qt.ApplicationShortcut
-        enabled: win.currentView !== null && !win.showingNewTabPage
+        enabled: Settings.devTools && win.currentView !== null && !win.pageHidden
+                 && (win.ownsShortcuts || win.devToolsFocused(win.currentView))
         onActivated: win.toggleDevTools(win.currentView)
         onActivatedAmbiguously: win.toggleDevTools(win.currentView)
     }
     Shortcut {
         sequence: "F11"
         context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
         onActivated: win.toggleWindowFullScreen()
         onActivatedAmbiguously: win.toggleWindowFullScreen()
     }
@@ -808,6 +1061,7 @@ Window {
     Shortcut {
         sequence: "Ctrl+T"
         context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
         onActivated: {
             win.openNewTabPage()
         }
@@ -815,18 +1069,22 @@ Window {
     Shortcut {
         sequence: "Ctrl+Shift+T"
         context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
         onActivated: win.reopenClosedTab()
     }
     Shortcut {
         sequence: "Ctrl+W"
         context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
         onActivated: win.closeTab(win.currentIndex)
     }
     Shortcut {
         sequence: "Ctrl+L"
         context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
         onActivated: {
             // En F11 la barra está oculta: se muestra antes de darle el foco
+            win.closeSettings()
             win.revealControls = true
             bottomBar.focusAddress()
             win.revealControls = false
@@ -835,6 +1093,7 @@ Window {
     Shortcut {
         sequence: "Ctrl+Tab"
         context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
         onActivated: win.selectTab(win.currentIndex + 1)
     }
     Shortcut {
@@ -843,27 +1102,35 @@ Window {
         // sistema la reporta ambigua igualmente, se atiende igual.
         sequence: "Ctrl+Shift+Tab"
         context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
         onActivated: win.selectTab(win.currentIndex - 1)
         onActivatedAmbiguously: win.selectTab(win.currentIndex - 1)
     }
     Shortcut {
         sequence: "Ctrl+Shift+A"
         context: Qt.ApplicationShortcut
-        onActivated: tabsPopup.opened ? tabsPopup.close() : tabsPopup.open()
+        enabled: win.ownsShortcuts
+        onActivated: {
+            win.closeSettings()
+            tabsPopup.opened ? tabsPopup.close() : tabsPopup.open()
+        }
     }
     Shortcut {
         sequence: "Ctrl+F"
         context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
         onActivated: win.openFind()
     }
     Shortcut {
         sequences: ["F3", "Ctrl+G"]
         context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
         onActivated: findBar.isOpen ? findBar.findNext() : win.openFind()
     }
     Shortcut {
         sequences: ["Shift+F3", "Ctrl+Shift+G"]
         context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
         onActivated: findBar.isOpen ? findBar.findPrevious() : win.openFind()
     }
     // Zoom: un Shortcut por secuencia (varias equivalentes en uno solo son
@@ -871,42 +1138,74 @@ Window {
     Shortcut {
         sequence: "Ctrl++"
         context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
         onActivated: win.zoomBy(1)
         onActivatedAmbiguously: win.zoomBy(1)
     }
     Shortcut {
         sequence: "Ctrl+="
         context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
         onActivated: win.zoomBy(1)
         onActivatedAmbiguously: win.zoomBy(1)
     }
     Shortcut {
         sequence: "Ctrl+-"
         context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
         onActivated: win.zoomBy(-1)
         onActivatedAmbiguously: win.zoomBy(-1)
     }
     Shortcut {
         sequence: "Ctrl+0"
         context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
         onActivated: win.zoomBy(0)
         onActivatedAmbiguously: win.zoomBy(0)
     }
     Shortcut {
         sequences: ["Ctrl+R", "F5"]
         context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
         onActivated: win.currentView.reload()
     }
     Shortcut {
         sequence: "Alt+Left"
         context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
         onActivated: win.currentView.goBack()
     }
     Shortcut {
         sequence: "Alt+Right"
         context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
         onActivated: win.currentView.goForward()
     }
 
-    Component.onCompleted: openNewTabPage()
+    Shortcut {
+        sequence: "Ctrl+D"
+        context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
+        onActivated: {
+            win.closeSettings()
+            if (!bookmarksPopup.bookmarked)
+                bookmarksPopup.toggleCurrent()
+            bookmarksPopup.open()
+        }
+    }
+    Shortcut {
+        sequence: "Ctrl+H"
+        context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
+        onActivated: {
+            win.closeSettings()
+            historyPopup.opened ? historyPopup.close() : historyPopup.open()
+        }
+    }
+    Shortcut {
+        sequence: "Ctrl+Shift+N"
+        context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
+        onActivated: win.openPrivateWindow()
+    }
 }

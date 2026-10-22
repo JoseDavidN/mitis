@@ -3,7 +3,8 @@ import QtQuick
 import QtQuick.Dialogs
 
 // Selector de archivos que piden las páginas (<input type=file>…), con el
-// diálogo del sistema. Uno para toda la ventana: es modal, así que solo hay
+// diálogo del sistema; también la carpeta de una descarga (Configuración →
+// Descargas → Preguntar dónde guardar). Uno para toda la ventana: es modal, así que solo hay
 // uno abierto a la vez; si llegan más mientras tanto, esperan su turno.
 Item {
     id: root
@@ -14,7 +15,8 @@ Item {
     readonly property var current: queue.length > 0 ? queue[0].dialog : null
     property bool closing: false
 
-    // `owner`: la pestaña que lo pide, para dismiss() si se cierra
+    // `owner`: la pestaña que lo pide, para dismiss() si se cierra (o null).
+    // `dialog` puede traer además `title` y `startFolder` (URL) para carpetas
     function ask(owner, dialog) {
         queue = queue.concat([{ owner: owner, dialog: dialog }])
         if (queue.length === 1)
@@ -39,6 +41,9 @@ Item {
         if (!dialog)
             return
         if (dialog.folder) {
+            folderDialog.title = dialog.title ?? "Elegir carpeta"
+            folderDialog.currentFolder = dialog.startFolder
+                ?? StandardPaths.standardLocations(StandardPaths.HomeLocation)[0]
             folderDialog.open()
             return
         }
@@ -74,8 +79,6 @@ Item {
 
     FolderDialog {
         id: folderDialog
-        title: "Elegir carpeta"
-        currentFolder: StandardPaths.standardLocations(StandardPaths.HomeLocation)[0]
         onAccepted: root.answer([selectedFolder])
         onRejected: root.answer(null)
     }

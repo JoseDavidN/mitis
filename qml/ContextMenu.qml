@@ -12,6 +12,8 @@ Popup {
     // Lo que había bajo el cursor (ver BrowserTab.contextMenuRequested), más
     // canGoBack y canGoForward de la pestaña para el grupo de la página
     property var info: ({})
+    // «Inspeccionar»: solo con las herramientas de desarrollo activadas en Configuración
+    property bool inspectAvailable: false
     // Filas: { action, label, icon, shortcut, enabled } o { separator: true }
     property var entries: []
     // Fila resaltada (ratón o teclado); -1 = ninguna
@@ -119,8 +121,9 @@ Popup {
                 row("savePage", "Guardar página", "save")
             ])
         }
-        // Siempre, al final
-        groups.push([row("inspect", "Inspeccionar", "inspect", "F12")])
+        // Al final
+        if (inspectAvailable)
+            groups.push([row("inspect", "Inspeccionar", "inspect", "F12")])
 
         let result = []
         for (const group of groups) {

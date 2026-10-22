@@ -1,6 +1,7 @@
 #include "requestinterceptor.h"
 
 #include <QHash>
+#include <QHostAddress>
 #include <QWebEngineUrlRequestInfo>
 #include <QtWebEngineCore/qtwebenginecoreglobal.h>
 
@@ -8,6 +9,15 @@ namespace {
 bool isGoogleSignIn(const QUrl &url)
 {
     return url.host() == QLatin1String("accounts.google.com");
+}
+
+// Red local: direcciones IP, localhost, *.local y nombres sin dominio
+// ("router"). Ahí https casi nunca existe y no se sube.
+bool isLocalHost(const QString &host)
+{
+    return !host.contains(QLatin1Char('.')) || host == QLatin1String("localhost")
+        || host.endsWith(QLatin1String(".localhost")) || host.endsWith(QLatin1String(".local"))
+        || !QHostAddress(host).isNull();
 }
 
 // Chrome estable vigente (Arch: paquete chromium). Si Google vuelve a
@@ -53,9 +63,45 @@ RequestInterceptor::RequestInterceptor(QObject *parent)
         + R"(", "Google Chrome";v=")" + full + '"';
 }
 
+bool RequestInterceptor::takeHttpsFallback(const QString &host)
+{
+    if (!m_upgraded.remove(host))
+        return false;
+    m_httpAllowed.insert(host);
+    return true;
+}
+
+void RequestInterceptor::confirmHttps(const QString &host)
+{
+    m_upgraded.remove(host);
+}
+
 void RequestInterceptor::interceptRequest(QWebEngineUrlRequestInfo &info)
 {
-    if (!isGoogleSignIn(info.requestUrl()) && !isGoogleSignIn(info.firstPartyUrl()))
+    if (doNotTrack) {
+        info.setHttpHeader("DNT", "1");
+        info.setHttpHeader("Sec-GPC", "1");
+    }
+
+    // Solo la página (marco principal): sus recursos http dentro de una
+    // página https ya los sube o bloquea el propio motor
+    const QUrl url = info.requestUrl();
+    if (httpsUpgrade && url.scheme() == QLatin1String("http")
+        && info.resourceType() == QWebEngineUrlRequestInfo::ResourceTypeMainFrame
+        && info.requestMethod() == "GET") {
+        const QString host = url.host();
+        if (!isLocalHost(host) && !m_httpAllowed.contains(host)) {
+            QUrl secure = url;
+            secure.setScheme(QStringLiteral("https"));
+            if (url.port() == 80)
+                secure.setPort(-1);
+            m_upgraded.insert(host);
+            info.redirect(secure);
+            return;
+        }
+    }
+
+    if (!isGoogleSignIn(url) && !isGoogleSignIn(info.firstPartyUrl()))
         return;
 
     // Solo se reemplazan las que el motor ya envía: el Chrome real manda

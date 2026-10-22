@@ -18,6 +18,8 @@ Item {
     property bool loading: false
     property int loadProgress: 0
     property int tabCount: 1
+    // La página actual está en marcadores: la estrella se ilumina
+    property bool bookmarked: false
 
     // Descargas: el botón solo se ve con `downloadsShown`. Con el panel
     // cerrado y la descarga en curso (`download`, roles de Downloads), un
@@ -214,6 +216,7 @@ Item {
                 fillStart: root.tone(rightGroup.x + x)
                 fillEnd: root.tone(rightGroup.x + x + width)
                 icon: "bookmarks"
+                highlighted: root.bookmarked
                 tooltip: "Marcadores"
                 onClicked: root.bookmarksRequested()
             }

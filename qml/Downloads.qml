@@ -1,6 +1,8 @@
 pragma Singleton
-import QtCore
 import QtQuick
+import Mitis.Core
+
+import "urls.js" as Urls
 
 // Descargas de Mitis: el modelo que ve la interfaz y sus acciones. No conoce
 // el motor: BrowserProfile.qml registra cada descarga con add() y la va
@@ -21,6 +23,7 @@ QtObject {
     //  error       string  motivo del fallo ("" si no hay)
     //  startedAt   real    ms desde 1970
     //  finishedAt  real    ms desde 1970 (0 mientras no termina)
+    //  privateMode bool    de una ventana privada: no se guarda al cerrar
     readonly property ListModel items: ListModel {}
 
     // Descargas en curso (en progreso o en pausa)
@@ -38,9 +41,6 @@ QtObject {
 
     // Listado de descargas terminadas, guardado entre sesiones (JSON)
     readonly property int _maxSaved: 50
-    readonly property Settings _settings: Settings {
-        category: "Downloads"
-    }
 
     Component.onCompleted: _load()
 
@@ -87,7 +87,8 @@ QtObject {
             state: "progress",
             error: "",
             startedAt: Date.now(),
-            finishedAt: 0
+            finishedAt: 0,
+            privateMode: info.privateMode === true
         })
         _controls[id] = control
         currentId = id
@@ -133,14 +134,14 @@ QtObject {
     function openFile(id) {
         const item = get(id)
         if (item && item.state === "done")
-            Qt.openUrlExternally(_fileUrl(item.path))
+            Qt.openUrlExternally(Urls.fileUrl(item.path))
     }
 
     // Abre la carpeta donde está el archivo
     function openFolder(id) {
         const item = get(id)
         if (item)
-            Qt.openUrlExternally(_fileUrl(item.folder))
+            Qt.openUrlExternally(Urls.fileUrl(item.folder))
     }
 
     // Quita una descarga terminada del listado (el archivo no se borra)
@@ -154,20 +155,17 @@ QtObject {
         _save()
     }
 
-    // Quita del listado todas las terminadas
-    function clearFinished() {
+    // Quita del listado todas las terminadas; con `sinceMs`, solo las
+    // empezadas desde entonces
+    function clearFinished(sinceMs) {
+        const since = sinceMs ?? 0
         for (let i = items.count - 1; i >= 0; i--) {
-            if (!isActive(items.get(i).state))
+            if (!isActive(items.get(i).state) && items.get(i).startedAt >= since)
                 items.remove(i)
         }
         if (indexOf(currentId) < 0)
             currentId = -1
         _save()
-    }
-
-    // En Windows la ruta empieza por la unidad (C:/…) y necesita "file:///"
-    function _fileUrl(path) {
-        return (path.startsWith("/") ? "file://" : "file:///") + path
     }
 
     // ── Persistencia ─────────────────────────────────────────────────
@@ -177,7 +175,7 @@ QtObject {
         const list = []
         for (let i = 0; i < items.count && list.length < _maxSaved; i++) {
             const item = items.get(i)
-            if (isActive(item.state))
+            if (isActive(item.state) || item.privateMode)
                 continue
             list.push({
                 fileName: item.fileName,
@@ -192,13 +190,13 @@ QtObject {
                 finishedAt: item.finishedAt
             })
         }
-        _settings.setValue("list", JSON.stringify(list))
+        Settings.setValue("Downloads/list", JSON.stringify(list))
     }
 
     function _load() {
         let list = []
         try {
-            list = JSON.parse(_settings.value("list", "[]"))
+            list = JSON.parse(Settings.value("Downloads/list", "[]"))
         } catch (e) {
             console.warn("[Mitis] Listado de descargas guardado no válido; se descarta")
         }
@@ -218,7 +216,8 @@ QtObject {
                 state: saved.state ?? "done",
                 error: saved.error ?? "",
                 startedAt: saved.startedAt ?? 0,
-                finishedAt: saved.finishedAt ?? 0
+                finishedAt: saved.finishedAt ?? 0,
+                privateMode: false
             })
         }
     }

@@ -7,6 +7,7 @@
 #include <QQmlContext>
 #include <QStandardPaths>
 #include <QTranslator>
+#include <QtQml/qqmlextensionplugin.h>
 #include <QtWebEngineQuick/qtwebenginequickglobal.h>
 
 #include "devreloader.h"
@@ -14,6 +15,9 @@
 #include "iconprovider.h"
 #include "networkfactory.h"
 #include "widevine.h"
+
+// Tipos de C++ para QML (Settings…): módulo Mitis.Core, enlazado estático
+Q_IMPORT_QML_PLUGIN(Mitis_CorePlugin)
 
 namespace {
 // Biblioteca de Widevine que usa el motor (ver Widevine::setup)

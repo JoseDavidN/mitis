@@ -6,13 +6,13 @@ import QtQuick.Controls.Basic
 Popup {
     id: root
 
-    // Cada opción: { key, label, icon, available }
+    // Cada opción: { key, label, icon, available, shortcut (opcional) }
     property var options: [
-        { key: "history", label: "Historial", icon: "history", available: false },
+        { key: "private", label: "Nueva ventana privada", icon: "private", available: true, shortcut: "Ctrl+Shift+N" },
+        { key: "history", label: "Historial", icon: "history", available: true },
         { key: "downloads", label: "Descargas", icon: "downloads", available: true },
         { key: "profile", label: "Perfil", icon: "profile", available: false },
-        { key: "search", label: "Motor de búsqueda", icon: "search", available: true },
-        { key: "settings", label: "Configuración", icon: "settings", available: false }
+        { key: "settings", label: "Configuración", icon: "settings", available: true }
     ]
 
     signal optionSelected(string key)
@@ -62,7 +62,7 @@ Popup {
                 Text {
                     anchors.left: optionIcon.right
                     anchors.leftMargin: Theme.spacing
-                    anchors.right: soon.visible ? soon.left : parent.right
+                    anchors.right: soon.left
                     anchors.rightMargin: Theme.margin
                     anchors.verticalCenter: parent.verticalCenter
                     text: row.modelData.label
@@ -71,14 +71,14 @@ Popup {
                     elide: Text.ElideRight
                 }
 
+                // «Próximamente» o el atajo
                 Text {
                     id: soon
-                    visible: !row.modelData.available
                     anchors.right: parent.right
                     anchors.rightMargin: Theme.margin
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Próximamente"
-                    color: Theme.inkFaint
+                    text: row.modelData.available ? (row.modelData.shortcut ?? "") : "Próximamente"
+                    color: row.modelData.available ? Theme.inkMuted : Theme.inkFaint
                     font.pixelSize: Theme.fontSizeSmall
                 }
 

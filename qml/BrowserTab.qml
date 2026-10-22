@@ -1,5 +1,6 @@
 import QtQuick
 import QtWebEngine
+import Mitis.Core
 
 import "urls.js" as Urls
 
@@ -14,9 +15,16 @@ Item {
 
     // Dirección que se carga al crear la pestaña; vacía = página de nueva pestaña
     property string initialUrl: ""
+    // Pestaña restaurada: no carga initialUrl hasta llamar a load() (al
+    // seleccionarla). Mientras, no gasta un proceso del motor.
+    property bool deferred: false
+    // De una ventana privada: usa el perfil sin disco. Solo al crearla.
+    property bool privateMode: false
 
     // ── Estado de la página ──────────────────────────────────────────
-    readonly property alias url: view.url
+    // Hasta que el motor empieza a cargar (o mientras espera, si es una
+    // restaurada), la dirección es la que se le pidió
+    readonly property url url: view.url.toString() !== "" ? view.url : initialUrl
     readonly property alias title: view.title
     readonly property alias icon: view.icon
     readonly property alias loading: view.loading
@@ -33,7 +41,8 @@ Item {
     readonly property alias findActive: findState.active
 
     // Zoom de esta pestaña (1 = 100 %). Se mantiene al navegar dentro de ella.
-    // Para cambiarlo, setZoom().
+    // Para cambiarlo, setZoom(); hasta entonces (y tras resetZoom()) sigue al
+    // zoom predeterminado de Configuración.
     readonly property alias zoom: zoomState.level
 
     // La página está en pantalla completa (p. ej. el botón de un vídeo)
@@ -88,6 +97,9 @@ Item {
     // si la espera se anula (otra navegación, pestaña cerrada: se rechaza).
     // Un host aceptado no vuelve a preguntar en toda la sesión.
     signal certificateErrorRequested(var error)
+    // Se llegó a una página nueva: terminó de cargar bien o cambió de
+    // dirección sin recargar (como en YouTube). Para el historial.
+    signal pageLoaded()
     // La página pidió contenido protegido (Widevine: Netflix, Spotify…) y el
     // motor no lo tiene. Solo llega si falta Widevine; la página sigue sin
     // poder reproducirlo (ver BrowserProfile.widevineAvailable).
@@ -97,7 +109,16 @@ Item {
     readonly property bool certificateBypassed: BrowserProfile.certificateExceptions[root._hostOf(view.url.toString())] === true
 
     // ── Acciones ─────────────────────────────────────────────────────
+    // Carga una pestaña restaurada (deferred); en las demás no hace nada
+    function load() {
+        if (!deferred)
+            return
+        deferred = false
+        if (initialUrl !== "")
+            view.url = initialUrl
+    }
     function navigate(target) {
+        deferred = false
         root._cancelCertificateError()
         view.url = target
     }
@@ -138,7 +159,10 @@ Item {
     // Cambia el zoom de esta pestaña (1 = 100 %)
     function setZoom(level) {
         zoomState.level = level
-        view.zoomFactor = level
+    }
+    // Vuelve al zoom predeterminado (y lo sigue si cambia)
+    function resetZoom() {
+        zoomState.level = Qt.binding(() => Settings.defaultZoom)
     }
     // Saca la página de pantalla completa sin esperar a que ella responda
     function exitFullScreen() {
@@ -318,7 +342,11 @@ Item {
 
     QtObject {
         id: zoomState
-        property real level: 1
+        property real level: Settings.defaultZoom
+        onLevelChanged: {
+            if (Math.abs(view.zoomFactor - level) > 0.001)
+                view.zoomFactor = level
+        }
     }
 
     // Diálogos JavaScript sin responder
@@ -334,6 +362,19 @@ Item {
         }
     }
 
+    // Última dirección contada como visita (ver pageLoaded)
+    QtObject {
+        id: visitState
+        property string url: ""
+    }
+    function _checkSameDocument() {
+        const current = view.url.toString()
+        if (view.loading || view.loadProgress < 100 || current === "" || current === visitState.url)
+            return
+        visitState.url = current
+        root.pageLoaded()
+    }
+
     QtObject {
         id: findState
         property int matches: 0
@@ -343,13 +384,21 @@ Item {
     WebEngineView {
         id: view
         anchors.fill: parent
-        profile: BrowserProfile
+        profile: root.privateMode ? BrowserProfile.privateProfile : BrowserProfile
         // Visor de PDF integrado (también lo esperan algunos sitios: un
         // navegador sin él parece un motor embebido)
         settings.pluginsEnabled: true
         settings.pdfViewerEnabled: true
         // Sin esto el motor rechaza la pantalla completa de vídeos y páginas
         settings.fullScreenSupportEnabled: true
+        // Preferencias de Configuración; el motor las aplica sin recargar
+        settings.javascriptEnabled: Settings.javascript
+        settings.autoLoadImages: Settings.images
+        // Sin esto, una ventana emergente solo se abre tras un clic del usuario
+        settings.javascriptCanOpenWindows: !Settings.blockPopups
+        settings.playbackRequiresUserGesture: !Settings.autoplay
+        settings.forceDarkMode: Settings.darkPages
+        settings.webRTCPublicInterfacesOnly: Settings.hideLocalIp
 
         onFindTextFinished: result => {
             findState.matches = result.numberOfMatches
@@ -377,6 +426,23 @@ Item {
             // Al cargar otra página se cancelan los diálogos de la anterior:
             // mientras esperan, la página está bloqueada y la carga no avanza.
             // El de salir no, que es justo el que decide si se carga.
+            // Conexiones seguras: una página subida de http a https que no
+            // carga por https (sin conexión segura, certificado no válido,
+            // respuesta vacía…) se vuelve a pedir por http (ver RequestInterceptor)
+            // qmllint disable unqualified
+            if (loadingInfo.status === WebEngineView.LoadSucceededStatus)
+                MitisEngine.confirmHttps(loadingInfo.url)
+            if (loadingInfo.status === WebEngineView.LoadFailedStatus
+                    && MitisEngine.takeHttpsFallback(loadingInfo.url)) {
+                view.url = loadingInfo.url.toString().replace(/^https:/, "http:")
+                return
+            }
+            // qmllint enable unqualified
+            if (loadingInfo.status === WebEngineView.LoadSucceededStatus
+                    && view.url.toString() !== visitState.url) {
+                visitState.url = view.url.toString()
+                root.pageLoaded()
+            }
             if (loadingInfo.status === WebEngineView.LoadStartedStatus) {
                 for (const dialog of dialogState.pending.slice()) {
                     if (dialog.type !== "beforeunload") {
@@ -391,6 +457,9 @@ Item {
         onUrlChanged: {
             findState.matches = 0
             findState.active = 0
+            // Al empezar una carga la dirección cambia antes de que `loading`
+            // se active: se mira después, y sin carga es la misma página
+            Qt.callLater(root._checkSameDocument)
         }
 
         // Chromium decide el destino según el clic:
@@ -412,6 +481,14 @@ Item {
                 error.rejectCertificate()
                 return
             }
+            // Página subida a https por Mitis (no la pidió así el usuario):
+            // sin aviso, se rechaza y la carga fallida vuelve a http
+            // qmllint disable unqualified
+            if (MitisEngine.isHttpsUpgrade(error.url)) {
+                error.rejectCertificate()
+                return
+            }
+            // qmllint enable unqualified
             root._cancelCertificateError()
             error.defer()
             const host = root._hostOf(error.url.toString())
@@ -487,6 +564,15 @@ Item {
             // se puede explicar al usuario qué conceden, se deniegan
             if (kind === undefined) {
                 permission.deny()
+                return
+            }
+            // Bloqueados en Configuración: se deniegan sin preguntar ni guardar
+            // nada (así, al desbloquearlos, el sitio vuelve a preguntar)
+            const blocked = Settings.blockedPermissions
+            const parts = { cameraMicrophone: ["camera", "microphone"], screenAudio: ["screen"] }
+            if ((parts[kind] ?? [kind]).some(part => blocked.includes(part))) {
+                permission.deny()
+                permission.reset()
                 return
             }
             // Cámara y micrófono los recuerda BrowserProfile (el motor no)
@@ -620,7 +706,8 @@ Item {
     }
 
     Component.onCompleted: {
-        if (initialUrl !== "")
+        view.zoomFactor = zoomState.level
+        if (initialUrl !== "" && !deferred)
             view.url = initialUrl
     }
 }

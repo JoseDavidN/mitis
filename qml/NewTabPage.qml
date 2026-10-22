@@ -1,9 +1,9 @@
 pragma ComponentBehavior: Bound
-import QtCore
+import QtCore as Core
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Dialogs
-import QtQuick.Shapes
+import Mitis.Core
 
 // Página de nueva pestaña, en QML: buscador en el centro, accesos rápidos
 // y noticias de tecnología, sobre el fondo del tema o una imagen propia.
@@ -15,16 +15,6 @@ Item {
 
     function focusSearch() {
         search.forceActiveFocus()
-    }
-
-    // Preferencias de la página, guardadas entre sesiones
-    Settings {
-        id: prefs
-        category: "NewTab"
-        // URL de la imagen de fondo; vacía = fondo del tema
-        property string background: ""
-        // Accesos rápidos en JSON: [{ name, url }]; vacío = nunca guardados
-        property string quickLinks: ""
     }
 
     readonly property var defaultLinks: [
@@ -42,14 +32,14 @@ Item {
         const list = []
         for (let i = 0; i < links.count; i++)
             list.push({ name: links.get(i).name, url: links.get(i).url })
-        prefs.quickLinks = JSON.stringify(list)
+        Settings.quickLinks = JSON.stringify(list)
     }
 
     Component.onCompleted: {
         let list = root.defaultLinks
         try {
-            if (prefs.quickLinks !== "")
-                list = JSON.parse(prefs.quickLinks)
+            if (Settings.quickLinks !== "")
+                list = JSON.parse(Settings.quickLinks)
         } catch (error) {
             console.warn("[Mitis] Accesos rápidos dañados; se usan los de serie")
         }
@@ -59,33 +49,16 @@ Item {
     onVisibleChanged: if (visible) News.refreshIfStale()
 
     // ── Fondo ────────────────────────────────────────────────────────
-    // Del tema: resplandor violeta arriba a la izquierda que se funde en negro
-    Shape {
+    // Del tema
+    ThemeBackground {
         anchors.fill: parent
-        ShapePath {
-            strokeWidth: -1
-            fillGradient: RadialGradient {
-                centerX: root.width * 0.2
-                centerY: 0
-                centerRadius: Math.max(root.width, root.height) * 1.1
-                focalX: centerX
-                focalY: centerY
-                GradientStop { position: 0.0; color: Theme.bgGlow }
-                GradientStop { position: 0.35; color: Theme.bgMid }
-                GradientStop { position: 0.8; color: Theme.bgBase }
-            }
-            PathLine { x: root.width; y: 0 }
-            PathLine { x: root.width; y: root.height }
-            PathLine { x: 0; y: root.height }
-            PathLine { x: 0; y: 0 }
-        }
     }
 
     // Imagen propia, decodificada al tamaño de la pantalla (no al de la foto)
     Image {
         id: wallpaper
         anchors.fill: parent
-        source: prefs.background
+        source: Settings.newTabBackground
         sourceSize: Qt.size(Screen.width, Screen.height)
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
@@ -101,8 +74,8 @@ Item {
         id: picker
         title: "Elegir imagen de fondo"
         nameFilters: ["Imágenes (*.png *.jpg *.jpeg *.webp *.bmp)"]
-        currentFolder: StandardPaths.standardLocations(StandardPaths.PicturesLocation)[0]
-        onAccepted: prefs.background = selectedFile.toString()
+        currentFolder: Core.StandardPaths.standardLocations(Core.StandardPaths.PicturesLocation)[0]
+        onAccepted: Settings.newTabBackground = selectedFile.toString()
     }
 
     // ── Contenido ────────────────────────────────────────────────────
@@ -283,11 +256,11 @@ Item {
         spacing: Theme.spacing
 
         IconButton {
-            visible: prefs.background !== ""
+            visible: Settings.newTabBackground !== ""
             icon: "background-reset"
             tooltip: "Quitar fondo"
             tooltipBelow: true
-            onClicked: prefs.background = ""
+            onClicked: Settings.newTabBackground = ""
         }
         IconButton {
             icon: "background"

@@ -9,7 +9,7 @@ project(Mitis
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Quick Network WebEngineCore WebEngineQuick Svg)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Quick Network Sql WebEngineCore WebEngineQuick Svg)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -28,6 +28,26 @@ qt_add_executable(mitis
     src/widevine.h
     src/widevine.cpp
 )
+
+# Tipos de C++ para QML (Settings…), en un módulo propio, Mitis.Core: el modo
+# --dev carga los QML desde qml/ y no ve los tipos del módulo Mitis, pero sí
+# puede importar este (va en el ejecutable, en qrc:/qt/qml/Mitis/Core)
+qt_add_library(mitiscore STATIC)
+qt_add_qml_module(mitiscore
+    URI Mitis.Core
+    VERSION 1.0
+    OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Mitis/Core"
+    SOURCES
+        src/settings.h
+        src/settings.cpp
+        src/history.h
+        src/history.cpp
+        src/bookmarks.h
+        src/bookmarks.cpp
+)
+# El registro de tipos generado incluye "settings.h" sin ruta
+target_include_directories(mitiscore PRIVATE src)
+target_link_libraries(mitiscore PRIVATE Qt6::Sql)
 
 # Iconos SVG (Lucide, ISC: assets/icons/LICENSE), empaquetados en :/icons
 file(GLOB MITIS_ICON_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" CONFIGURE_DEPENDS assets/icons/*.svg)
@@ -84,7 +104,14 @@ set(MITIS_QML_FILES
     qml/DownloadsPopup.qml
     qml/urls.js
     qml/SearchEngines.qml
-    qml/SearchEngineDialog.qml
+    qml/SettingsPage.qml
+    qml/ThemeBackground.qml
+    qml/Toggle.qml
+    qml/RadioMark.qml
+    qml/CheckMark.qml
+    qml/PageRow.qml
+    qml/BookmarksPopup.qml
+    qml/HistoryPopup.qml
     qml/ResizeHandles.qml
     qml/FullscreenHint.qml
     qml/DevToolsWindow.qml
@@ -106,6 +133,7 @@ qt_add_qml_module(mitis
     URI Mitis
     VERSION 1.0
     QML_FILES ${MITIS_QML_FILES}
+    IMPORTS Mitis.Core
 )
 
 target_compile_definitions(mitis PRIVATE
@@ -117,6 +145,7 @@ target_compile_definitions(mitis PRIVATE
 )
 
 target_link_libraries(mitis PRIVATE
+    mitiscoreplugin
     Qt6::Quick
     Qt6::Network
     Qt6::WebEngineCore

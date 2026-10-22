@@ -14,7 +14,7 @@ Sistema de diseño (colores, tokens, componentes): `DESIGN.md`. Todo cambio visu
 
 ## Stack
 
-- Qt 6.8+ (desarrollo en Arch Linux con Qt 6.11), Qt Quick/QML, Qt WebEngine, Qt SVG, C++17, CMake 3.21+, Ninja.
+- Qt 6.8+ (desarrollo en Arch Linux con Qt 6.11), Qt Quick/QML, Qt WebEngine, Qt SVG, Qt SQL (SQLite), C++17, CMake 3.21+, Ninja.
 - Windows requiere MSVC 2022; Qt WebEngine no funciona con MinGW.
 
 ## Compilar y ejecutar
@@ -35,17 +35,23 @@ cmake --build build
 ```
 src/            C++ (main.cpp, devreloader.*, iconprovider.*: iconos SVG coloreados para QML,
                 networkfactory.*: red de la interfaz QML con caché en disco,
-                widevine.*: localiza Widevine (contenido protegido) y se lo pasa al motor)
+                widevine.*: localiza Widevine (contenido protegido) y se lo pasa al motor,
+                settings.*: ajustes guardados con QSettings, singleton `Settings` del módulo Mitis.Core,
+                history.*: historial en SQLite, escritura en un hilo propio (singleton `History`),
+                bookmarks.*: marcadores en SQLite (singleton `Bookmarks`))
 qml/            Interfaz. Todos los archivos planos en esta carpeta.
-  Main.qml            Ventana, modelo de pestañas, navegación, atajos (no conoce el motor)
+  Main.qml            Ventana, modelo de pestañas, navegación, atajos, sesión (no conoce el motor). La ventana privada es otra instancia (privateMode)
   BrowserTab.qml      Una pestaña: envuelve WebEngineView y ofrece solo lo que usa la interfaz
   BrowserProfile.qml  Singleton: el perfil (cookies, caché, User-Agent, scripts inyectados)
   Theme.qml           Singleton: colores, medidas, animaciones
   TitleBar.qml        Barra superior: marca (icono + "Mitis") y controles de ventana
   BottomBar.qml       Controles inferiores flotantes: navegación, dirección, pestañas, marcadores, opciones
-  AddressBar.qml      Campo de dirección/búsqueda
+  AddressBar.qml      Campo de dirección/búsqueda, con sugerencias de marcadores e historial
   TabsPopup.qml       Lista desplegable de pestañas
-  OptionsPopup.qml    Lista de opciones; se usa para el menú de opciones y el de marcadores
+  OptionsPopup.qml    Menú de opciones (ventana privada, historial, descargas, configuración)
+  BookmarksPopup.qml  Lista de marcadores: guardar la página actual (Ctrl+D), buscar, abrir, quitar
+  HistoryPopup.qml    Historial (Opciones → Historial): lo visitado, reabrir la última cerrada, ir a Configuración
+  PageRow.qml         Fila de una página guardada (favicon, título, detalle, quitar)
   DownloadsPopup.qml  Listado de descargas (menú de opciones → Descargas)
   ContextMenu.qml     Menú contextual de la página (clic derecho)
   DevToolsWindow.qml  Ventana de herramientas de desarrollo (F12), una por pestaña; paleta propia negra
@@ -59,7 +65,11 @@ qml/            Interfaz. Todos los archivos planos en esta carpeta.
   QuickLinkTile.qml   Acceso rápido de la página de nueva pestaña
   QuickLinkEditor.qml Diálogo para añadir un acceso rápido
   SearchEngines.qml   Singleton: buscadores, el elegido (guardado en Settings, categoría Search) y resolve()/searchUrl()
-  SearchEngineDialog.qml Diálogo para elegir el motor de búsqueda (menú de opciones)
+  SettingsPage.qml    Página de Configuración (menú de opciones): sobre las pestañas, índice de secciones y ajustes
+  ThemeBackground.qml Fondo del tema de las páginas propias (nueva pestaña, Configuración)
+  Toggle.qml          Interruptor de encendido/apagado
+  RadioMark.qml       Círculo de elección única (lo dibuja; el clic es de su fila)
+  CheckMark.qml       Casilla de verificación (lo dibuja; el clic es de su fila)
   NewsCard.qml        Tarjeta de noticia
   MiniPlayer.qml      Mini reproductor sobre la barra de búsqueda
   FindBar.qml         Buscar en la página (Ctrl+F)
@@ -67,7 +77,7 @@ qml/            Interfaz. Todos los archivos planos en esta carpeta.
   News.qml            Singleton: noticias de tecnología (RSS), compartidas por todas las pestañas
   TextButton.qml      Botón con texto (primary = degradado de marca; danger = acción arriesgada)
   FormField.qml       Campo de texto de formulario
-  urls.js             Texto escrito → URL o búsqueda (con la plantilla que recibe); dominio y favicon de una URL. Sin estado: el buscador lo pone SearchEngines
+  urls.js             Texto escrito → URL o búsqueda (con la plantilla que recibe); dominio y favicon de una URL; ruta local ↔ file://. Sin estado: el buscador lo pone SearchEngines
   ResizeHandles.qml   Bordes para redimensionar la ventana sin marco
   FullscreenHint.qml  Aviso «Pulsa Esc/F11 para salir de la pantalla completa»
   CertificateDialog.qml Aviso de certificado inválido (PageDialog): volver o continuar
@@ -105,9 +115,16 @@ docs/           Documentación y plan
 - En C++, el motor aparece en `QtWebEngineQuick::initialize()` de `main.cpp`, en `RequestInterceptor` (ve cada petición de las páginas; base del futuro bloqueador de anuncios) y en `EngineBridge` (lo publica en QML como la propiedad de contexto `MitisEngine`, porque los tipos del módulo no existen en `--dev`).
 - **Descargas:** motor → `BrowserProfile` (`onDownloadRequested`: acepta, registra con `Downloads.add()` y mantiene el modelo con `Downloads.update()` desde las señales del objeto, sin sondeo) → `Downloads.qml` (singleton sin motor: modelo `items`, acciones, y listado de terminadas guardado en `Settings`, categoría `Downloads`) → interfaz, que solo usa `Downloads`. El nombre repetido lo resuelve el propio motor (`archivo (1).ext`).
 
+### Ajustes
+- **Todo lo que se guarda entre sesiones va por el singleton `Settings`** (`src/settings.*`, `import Mitis.Core`), nunca por `Settings` de `QtCore`. Las preferencias son propiedades (enlazables, con su clave fija en `settings.cpp`); los datos internos usan `Settings.value("Categoría/clave", porDefecto)` / `Settings.setValue()`.
+- Un archivo que necesite además `StandardPaths` importa `QtCore as Core` (`Core.StandardPaths…`): así su `Settings` no choca con el de Mitis.
+- Una preferencia nueva que se elija en la interfaz: propiedad en `Settings`, fila en `SettingsPage.qml` y su clave en `resetPreferences()` (`settings.cpp`).
+- Dónde se aplica cada preferencia: las de la página (JavaScript, imágenes, emergentes, modo oscuro, zoom, permisos bloqueados) en `BrowserTab`; las del perfil (idiomas, carpeta, borrar al cerrar) en `BrowserProfile`; las que van petición a petición (cookies de terceros, No rastrear, conexiones seguras) en C++, en `EngineBridge`/`RequestInterceptor`, enlazadas desde `BrowserProfile`.
+
 ### C++
 - Lógica pesada, persistencia y todo lo que toque el motor a bajo nivel va en C++, expuesto a QML con `QML_ELEMENT` / `QML_SINGLETON`.
-- Cada clase nueva se añade a `qt_add_executable` en `CMakeLists.txt`.
+- Los tipos de C++ para QML van en el módulo `Mitis.Core` (biblioteca `mitiscore` en `CMakeLists.txt`, enlazada estática con `Q_IMPORT_QML_PLUGIN` en `main.cpp`): el modo `--dev` no ve los tipos del módulo `Mitis`, pero sí puede importar este. Lo que dependa del motor sigue en `EngineBridge` (`MitisEngine`).
+- Cada clase nueva se añade a `qt_add_executable` (o a `mitiscore` si es un tipo de QML) en `CMakeLists.txt`.
 - Si se usa un módulo Qt nuevo, añadirlo a `find_package` y a `target_link_libraries`.
 
 ### General
@@ -118,9 +135,9 @@ docs/           Documentación y plan
 ## Cómo verificar cambios
 
 1. `cmake --build build` sin errores ni advertencias nuevas.
-2. `qmllint` sobre los QML modificados (está en `/usr/lib/qt6/bin`).
+2. `qmllint -I ../build` desde `qml/` sobre los QML modificados (está en `/usr/lib/qt6/bin`; `-I ../build` para que encuentre `Mitis.Core`, que se genera al compilar).
 3. Ejecutar y comprobar que no hay errores de QML en la salida:
-   - En modo normal y en `--dev`: el modo `--dev` carga los QML de otra forma y puede fallar aunque el normal funcione.
+   - En modo normal y en `--dev`: el modo `--dev` carga los QML de otra forma y puede fallar aunque el normal funcione. El modo normal usa los QML de la última compilación: recompilar antes de probarlo.
    - Si la salida no es una terminal, Qt manda los mensajes a journald: `journalctl --user --since "-1min" | grep Mitis`.
 4. Sin pantalla se puede verificar visualmente (no hay Xvfb ni xdotool; sí Xvnc y ffmpeg). Usar una pantalla distinta de `:1`, que es la del usuario:
    ```bash
@@ -141,6 +158,7 @@ docs/           Documentación y plan
 - Los singletons no se recargan con `clearComponentCache()` → `DevReloader` crea un `QQmlApplicationEngine` nuevo en cada recarga.
 - Al destruir la ventana en una recarga la app se cerraba → `setQuitOnLastWindowClosed(false)` durante la recarga.
 - En `--dev` el `qmldir` solo necesita los singletons; los demás tipos se resuelven por la carpeta.
+- Atajos con varias ventanas (la privada es otra `Main`): son `Qt.ApplicationShortcut` (con `WindowShortcut` dejan de funcionar si ninguna ventana queda activa, como en Xvnc sin gestor de ventanas, y F12 debe llegar desde la de DevTools), así que dos ventanas tendrían los mismos atajos a la vez y Qt los da por ambiguos. Cada `Shortcut` de `Main.qml` lleva `enabled: win.ownsShortcuts && …`: los atiende la ventana activa o, si no hay ninguna, la principal. Las privadas se quitan de `privateWindows` de su ventana al cerrarse: una referencia a una ventana destruida dejaba `ownsShortcuts` en falso para siempre.
 - Ctrl+Mayús+Tab no hacía nada: un `Shortcut` con varias secuencias equivalentes (`Ctrl+Shift+Tab`, `Ctrl+Backtab`…) es **ambiguo** consigo mismo y Qt emite `activatedAmbiguously`, no `activated`. Usar una sola secuencia por pulsación (y, si hay riesgo, atender también `onActivatedAmbiguously`).
 - Una descarga cortada por el servidor mostraba "Download canceled by the user": Chromium envía motivos de interrupción que Qt no tiene en su enumeración (p. ej. 38, la descarga llegó incompleta) y para ellos `interruptReasonString` miente. `BrowserProfile` los traduce por número y nunca usa ese texto.
 - Google no dejaba iniciar sesión ("Es posible que el navegador o la aplicación no sean seguros", página `/signin/rejected`): rechaza los navegadores con motor embebido y las versiones de Chrome viejas. Los delataban las Client Hints (`sec-ch-ua`) y `navigator.userAgentData` (solo "Chromium", sin "Google Chrome"), la versión del motor (140, cuando Chrome estable va por la 153) y `navigator.plugins` vacío. Solución, solo en `accounts.google.com`: `RequestInterceptor` (C++) declara el Chrome vigente en `User-Agent`, `sec-ch-ua` y `sec-ch-ua-full-version-list`, y un script inyectado desde `BrowserProfile` hace lo mismo con `navigator.userAgent`/`userAgentData`; `BrowserTab` activa los complementos (visor de PDF). Si Google vuelve a rechazar, subir `CurrentChromeVersion` en `requestinterceptor.cpp`. No disfrazarse de Firefox: la conexión (TLS, HTTP/2) es de Chromium y no casa. Las Client Hints las añade el motor: el interceptor puede reemplazarlas, no quitarlas.

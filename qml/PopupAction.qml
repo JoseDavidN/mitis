@@ -13,6 +13,7 @@ Item {
 
     implicitWidth: Theme.popupWidth
     implicitHeight: Theme.popupRowHeight
+    opacity: enabled ? 1 : 0.45
 
     Rectangle {
         anchors.fill: parent

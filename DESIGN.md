@@ -98,7 +98,7 @@ Los semánticos conservan su significado en todos los temas; no usarlos como ace
 - **Fuente:** [Nunito](https://github.com/googlefonts/nunito) (SIL OFL, `assets/fonts/OFL.txt`): sans redondeada, moderna y legible en tamaños pequeños. Un solo archivo variable (`assets/fonts/Nunito.ttf`) con todos los pesos.
 - Se registra en `src/main.cpp` y queda como fuente por defecto de la aplicación: todo `Text` y `TextField` la usa sin indicarlo. No escribir `font.family` en los componentes.
 - Solo afecta a la interfaz: las páginas web usan sus propias fuentes.
-- Tamaños desde `Theme`: `fontSizeTitle` (14) nombre de la app, `fontSize` (13) texto general, `fontSizeSmall` (12) atajos y notas. Pesos: regular para texto, `Font.DemiBold` para el nombre de la app y títulos.
+- Tamaños desde `Theme`: `fontSizeHeading` (24) título de una página propia (Configuración), `fontSizeLarge` (16) buscador de la nueva pestaña y títulos de sección, `fontSizeTitle` (14) nombre de la app y títulos de diálogo, `fontSize` (13) texto general, `fontSizeSmall` (12) atajos y notas. Pesos: regular para texto, `Font.DemiBold` para el nombre de la app, títulos de diálogo y de cada ajuste, `Font.Bold` para el título de una página y de sus secciones y para lo elegido en una lista.
 
 ### Medidas, tipografía y movimiento
 
@@ -122,6 +122,10 @@ Arrastre de filas: `dragOpacity` (0,85) opacidad de la fila levantada, `dropIndi
 Descargas: `downloadRowHeight` (52) fila de dos líneas del listado, `durationIndeterminate` (1,2 s) vuelta de la barra de progreso sin total conocido, `relativeTimeRefresh` (30 s) refresco de «hace 5 min» en el listado.
 
 Descarga actual: `downloadPanelWidth` (340) ancho del panel, `downloadBarHeight` (4) grosor de su barra, `progressRingWidth` (2) trazo del anillo del botón, `progressIndeterminateSpan` (0,3) fracción que ocupan el tramo de la barra y el arco del anillo sin total conocido, `durationSpin` (1 s) vuelta del anillo sin total, `downloadPanelHold` (10 s) lo que se quedan panel y botón al terminar.
+
+Filas de página (marcadores, historial): `pageRowHeight` (48). `CheckMark`: `checkRadius` (5); «Datos borrados» se queda `clearedNoticeHold` (3 s).
+
+Configuración: `settingsMaxWidth` (680) ancho máximo de la columna, `settingsNavWidth` (220) índice de secciones, `settingsNavBreakpoint` (900) ancho por debajo del cual el índice se oculta, `settingsHeaderHeight` (64) cabecera, `settingsSectionSpacing` (32) entre secciones, `settingsRowHeight` (60) alto mínimo de una fila, `settingsIconBox` (36) círculo del icono de la cabecera y de los favicons. `Toggle`: `toggleWidth` × `toggleHeight` (38 × 22) y `toggleKnobInset` (3). `RadioMark`: `radioSize` (18) y `radioDotSize` (8).
 
 Aviso de certificado: `certificateDialogWidth` (440) ancho de la tarjeta, algo más que `dialogWidth` (360) porque explica más.
 
@@ -164,11 +168,15 @@ Window (bgBase, sin marco)
 | `back`, `forward`, `reload` | `arrow-left`, `arrow-right`, `rotate-cw` | Navegación |
 | `close` | `x` | Cerrar ventana o pestaña, detener la carga |
 | `minimize`, `maximize`, `restore` | `minus`, `square`, `copy` | Controles de ventana |
-| `search` | `search` | Campo de dirección al escribir; menú de opciones y diálogo «Motor de búsqueda» (también en lugar del favicon de un buscador que no carga) |
-| `bookmarks`, `bookmark-add`, `bookmark` | `star`, `bookmark-plus`, `bookmark` | Botón y lista de marcadores |
+| `search` | `search` | Campo de dirección al escribir; sección «Búsqueda» de Configuración (también en lugar del favicon de un buscador que no carga) |
+| `bookmarks`, `bookmark-add`, `bookmark` | `star`, `bookmark-plus`, `bookmark` | Botón y lista de marcadores (`bookmark`, también en las sugerencias de la barra de dirección) |
 | `options` | `ellipsis` | Botón de opciones |
-| `new-tab`, `reopen` | `plus`, `undo-2` | Lista de pestañas: nueva y reabrir cerrada |
-| `history`, `downloads`, `profile`, `settings` | `history`, `download`, `circle-user-round`, `settings` | Menú de opciones |
+| `new-tab`, `reopen` | `plus`, `undo-2` | Lista de pestañas: nueva y reabrir cerrada (`reopen`, también en Historial y en «Al iniciar» de Configuración) |
+| `history`, `downloads`, `profile`, `settings` | `history`, `download`, `circle-user-round`, `settings` | Menú de opciones (`settings`, también en la cabecera de Configuración; `downloads` e `history`, en sus secciones; `history`, en las sugerencias del historial) |
+| `info` | `info` | Configuración: «Acerca de Mitis» |
+| `appearance`, `privacy`, `security`, `permissions` | `palette`, `eye-off`, `shield-check`, `sliders-horizontal` | Configuración: secciones Apariencia e idioma, Privacidad, Seguridad y Permisos de sitios (Contenido usa `open-image`) |
+| `private` | `venetian-mask` | Ventana privada: menú de opciones y «Privada» en la barra de título |
+| `check` | `check` | `CheckMark` marcada y «Datos borrados» |
 | `background`, `background-reset`, `news` | `image`, `image-off`, `newspaper` | Página de nueva pestaña |
 | `music`, `play`, `pause`, `previous`, `next` | `music`, `play`, `pause`, `skip-back`, `skip-forward` | Mini reproductor |
 | `sound`, `muted` | `volume-2`, `volume-x` | Pestaña que suena / silenciada |
@@ -182,7 +190,7 @@ Window (bgBase, sin marco)
 | `not-secure` | `shield-alert` | Aviso de certificado inválido |
 | `camera`, `microphone`, `camera-microphone`, `screen`, `location`, `notifications`, `clipboard`, `fonts` | `camera`, `mic`, `video`, `monitor`, `map-pin`, `bell`, `clipboard`, `type` | Diálogo de permisos: qué pide el sitio |
 | `protected-content` | `monitor-play` | Aviso de que falta Widevine (contenido protegido) |
-| `devtools`, `inspect` | `code-xml`, `scan-search` | Ventana de herramientas de desarrollo (etiqueta «DevTools»); «Inspeccionar» del menú contextual |
+| `devtools`, `inspect` | `code-xml`, `scan-search` | Ventana de herramientas de desarrollo (etiqueta «DevTools») y sección «Desarrollo» de Configuración; «Inspeccionar» del menú contextual |
 
 ### `IconButton` — botón flotante
 - `icon` (nombre de `assets/icons/`, tamaño `iconSize`) o, si no, `glyph` (texto corto: el contador de pestañas).
@@ -258,22 +266,67 @@ Window (bgBase, sin marco)
 
 ### `NewTabPage` — página de nueva pestaña
 - Minimalista y en una columna centrada de hasta `ntpMaxWidth`: buscador, accesos rápidos, noticias. Se desplaza si no cabe.
-- **Fondo:** el del tema, un radial `bgGlow → bgMid → bgBase` desde arriba a la izquierda (como StartCode). Con imagen propia, la imagen a pantalla completa (recortada, decodificada al tamaño de la pantalla para no gastar RAM) y encima un velo `backgroundScrim`.
+- **Fondo:** el del tema (`ThemeBackground`, compartido con Configuración), un radial `bgGlow → bgMid → bgBase` desde arriba a la izquierda (como StartCode). Con imagen propia, la imagen a pantalla completa (recortada, decodificada al tamaño de la pantalla para no gastar RAM) y encima un velo `backgroundScrim`.
 - **Buscador:** píldora de `ntpSearchHeight`, `surfaceFloat`, texto `fontSizeLarge`, icono de búsqueda; borde `focusRing` con foco. Tiene el foco al abrir una pestaña nueva.
 - **Accesos rápidos:** cuadros de `tileSize` con el favicon del sitio (`tileIconSize`) sobre un círculo `faviconBackdrop` de `tileIconBackdrop` (muchos favicons son negros y desaparecerían sobre el fondo oscuro), y el nombre debajo en `inkSecondary`. Sin favicon, la inicial del sitio en `brandLight1`. Los favicons vienen del servicio de iconos de DuckDuckGo y quedan en la caché en disco. La ✕ para quitar aparece al pasar por encima. Hasta `quickLinksMax`; el último cuadro es "Añadir".
 - **Noticias:** encabezado con icono `news` en `brandLight1`, tarjetas `NewsCard` (titular de hasta dos líneas en `ink`, fuente y antigüedad en `inkMuted`), en dos columnas desde `ntpNewsTwoColumnsWidth`.
-- **Botones de fondo** arriba a la derecha: cambiar (abre el selector de archivos) y quitar (solo con imagen propia).
+- **Botones de fondo** arriba a la derecha: cambiar (abre el selector de archivos) y quitar (solo con imagen propia). Lo mismo está en Configuración → Nueva pestaña.
 
-### Diálogos (`QuickLinkEditor`, `SearchEngineDialog`)
+### Diálogos (`QuickLinkEditor`)
 - `Popup` modal centrado, ancho `dialogWidth`, fondo `PopupBackground`, velo `backgroundScrim` detrás.
 - Título en `fontSizeTitle` DemiBold, campos `FormField` (fondo `tintSunken`, radio `radiusSmall`, borde `focusRing` con foco), botones `TextButton` abajo a la derecha: cancelar primero, la acción principal (`primary`, degradado de marca) al final.
 - `TextButton` con `danger` (sin `primary`): acción arriesgada y secundaria. Mismo fondo que un botón normal, texto en `danger` y, al pasar por encima, borde en `danger`.
-
-### `SearchEngineDialog` — motor de búsqueda
-- Se abre desde el menú de opciones → «Motor de búsqueda» (hasta que exista la página de Configuración). Diálogo como los demás: título «Motor de búsqueda».
-- Lista de buscadores en filas de `popupRowHeight` (radio `radiusSmall`, hover `tintHover`): favicon de `faviconSize` del servicio de iconos de DuckDuckGo (sin él, el icono `search` en `inkSoft`), nombre en `ink` y dominio a la derecha en `fontSizeSmall` `inkMuted`. El elegido: fondo `tintActive`, barra `markerWidth` con el degradado de marca y nombre DemiBold. **Pulsar una fila lo elige al momento y cierra.**
-- Debajo, separador `line` y «Personalizado» (`fontSizeSmall` `inkSecondary`): dos `FormField` (nombre opcional y dirección con `%s` donde va el texto; sin esquema se añade `https://`) y una nota `fontSizeSmall` `inkMuted` con un ejemplo, que pasa a `danger` si la dirección no vale. Botones «Cerrar» y «Usar personalizado» (`primary`). Una vez guardado, el personalizado aparece como última fila de la lista.
 - Las filas clicables de un `Popup` sobre la página usan `TapHandler` con `gesturePolicy: TapHandler.ReleaseWithinBounds` (agarre exclusivo): con la política por defecto, lo que hay debajo (una noticia, un acceso rápido de la nueva pestaña) recibe también el clic.
+
+### `SettingsPage` — Configuración
+- Página propia (no una pestaña ni HTML): menú de opciones → «Configuración». Cubre la ventana bajo la barra de título, sobre las pestañas; los controles inferiores y el mini reproductor se ocultan mientras está abierta. Se cierra con Esc, con la ✕ (`IconButton`, arriba a la derecha) o al abrir o cambiar de pestaña. Aparece con un fundido (`durationBase`) y la cabecera baja `spacing` (`durationSlow`, `easeOut`).
+- **Fondo:** `ThemeBackground`, el de la nueva pestaña.
+- **Cabecera** de `settingsHeaderHeight`: círculo de `settingsIconBox` con el degradado de marca y el icono `settings` en `onBrand`, y «Configuración» en `fontSizeHeading` Bold `ink`.
+- **Índice** a la izquierda, de `settingsNavWidth`, solo si la página mide al menos `settingsNavBreakpoint`: una fila de `popupRowHeight` por sección (icono `inkMuted` y nombre DemiBold `inkSecondary`; hover `tintHover`). La sección a la vista: fondo `tintActive`, barra `markerWidth` con el degradado de marca, icono `brandLight1` y nombre Bold `ink`. Pulsar una fila desplaza hasta la sección (`durationSlow`, `easeOut`); al desplazarse, el índice sigue a la sección a la vista.
+- **Columna** de hasta `settingsMaxWidth`; índice y columna van juntos y centrados. Entre secciones, `settingsSectionSpacing`. Cada sección: icono `brandLight1` y título `fontSizeLarge` Bold `ink`, una nota opcional en `fontSizeSmall` `inkSecondary` y una tarjeta (`surfaceFloat`, borde `hairline`, `radius`) con los ajustes.
+- **Fila de ajuste:** al menos `settingsRowHeight`; título `fontSize` DemiBold `ink` y descripción `fontSizeSmall` `inkMuted` a la izquierda (con icono opcional `inkSoft` delante), controles (`TextButton`, `Toggle`, `Chip`) a la derecha. Entre filas, separador `line` con margen `margin`. Estados en píldora: borde y texto Bold `ok` («Disponible») o `warn` («No disponible»), alto `buttonSizeSmall`.
+- **Elección única en filas** (`OptionRow`, «Al iniciar»): título y descripción con un `RadioMark` a la derecha; toda la fila se pulsa (hover `tintHover`), la elegida con fondo `tintActive` y título Bold.
+- **Opciones en píldoras** (`ChoiceRow`: zoom, idiomas): título y descripción arriba y debajo los `Chip`, que saltan de línea si no caben. En los idiomas se marcan varios; la descripción dice el orden.
+- **Permisos guardados** (`SitePermissionRow`, de `pageRowHeight`): icono del permiso `inkSoft`, sitio DemiBold `ink` y «Ubicación · Permitido» en `inkMuted` (`warn` si es «Bloqueado»); ✕ plana para olvidarlo, visible al pasar.
+- **Acción con confirmación** («Restablecer la configuración»): el primer clic cambia la descripción por la pregunta y muestra «Cancelar» junto al botón `danger`.
+- **Búsqueda:** cada buscador en una fila de `settingsRowHeight`: favicon de `faviconSize` sobre un círculo `faviconBackdrop` de `settingsIconBox` (sin favicon, `search` sobre `tintActive`), nombre DemiBold `ink` y dominio debajo en `fontSizeSmall` `inkMuted`, y un `RadioMark` a la derecha. Hover `tintHover`; el elegido, fondo `tintActive`, nombre Bold y `RadioMark` marcado. **Pulsar una fila lo elige al momento.** Debajo, «Personalizado»: nombre (un tercio) y dirección con `%s` (sin esquema se añade `https://`) en `FormField`, nota con un ejemplo en `fontSizeSmall` `inkMuted` (en `danger` si la dirección no vale) y «Guardar y usar» (`primary`). Guardado, el personalizado es la última fila de la lista.
+- **Borrar datos de navegación:** «Borrar datos de» y el periodo en `Chip` (píldoras de `buttonSizeSmall` + `spacing / 2`, borde `hairline`; la elegida, `tintActive`, borde `brandLight1` y texto Bold `ink`). Debajo, una `CheckRow` por dato (`CheckMark`, título y descripción; toda la fila se pulsa, hover `tintHover`): historial y listado de descargas (por periodo), cookies, caché y permisos de sitios (siempre enteros). Abajo, «Borrar datos» (`TextButton` `danger`) y, al terminar, «Datos borrados» con `check` en `ok`, que se desvanece a los `clearedNoticeHold`.
+- **Secciones:**
+  - Al iniciar: continuar donde lo dejaste, pestaña nueva o una página (dirección en `FormField` y «Usar la página actual»).
+  - Apariencia e idioma: zoom de las páginas, modo oscuro en las páginas, idiomas de las páginas.
+  - Búsqueda; Nueva pestaña (imagen de fondo: elegir o quitar).
+  - Privacidad: cookies de terceros, borrar cookies y caché al cerrar, no rastrear, ocultar la IP local.
+  - Seguridad: conexiones seguras, ventanas emergentes, JavaScript.
+  - Permisos de sitios: «Preguntar» / «Bloquear» (`Chip`) por tipo y, debajo, lo decidido para cada sitio.
+  - Contenido: imágenes, reproducción automática.
+  - Borrar datos de navegación; Descargas (carpeta y preguntar dónde guardar).
+  - Desarrollo (`Toggle` «Herramientas de desarrollo»: con él, «Inspeccionar» y F12; al apagarlo se cierran las ventanas de DevTools abiertas).
+  - Acerca de Mitis (versión, Chromium, Widevine) y restablecer la configuración.
+
+### `CheckMark` — casilla
+- Cuadrado de `radioSize` con radio `checkRadius`. Sin marcar: borde `hairlineStrong` (`hairlineHover` al pasar por su fila). Marcada: degradado de marca con `check` en `onBrand` (`iconSizeSmall`). Solo dibuja: la fila atiende el clic.
+
+### `BookmarksPopup` — marcadores
+- Lista desplegable del botón de marcadores, como las demás (`popupWidth`, `PopupBackground`, abre hacia arriba). Arriba, `PopupAction` «Añadir esta página» (`bookmark-add`) o «Quitar esta página» (`bookmark`), con Ctrl+D; desactivada fuera de una página web. Separador `hairline`, buscador (`FormField`, con el foco al abrir) y la lista en `PageRow`; vacía: «Aún no hay marcadores» en `inkMuted`.
+- Con la página actual guardada, la estrella del botón va en `brandLight1` (`IconButton.highlighted`). Ctrl+D la guarda (si no lo estaba) y abre la lista.
+
+### `HistoryPopup` — historial
+- Menú de opciones → Historial (o Ctrl+H). Título «Historial» (`fontSizeTitle` DemiBold), `PopupAction` «Reabrir la última pestaña cerrada» (Ctrl+Shift+T; desactivada sin cerradas), separador, las 30 últimas visitadas en `PageRow` (detalle: dominio · «hace 5 min»), separador y «Historial en Configuración» (`settings`), que abre Configuración en su sección.
+
+### `PageRow` — fila de una página
+- `pageRowHeight`. Favicon sobre círculo `faviconBackdrop` de `buttonSizeSmall` (sin él, la inicial del dominio en `brandLight1` sobre `tintActive`), título en `ink` y detalle en `fontSizeSmall` `inkMuted` (la dirección sin esquema, si no se da otro). Hover `tintHover` y ✕ plana para quitar, visible solo al pasar.
+
+### Sugerencias de la barra de dirección
+- Al escribir, una lista sobre el campo (mismo ancho, `PopupBackground`, separada `floatingMargin`), que no se queda el foco. Hasta 6 filas de `popupRowHeight`: icono `bookmark` o `history` (`inkMuted`; `brandLight1` en la elegida), título en `ink` (hasta el 60 % del ancho) y la dirección sin esquema en `fontSizeSmall` `inkMuted`. La elegida con las flechas: `tintActive` y título DemiBold.
+
+### Ventana privada
+- Otra ventana como la principal. En la barra de título, junto al nombre, una píldora de `logoSize` de alto: borde `brandLight1`, fondo `tintActive`, icono `private` y «Privada» en `fontSizeSmall` Bold `brandLight1`. El título de la ventana termina en «Mitis (ventana privada)».
+
+### `Toggle` — interruptor
+- Pista de `toggleWidth` × `toggleHeight`, totalmente redonda. Apagado: `tintHover` (`tintActive` al pasar), borde `hairline` y bola `inkSoft`. Encendido: degradado de marca (aparece con un fundido `durationFast`) y bola `onBrand`. La bola, separada `toggleKnobInset` del borde, se desliza en `durationBase` con `easeInOut`. Con foco de teclado, borde `focusRing`; Espacio lo cambia.
+
+### `RadioMark` — elección única
+- Círculo de `radioSize`. Sin elegir: aro `hairlineStrong` (`hairlineHover` al pasar por su fila). Elegido: relleno con el degradado de marca y punto `onBrand` de `radioDotSize`. Solo dibuja: la fila que lo contiene atiende el clic.
 
 ### `CertificateDialog` — certificado inválido
 - `PageDialog` con `danger`: tarjeta de `certificateDialogWidth` sobre la página de su pestaña (se oculta y vuelve con ella), icono `not-secure` y título «La conexión no es privada» en `danger`.

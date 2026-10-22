@@ -107,6 +107,24 @@ QtObject {
     readonly property int tileIconSize: 22
     readonly property int tileIconBackdrop: 34
     readonly property int quickLinksMax: 10
+    // Página de Configuración: índice a la izquierda y columna de secciones
+    readonly property int settingsMaxWidth: 680
+    readonly property int settingsNavWidth: 220
+    // Por debajo de este ancho de ventana el índice se oculta
+    readonly property int settingsNavBreakpoint: 900
+    readonly property int settingsHeaderHeight: 64
+    readonly property int settingsSectionSpacing: 32
+    readonly property int settingsRowHeight: 60
+    readonly property int settingsIconBox: 36
+    // Interruptor (Toggle): pista y separación de la bola
+    readonly property int toggleWidth: 38
+    readonly property int toggleHeight: 22
+    readonly property int toggleKnobInset: 3
+    // Botón de opción (círculo de elección única)
+    readonly property int radioSize: 18
+    readonly property int radioDotSize: 8
+    // Casilla de verificación (CheckMark): mismo tamaño que el botón de opción
+    readonly property int checkRadius: 5
     readonly property int miniPlayerWidth: 270
     readonly property int findBarWidth: 440
     readonly property int zoomLabelWidth: 52
@@ -124,10 +142,13 @@ QtObject {
     readonly property int dragScrollStep: 6
     // Listado de descargas: fila de dos líneas (nombre y estado)
     readonly property int downloadRowHeight: 52
+    // Fila de una página (marcadores, historial): título y detalle
+    readonly property int pageRowHeight: 48
     // Pantalla completa (F11): franja del borde inferior que muestra los controles
     readonly property int fullscreenRevealEdge: 4
 
     // ── Tipografía ───────────────────────────────────────────────────
+    readonly property int fontSizeHeading: 24
     readonly property int fontSizeLarge: 16
     readonly property int fontSizeTitle: 14
     readonly property int fontSize: 13
@@ -165,6 +186,8 @@ QtObject {
     readonly property int zoomIndicatorHold: 2000
     // Al terminar una descarga, su panel y el botón se quedan este tiempo
     readonly property int downloadPanelHold: 10000
+    // Aviso «Datos borrados» de Configuración
+    readonly property int clearedNoticeHold: 3000
     // Aviso «Pulsa Esc/F11 para salir de la pantalla completa»
     readonly property int fullscreenHintHold: 3000
     // Una vuelta del anillo de progreso sin total conocido
