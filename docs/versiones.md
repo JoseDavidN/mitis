@@ -1,0 +1,56 @@
+# Versiones de Mitis
+
+## Esquema
+
+[Semantic Versioning](https://semver.org/lang/es/) (`MAYOR.MENOR.PARCHE`), adaptado a la etapa del proyecto:
+
+- **Mientras sea 0.x**, la interfaz y los datos aún pueden cambiar sin aviso.
+  - **MENOR** sube con cada fase cerrada del [plan](PLAN.md) o con un conjunto de funciones nuevas que merezca publicarse. Al cerrar una fase, la versión menor coincide con su número: Fase 5 → `0.5.0`.
+  - **PARCHE** sube con versiones que solo corrigen errores (o cambios menores sin funciones nuevas): `0.5.1`, `0.5.2`…
+- **1.0.0** llegará cuando se cumplan los criterios de la Fase 6: alguien sin Qt instalado puede descargar Mitis y usarlo en Linux, Windows y macOS.
+- **A partir de 1.0**, SemVer normal: MAYOR si se pierden datos o ajustes al actualizar o desaparece algo que se usaba, MENOR con funciones nuevas, PARCHE con correcciones.
+
+Historial con este esquema (ver [CHANGELOG.md](../CHANGELOG.md)):
+
+| Versión | Contenido | Commit |
+|---|---|---|
+| 0.1.0 | Esqueleto del proyecto (no publicada) | `f5d23db` |
+| 0.2.0 | Fases 0, 1 (parcial) y 2: interfaz propia y pestañas completas | `12afc15` |
+| 0.3.0 | Fase 3: navegación completa | `d2fa2ac` |
+| 0.4.0 | Fase 4: persistencia y Configuración | `d6cfa89` |
+| 0.5.0 | Fase 5 y casi toda la 6: memoria, suspensión, bloqueador, temas, instalador y paquetes | el de «Publica la versión 0.5.0» |
+
+Las fases 0–2 van juntas en 0.2.0 porque entraron en un solo commit. Esas versiones no tienen etiqueta ni release: son anteriores al workflow de publicación. Si se quieren marcar, basta con etiquetas ligeras (`git tag v0.4.0 d6cfa89`); al subirlas no se publica nada porque esos commits no tienen `.github/workflows/`.
+
+**Versión actual: 0.5.0** (Fase 5 cerrada). Será la primera publicada, al subir la etiqueta `v0.5.0`: instalador de Windows, `.dmg` de macOS y AppImage.
+
+## Dónde vive la versión
+
+Una sola fuente: `project(Mitis VERSION x.y.z)` en `CMakeLists.txt`. Nunca se escribe en otro sitio; todo lo demás sale de ahí:
+
+- `MITIS_VERSION` (definición del compilador) → `QGuiApplication::setApplicationVersion()` en `src/main.cpp` → `Qt.application.version` en Configuración → Acerca de Mitis.
+- `MACOSX_BUNDLE_*_VERSION` → versión de `Mitis.app` en macOS.
+- El workflow (`.github/workflows/compilar.yml`) la lee de `CMakeLists.txt` y se la pasa al instalador de Windows (`-DMITIS_VERSION`, que la muestra en «Aplicaciones instaladas») y a los nombres de los paquetes: `Mitis-x.y.z-Instalador.exe`, `Mitis-x.y.z-macOS.dmg`.
+- La etiqueta de git (`vx.y.z`) debe coincidir; el workflow lo comprueba antes de publicar.
+
+`qt_add_qml_module(... VERSION 1.0)` es la versión de los módulos QML (`Mitis`, `Mitis.Core`), no la de Mitis: no se toca.
+
+## Registro de cambios
+
+`CHANGELOG.md`, formato [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/):
+
+- Cada cambio que note quien usa Mitis se apunta en **«Sin publicar»** en el mismo commit que lo introduce, en la sección que toque: **Añadido**, **Cambiado**, **Corregido**, **Eliminado**.
+- Se escribe para usuarios: qué cambia al usar Mitis, no cómo está hecho. Los cambios internos sin efecto visible no se apuntan.
+- Las notas de cada release de GitHub son la sección de su versión en `CHANGELOG.md`.
+
+## Publicar una versión
+
+1. Comprobar que `main` compila en las tres plataformas (último run de GitHub Actions en verde).
+2. Subir la versión en `CMakeLists.txt`: `project(Mitis VERSION 0.5.0 ...)`.
+3. En `CHANGELOG.md`, renombrar `## [Sin publicar]` a `## [0.5.0] - AAAA-MM-DD` y dejar encima un `## [Sin publicar]` vacío.
+4. Si la versión cierra una fase, marcarla en `docs/PLAN.md`.
+5. Commit: `git commit -am "Publica la versión 0.5.0"`.
+6. Etiqueta anotada: `git tag -a v0.5.0 -m "Mitis 0.5.0"`.
+7. Subir el commit y la etiqueta: `git push origin main v0.5.0`.
+8. El workflow compila, comprueba que la etiqueta coincide con `project(VERSION)`, extrae las notas de `CHANGELOG.md` y publica el release con el instalador y el `.dmg`.
+9. Revisar el release en GitHub. Si algo falla, corregir en `main`, borrar la etiqueta (`git push --delete origin v0.5.0`, `git tag -d v0.5.0`) y volver a etiquetar; si el release ya se descargó, mejor publicar `0.5.1`.

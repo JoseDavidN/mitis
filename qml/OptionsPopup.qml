@@ -6,14 +6,18 @@ import QtQuick.Controls.Basic
 Popup {
     id: root
 
+    // Herramientas de desarrollo activadas: añade «Uso de memoria»
+    property bool developer: false
+
     // Cada opción: { key, label, icon, available, shortcut (opcional) }
-    property var options: [
+    readonly property var options: [
         { key: "private", label: "Nueva ventana privada", icon: "private", available: true, shortcut: "Ctrl+Shift+N" },
         { key: "history", label: "Historial", icon: "history", available: true },
         { key: "downloads", label: "Descargas", icon: "downloads", available: true },
         { key: "profile", label: "Perfil", icon: "profile", available: false },
+        { key: "memory", label: "Uso de memoria", icon: "memory", available: true, shortcut: "Shift+Esc" },
         { key: "settings", label: "Configuración", icon: "settings", available: true }
-    ]
+    ].filter(option => developer || option.key !== "memory")
 
     signal optionSelected(string key)
 

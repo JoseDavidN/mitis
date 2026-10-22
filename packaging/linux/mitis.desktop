@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=Mitis
+GenericName=Navegador web
+Comment=Navegador web ligero y con interfaz propia
+# %U: el sistema pasa las URL abiertas con Mitis (enlaces, archivos .html)
+Exec=mitis %U
+Icon=mitis
+Terminal=false
+Categories=Network;WebBrowser;
+MimeType=text/html;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;
+Keywords=web;navegador;internet;browser;
+StartupNotify=true
+# Qt pone el nombre de la aplicación (QGuiApplication::applicationName) como clase de la ventana
+StartupWMClass=Mitis

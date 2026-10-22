@@ -38,12 +38,16 @@ src/            C++ (main.cpp, devreloader.*, iconprovider.*: iconos SVG colorea
                 widevine.*: localiza Widevine (contenido protegido) y se lo pasa al motor,
                 settings.*: ajustes guardados con QSettings, singleton `Settings` del módulo Mitis.Core,
                 history.*: historial en SQLite, escritura en un hilo propio (singleton `History`),
-                bookmarks.*: marcadores en SQLite (singleton `Bookmarks`))
+                bookmarks.*: marcadores en SQLite (singleton `Bookmarks`),
+                memorymonitor.*: memoria de Mitis y de sus procesos del motor (singleton `MemoryMonitor`),
+                filterengine.*: motor de filtros de anuncios (sintaxis EasyList/uBlock y hosts de Pi-hole), sin dependencias del motor web,
+                contentblocker.*: bloqueador: descarga, guarda, renueva y compila las listas; lo consulta RequestInterceptor,
+                links.*: enlaces que el sistema pide abrir (navegador predeterminado) y un solo Mitis por perfil (singleton `Links`))
 qml/            Interfaz. Todos los archivos planos en esta carpeta.
   Main.qml            Ventana, modelo de pestañas, navegación, atajos, sesión (no conoce el motor). La ventana privada es otra instancia (privateMode)
   BrowserTab.qml      Una pestaña: envuelve WebEngineView y ofrece solo lo que usa la interfaz
-  BrowserProfile.qml  Singleton: el perfil (cookies, caché, User-Agent, scripts inyectados)
-  Theme.qml           Singleton: colores, medidas, animaciones
+  BrowserProfile.qml  Singleton: completa y atiende el perfil que crea C++ (scripts inyectados, User-Agent, descargas, permisos) y el de las ventanas privadas
+  Theme.qml           Singleton: colores (tres temas: Nocturno, Oscuro, Claro; Settings.theme), medidas, animaciones
   TitleBar.qml        Barra superior: marca (icono + "Mitis") y controles de ventana
   BottomBar.qml       Controles inferiores flotantes: navegación, dirección, pestañas, marcadores, opciones
   AddressBar.qml      Campo de dirección/búsqueda, con sugerencias de marcadores e historial
@@ -74,6 +78,7 @@ qml/            Interfaz. Todos los archivos planos en esta carpeta.
   MiniPlayer.qml      Mini reproductor sobre la barra de búsqueda
   FindBar.qml         Buscar en la página (Ctrl+F)
   ZoomIndicator.qml   Indicador de zoom (arriba a la derecha, se cierra solo)
+  MemoryPanel.qml     Panel de memoria (desarrollo, Shift+Esc): total, por tipo de proceso y por pestaña
   News.qml            Singleton: noticias de tecnología (RSS), compartidas por todas las pestañas
   TextButton.qml      Botón con texto (primary = degradado de marca; danger = acción arriesgada)
   FormField.qml       Campo de texto de formulario
@@ -89,7 +94,17 @@ assets/         icons/ (SVG de Lucide, nombrados por uso), fonts/ (Nunito),
                 scripts/ (JS que Mitis inyecta: media.js, puente multimedia en las páginas;
                 devtools.js, tema negro del panel de DevTools; drm.js, detecta páginas que
                 piden Widevine cuando falta)
-docs/           Documentación y plan
+docs/           Documentación y plan (rendimiento.md: comparativa de memoria; versiones.md: esquema y cómo publicar)
+licencias/      LEEME.md (GPL-3.0 de Mitis y cómo se cumple la LGPL de Qt), AVISOS.md (terceros) y textos de licencia; viaja en cada paquete. LICENSE (raíz): GPL-3.0
+CHANGELOG.md    Cambios de cada versión, para usuarios («Sin publicar» arriba)
+tools/codecs/   Compilar Qt WebEngine con códecs propietarios (H.264, AAC) para Windows y macOS, y página de prueba; guía en docs/codecs.md
+tools/          medir_ram.py: mide la RAM de Mitis, Chrome o Firefox con las páginas de paginas.txt
+installer/      Instalador de Windows (proyecto CMake aparte, Win32 + GDI+, sin Qt): src/main.cpp (ventana),
+                src/instalacion.* (extraer, accesos, registro, desinstalar), empaquetar.ps1 (pega el ZIP al .exe)
+assets/branding/ Logos para el instalador (startcode.png)
+packaging/macos/ Info.plist.in (abre http/https y HTML: navegador predeterminado)
+packaging/linux/ PKGBUILD (Arch, mitis-git), appimage.sh (+ apprun-sandbox.sh), mitis.desktop, mitis.svg (icono provisional)
+.github/workflows/compilar.yml  Compila en Linux, Windows y macOS; instalador y .dmg; release con etiqueta v*
 ```
 
 ## Diseño de la interfaz
@@ -112,14 +127,19 @@ docs/           Documentación y plan
 ### Motor web
 - **Solo `BrowserTab.qml` y `BrowserProfile.qml` importan `QtWebEngine`.** El resto de la interfaz habla con las pestañas a través de la API de `BrowserTab` (propiedades `url`, `title`, `icon`, `loading`, `muted`…; funciones `navigate()`, `goBack()`, `mediaState()`…; señales `newTabRequested`, `closeRequested`). Así, cambiar de motor es reescribir esos dos archivos.
 - Si la interfaz necesita algo nuevo del motor, se añade a `BrowserTab` (como alias cuando sea una propiedad: no cuesta nada), nunca usando `WebEngineView` desde fuera.
-- En C++, el motor aparece en `QtWebEngineQuick::initialize()` de `main.cpp`, en `RequestInterceptor` (ve cada petición de las páginas; base del futuro bloqueador de anuncios) y en `EngineBridge` (lo publica en QML como la propiedad de contexto `MitisEngine`, porque los tipos del módulo no existen en `--dev`).
+- En C++, el motor aparece en `QtWebEngineQuick::initialize()` de `main.cpp`, en `RequestInterceptor` (ve cada petición de las páginas: bloqueador, parámetros de rastreo, https) y en `EngineBridge` (lo publica en QML como la propiedad de contexto `MitisEngine`, porque los tipos del módulo no existen en `--dev`).
+- **Perfiles:** los crea `EngineBridge` en C++: el normal con su nombre de almacenamiento desde el constructor (creado en QML, Qt avisa de que quedará obsoleto y arranca un instante sin disco) y el privado con nombre vacío (`createPrivateProfile()`/`destroyPrivateProfile()`). Viven toda la app, también entre recargas de `--dev`: lo que `BrowserProfile` les pone (scripts, enlaces) debe poder repetirse sin duplicar. `main.cpp` crea el puente antes de la interfaz y lo destruye después de ella y antes de la aplicación.
+- **Navegador predeterminado:** los enlaces llegan como argumentos (`Mitis https://…`) o, en macOS, como evento FileOpen. `Links` (C++) deja un solo Mitis por perfil: el que arranca con otro abierto le pasa sus enlaces por `QLocalServer` (canal que depende de la carpeta de datos: un perfil de pruebas con otra carpeta XDG no se los manda al Mitis del usuario) y termina. `Main.qml` (solo la ventana principal) los abre en pestañas nuevas. Registro: `mitis.desktop` (Linux), `Info.plist.in` (macOS) y el instalador (Windows: ProgID `MitisHTML`, `RegisteredApplications`).
+- **Opciones de Chromium** (`setupChromiumFlags()` en `main.cpp`, antes de iniciar el motor): sin peticiones en segundo plano, sin `<a ping>`, sin las APIs publicitarias de Privacy Sandbox, y `prefers-color-scheme` según el tema guardado (solo al arrancar: Qt WebEngine no deja cambiarlo en marcha). Las de `QTWEBENGINE_CHROMIUM_FLAGS` van detrás y ganan; un `--disable-features` propio sustituye la lista entera. Límite de procesos, `--process-per-site` y `--enable-low-end-device-mode` se midieron y no ahorran memoria (docs/rendimiento.md).
 - **Descargas:** motor → `BrowserProfile` (`onDownloadRequested`: acepta, registra con `Downloads.add()` y mantiene el modelo con `Downloads.update()` desde las señales del objeto, sin sondeo) → `Downloads.qml` (singleton sin motor: modelo `items`, acciones, y listado de terminadas guardado en `Settings`, categoría `Downloads`) → interfaz, que solo usa `Downloads`. El nombre repetido lo resuelve el propio motor (`archivo (1).ext`).
 
 ### Ajustes
 - **Todo lo que se guarda entre sesiones va por el singleton `Settings`** (`src/settings.*`, `import Mitis.Core`), nunca por `Settings` de `QtCore`. Las preferencias son propiedades (enlazables, con su clave fija en `settings.cpp`); los datos internos usan `Settings.value("Categoría/clave", porDefecto)` / `Settings.setValue()`.
 - Un archivo que necesite además `StandardPaths` importa `QtCore as Core` (`Core.StandardPaths…`): así su `Settings` no choca con el de Mitis.
 - Una preferencia nueva que se elija en la interfaz: propiedad en `Settings`, fila en `SettingsPage.qml` y su clave en `resetPreferences()` (`settings.cpp`).
-- Dónde se aplica cada preferencia: las de la página (JavaScript, imágenes, emergentes, modo oscuro, zoom, permisos bloqueados) en `BrowserTab`; las del perfil (idiomas, carpeta, borrar al cerrar) en `BrowserProfile`; las que van petición a petición (cookies de terceros, No rastrear, conexiones seguras) en C++, en `EngineBridge`/`RequestInterceptor`, enlazadas desde `BrowserProfile`.
+- **Suspensión de pestañas** (Fase 5): `Main.qml` decide cuándo (temporizador: congelar a los 5 min oculta, descargar a los `Settings.suspendAfter`; nunca fijadas ni la del mini reproductor) y `BrowserTab.suspend()` aplica el estado del motor (`lifecycleState`) con sus excepciones (suena, DevTools, `recommendedState`, permiso de notificaciones, formulario con datos). Al volver a verse, la pestaña se reactiva sola.
+- **Bloqueador de anuncios** (Fase 5): `ContentBlocker` guarda las listas en la carpeta de datos (`filtros/`), las renueva cada 4 días y las compila en un hilo con `FilterEngine` (~335 000 reglas, <1 s, ~4 MB, ~10 µs por petición). Para no romper páginas: la página principal solo se bloquea con reglas `$document`; si el usuario visita un dominio de las listas, sus propios recursos no se bloquean; una regla con opciones que no se entienden (`redirect`, `csp`…) se descarta entera. La ocultación de elementos es solo por sitio: `BrowserTab` pone el CSS del sitio en un script de la vista al empezar cada carga (`MitisEngine.cosmeticCss`). Para probar el motor sin compilar Mitis, basta con compilar `filterengine.cpp` con un `main` que lo use (solo necesita Qt Core).
+- Dónde se aplica cada preferencia: las de la página (JavaScript, imágenes, emergentes, modo oscuro, zoom, permisos bloqueados) en `BrowserTab`; las del perfil (idiomas, carpeta, borrar al cerrar) en `BrowserProfile`; las que van petición a petición (cookies de terceros, No rastrear, conexiones seguras, bloqueador y parámetros de rastreo) en C++, en `EngineBridge`/`RequestInterceptor`, enlazadas desde `BrowserProfile`.
 
 ### C++
 - Lógica pesada, persistencia y todo lo que toque el motor a bajo nivel va en C++, expuesto a QML con `QML_ELEMENT` / `QML_SINGLETON`.
@@ -127,10 +147,18 @@ docs/           Documentación y plan
 - Cada clase nueva se añade a `qt_add_executable` (o a `mitiscore` si es un tipo de QML) en `CMakeLists.txt`.
 - Si se usa un módulo Qt nuevo, añadirlo a `find_package` y a `target_link_libraries`.
 
+### Instalador de Windows (`installer/`)
+- No usa Qt (se ejecuta antes de que esté instalado): Win32, GDI+ y miniz (se descarga al configurar, con su hash). CRT estático.
+- Sus colores son los de Nocturno copiados en `src/main.cpp`: si cambia el tema, cambiarlos también allí. Medidas a 100 % de escala, multiplicadas por los DPI.
+- Formato: `[MitisInstalador.exe][ZIP][desplazamiento 8 bytes][«MITISPAQ»]`. El desinstalador es el mismo `.exe` sin el paquete, con `--desinstalar`.
+- Solo se compila en Windows (GitHub Actions); aquí no hay compilador para probarlo.
+
 ### General
 - Comentarios y mensajes en español, breves, explicando el porqué cuando no es obvio.
 - Textos de la interfaz en español.
 - Mensajes de commit en español, en imperativo ("Añade...", "Corrige...").
+- Un componente de terceros nuevo (biblioteca, fuente, iconos, lista descargada): añadirlo a `licencias/AVISOS.md` con su licencia y, si se distribuye, su texto en `licencias/`. Qt siempre enlazado dinámicamente (LGPL).
+- **Versiones y cambios:** la versión solo se cambia en `project(VERSION)` de `CMakeLists.txt`. Todo cambio que note el usuario se apunta en `CHANGELOG.md`, sección «Sin publicar», en el mismo commit y redactado para usuarios. Para publicar: `docs/versiones.md`.
 
 ## Cómo verificar cambios
 
@@ -146,6 +174,7 @@ docs/           Documentación y plan
    sleep 15; ffmpeg -loglevel error -y -f x11grab -video_size 1400x900 -i :7 -frames:v 1 captura.png
    ```
    WebEngine tarda en pintar la primera página: esperar al menos 15 s.
+   Para medir memoria con muchas páginas (y comparar con Chrome y Firefox): `tools/medir_ram.py` (ver su ayuda).
    Para probar hover y animaciones, lanzar con `QT_QUICK_BACKEND=software`: con OpenGL, en Xvnc la ventana no se repinta al pasar el ratón y las capturas salen sin el efecto. El puntero se mueve con XTest desde Python:
    ```bash
    python3 -c 'import ctypes as c,sys; x=c.CDLL("libX11.so.6"); t=c.CDLL("libXtst.so.6"); x.XOpenDisplay.restype=c.c_void_p; d=c.c_void_p(x.XOpenDisplay(b":7")); t.XTestFakeMotionEvent(d,-1,int(sys.argv[1]),int(sys.argv[2]),0); x.XFlush(d)' 1252 20
@@ -161,7 +190,7 @@ docs/           Documentación y plan
 - Atajos con varias ventanas (la privada es otra `Main`): son `Qt.ApplicationShortcut` (con `WindowShortcut` dejan de funcionar si ninguna ventana queda activa, como en Xvnc sin gestor de ventanas, y F12 debe llegar desde la de DevTools), así que dos ventanas tendrían los mismos atajos a la vez y Qt los da por ambiguos. Cada `Shortcut` de `Main.qml` lleva `enabled: win.ownsShortcuts && …`: los atiende la ventana activa o, si no hay ninguna, la principal. Las privadas se quitan de `privateWindows` de su ventana al cerrarse: una referencia a una ventana destruida dejaba `ownsShortcuts` en falso para siempre.
 - Ctrl+Mayús+Tab no hacía nada: un `Shortcut` con varias secuencias equivalentes (`Ctrl+Shift+Tab`, `Ctrl+Backtab`…) es **ambiguo** consigo mismo y Qt emite `activatedAmbiguously`, no `activated`. Usar una sola secuencia por pulsación (y, si hay riesgo, atender también `onActivatedAmbiguously`).
 - Una descarga cortada por el servidor mostraba "Download canceled by the user": Chromium envía motivos de interrupción que Qt no tiene en su enumeración (p. ej. 38, la descarga llegó incompleta) y para ellos `interruptReasonString` miente. `BrowserProfile` los traduce por número y nunca usa ese texto.
-- Google no dejaba iniciar sesión ("Es posible que el navegador o la aplicación no sean seguros", página `/signin/rejected`): rechaza los navegadores con motor embebido y las versiones de Chrome viejas. Los delataban las Client Hints (`sec-ch-ua`) y `navigator.userAgentData` (solo "Chromium", sin "Google Chrome"), la versión del motor (140, cuando Chrome estable va por la 153) y `navigator.plugins` vacío. Solución, solo en `accounts.google.com`: `RequestInterceptor` (C++) declara el Chrome vigente en `User-Agent`, `sec-ch-ua` y `sec-ch-ua-full-version-list`, y un script inyectado desde `BrowserProfile` hace lo mismo con `navigator.userAgent`/`userAgentData`; `BrowserTab` activa los complementos (visor de PDF). Si Google vuelve a rechazar, subir `CurrentChromeVersion` en `requestinterceptor.cpp`. No disfrazarse de Firefox: la conexión (TLS, HTTP/2) es de Chromium y no casa. Las Client Hints las añade el motor: el interceptor puede reemplazarlas, no quitarlas.
+- Google no dejaba iniciar sesión ("Es posible que el navegador o la aplicación no sean seguros", página `/signin/rejected`): rechaza los navegadores con motor embebido. Lo que delataba a Mitis era `window.chrome` vacío (Chrome trae `app`, `csi`, `loadTimes`). Solución, solo en `accounts.google.com`: `assets/scripts/google.js` (inyectado desde `BrowserProfile`) los completa. **No disfrazarse** de otra versión ni de Google Chrome (User-Agent, Client Hints, `userAgentData`): se probó y con la incoherencia con el motor Google también rechaza; Chrome for Testing 140, con solo la marca "Chromium", pasa. Se conserva la versión real de Chromium. `BrowserTab` activa los complementos (visor de PDF), como Chrome.
 - El panel de DevTools salía claro aunque se eligiera el tema oscuro: Chromium solo aplica el tema tras cargar `devtools://theme/colors.css`, que Qt WebEngine no incluye. `devtools.js` desactiva su ajuste `chrome-theme-colors` y entonces el tema se aplica al momento. Sus variables de color (`--sys-color-*`) se sobrescriben con `!important`: el panel las define con selectores más específicos. La vista del panel debe recibir `inspectedView` **después** de crearse: pasado en `createObject()` el panel se queda en blanco.
 - Al cerrar la ventana, Mitis desaparecía pero el proceso seguía vivo: el motor QML era hijo de `app` y se destruía a mitad del cierre de esta, y Qt WebEngine se quedaba bloqueado. `main.cpp` destruye la interfaz a mano tras `app.exec()`.
 - WhatsApp Web (y otros sitios) rechazaban a Mitis: el User-Agent de Qt WebEngine incluye `QtWebEngine/x.y.z` → `BrowserProfile.qml` lo quita al arrancar. Se conserva la versión real de Chromium: no inventar una más nueva.

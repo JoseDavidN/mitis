@@ -1,0 +1,24 @@
+# Páginas de la comparativa de memoria (tools/medir_ram.py): 20 sitios
+# conocidos y variados (vídeo, noticias, tiendas, documentación), que se
+# abren sin iniciar sesión. Las 4 primeras hacen de «activas» en Mitis
+# (fijadas: nunca se suspenden); con la visible, 5 activas.
+https://www.youtube.com/watch?v=jNQXAC9IVRw
+https://es.wikipedia.org/wiki/Colombia
+https://github.com/qt/qtwebengine
+https://www.eltiempo.com/
+https://www.amazon.com/
+https://www.mercadolibre.com.co/
+https://elpais.com/
+https://www.bbc.com/mundo
+https://stackoverflow.com/questions/11227809
+https://developer.mozilla.org/es/docs/Web/JavaScript
+https://doc.qt.io/qt-6/qtwebengine-index.html
+https://www.imdb.com/
+https://edition.cnn.com/
+https://www.reddit.com/r/programming/
+https://news.ycombinator.com/
+https://www.infobae.com/
+https://www.semana.com/
+https://www.twitch.tv/
+https://www.espn.com/
+https://www.booking.com/

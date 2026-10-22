@@ -7,15 +7,17 @@
 
 #include <atomic>
 
-// Ve cada petición de las páginas antes de que salga: pide no ser rastreado
-// (Configuración → Privacidad), abre con https:// las direcciones http://
-// (Seguridad) y ajusta las Client Hints del inicio de sesión de Google. El
-// bloqueador de anuncios de la Fase 5 se apoyará en esta misma pieza.
+class ContentBlocker;
+
+// Ve cada petición de las páginas antes de que salga: bloquea anuncios y
+// rastreadores (ContentBlocker) y quita el rastreo de los enlaces, pide no
+// ser rastreado (Configuración → Privacidad), abre con https:// las
+// direcciones http:// (Seguridad).
 // Se llama para cada petición, en el hilo de la interfaz: debe ser rápido.
 class RequestInterceptor : public QWebEngineUrlRequestInterceptor
 {
 public:
-    explicit RequestInterceptor(QObject *parent = nullptr);
+    explicit RequestInterceptor(ContentBlocker *blocker, QObject *parent = nullptr);
 
     void interceptRequest(QWebEngineUrlRequestInfo &info) override;
 
@@ -34,20 +36,8 @@ public:
     // debe a la subida (p. ej. sin conexión) y no vuelve a http
     void confirmHttps(const QString &host);
 
-    // Versión de Chrome que Mitis declara en el inicio de sesión de Google:
-    // la del motor o, si es más antigua, la de Chrome estable vigente
-    // (Google rechaza versiones viejas). Se actualiza a mano.
-    static QByteArray googleChromeVersion();
-
 private:
-    // Google no deja iniciar sesión desde navegadores con motor embebido y
-    // los detecta, entre otras cosas, porque sus Client Hints solo dicen
-    // "Chromium". En su página de inicio de sesión Mitis añade la marca
-    // "Google Chrome" con la versión real del motor, como el Chrome de verdad
-    // (con el que comparte motor, conexión y User-Agent).
-    QByteArray m_userAgent;
-    QByteArray m_brands;
-    QByteArray m_fullVersionList;
+    ContentBlocker *m_blocker;
 
     // Hosts subidos a https cuya carga aún no ha terminado bien
     QSet<QString> m_upgraded;

@@ -26,11 +26,13 @@ FocusScope {
         { key: "search", title: "Búsqueda", icon: "search" },
         { key: "newtab", title: "Nueva pestaña", icon: "new-tab" },
         { key: "privacy", title: "Privacidad", icon: "privacy" },
+        { key: "blocker", title: "Anuncios y rastreadores", icon: "blocker" },
         { key: "security", title: "Seguridad", icon: "security" },
         { key: "permissions", title: "Permisos de sitios", icon: "permissions" },
         { key: "content", title: "Contenido", icon: "open-image" },
         { key: "history", title: "Borrar datos", icon: "history" },
         { key: "downloads", title: "Descargas", icon: "downloads" },
+        { key: "performance", title: "Rendimiento", icon: "performance" },
         { key: "developer", title: "Desarrollo", icon: "devtools" },
         { key: "about", title: "Acerca de Mitis", icon: "info" }
     ]
@@ -39,6 +41,11 @@ FocusScope {
     readonly property var zoomOptions: [
         { value: 0.8, label: "80 %" }, { value: 0.9, label: "90 %" }, { value: 1, label: "100 %" },
         { value: 1.1, label: "110 %" }, { value: 1.25, label: "125 %" }, { value: 1.5, label: "150 %" }
+    ]
+    // Minutos sin usar tras los que se descarga una pestaña (0 = nunca)
+    readonly property var suspendOptions: [
+        { value: 15, label: "15 min" }, { value: 30, label: "30 min" }, { value: 60, label: "1 hora" },
+        { value: 120, label: "2 horas" }, { value: 0, label: "Nunca" }
     ]
     // Idiomas que se pueden pedir a las páginas (código de Accept-Language)
     readonly property var languageOptions: [
@@ -83,6 +90,27 @@ FocusScope {
     property var sitePermissions: []
     function refreshSitePermissions() {
         sitePermissions = BrowserProfile.sitePermissions()
+    }
+
+    // Bloqueador: sitio de la pestaña activa (para «Permitir en…») y estado de las listas
+    readonly property string currentSite: /^https?:/.test(currentPageUrl) ? BrowserProfile.siteOf(currentPageUrl) : ""
+    readonly property string filterListsStatus: {
+        if (!Settings.blockAds)
+            return "El bloqueador está desactivado."
+        const rules = BrowserProfile.adBlockRules
+        if (rules === 0)
+            return BrowserProfile.adBlockUpdating ? "Descargando las listas…"
+                                                  : "Aún no se han podido descargar: se volverá a intentar."
+        const locale = Qt.locale("es_ES")
+        const updated = BrowserProfile.adBlockUpdated
+        return rules.toLocaleString(locale, "f", 0) + " reglas"
+            + (isNaN(updated.getTime()) ? "" : ", del " + updated.toLocaleDateString(locale, "d 'de' MMMM"))
+            + ". Se renuevan solas cada 4 días. Bloqueado desde que abriste Mitis: "
+            + BrowserProfile.adBlockBlocked.toLocaleString(locale, "f", 0) + "."
+    }
+    function allowAdsOn(site) {
+        if (!Settings.adBlockAllowedSites.includes(site))
+            Settings.adBlockAllowedSites = Settings.adBlockAllowedSites.concat([site]).sort()
     }
 
     // Página al iniciar: lo escrito → dirección ("" = ninguna)
@@ -155,11 +183,13 @@ FocusScope {
         case "search": return searchSection
         case "newtab": return newTabSection
         case "privacy": return privacySection
+        case "blocker": return blockerSection
         case "security": return securitySection
         case "permissions": return permissionsSection
         case "content": return contentSection
         case "history": return historySection
         case "downloads": return downloadsSection
+        case "performance": return performanceSection
         case "developer": return developerSection
         case "about": return aboutSection
         default: return startupSection
@@ -476,10 +506,10 @@ FocusScope {
                 id: appearanceSection
                 title: "Apariencia e idioma"
                 icon: "appearance"
-                description: "Cómo se ven las páginas web. La interfaz de Mitis no cambia."
+                description: "El tema de Mitis y cómo se ven las páginas web."
 
+                ThemeRow {}
                 ChoiceRow {
-                    divider: false
                     title: "Zoom de las páginas"
                     description: "Con el que abren todas (también agranda o reduce la letra). Ctrl+0 vuelve a él."
                     options: root.zoomOptions
@@ -669,6 +699,60 @@ FocusScope {
                         checked: Settings.hideLocalIp
                         onToggled: Settings.hideLocalIp = checked
                     }
+                }
+            }
+
+            SettingsSection {
+                id: blockerSection
+                title: "Anuncios y rastreadores"
+                icon: "blocker"
+                description: "Se bloquean antes de descargarse: las páginas cargan antes y gastan menos memoria y datos."
+
+                SettingRow {
+                    divider: false
+                    title: "Bloquear anuncios y rastreadores"
+                    description: "Con EasyList, EasyPrivacy, EasyList en español y HaGeZi Pro (la lista de dominios que se usa con Pi-hole). La página que abres nunca se bloquea: solo lo que carga dentro."
+
+                    Toggle {
+                        checked: Settings.blockAds
+                        onToggled: Settings.blockAds = checked
+                    }
+                }
+                SettingRow {
+                    title: "Listas de filtros"
+                    description: root.filterListsStatus
+
+                    TextButton {
+                        text: BrowserProfile.adBlockUpdating ? "Actualizando…" : "Actualizar ahora"
+                        enabled: Settings.blockAds && !BrowserProfile.adBlockUpdating
+                        onClicked: BrowserProfile.updateFilterLists()
+                    }
+                }
+                SettingRow {
+                    title: "Quitar el rastreo de los enlaces"
+                    description: "Borra de las direcciones que abres los datos que solo sirven para seguirte de un sitio a otro (utm_…, fbclid, gclid…)."
+
+                    Toggle {
+                        checked: Settings.stripTrackingParams
+                        onToggled: Settings.stripTrackingParams = checked
+                    }
+                }
+                SettingRow {
+                    title: "Permitir anuncios en un sitio"
+                    description: Settings.adBlockAllowedSites.length === 0
+                                 ? "Si una página no funciona bien, desactiva el bloqueador solo en ella."
+                                 : "Si una página no funciona bien, desactiva el bloqueador solo en ella. En estos sitios no se bloquea nada:"
+
+                    TextButton {
+                        visible: root.currentSite !== "" && !Settings.adBlockAllowedSites.includes(root.currentSite)
+                        text: "Permitir en " + root.currentSite
+                        onClicked: root.allowAdsOn(root.currentSite)
+                    }
+                }
+                Repeater {
+                    model: Settings.adBlockAllowedSites
+
+                    delegate: AllowedSiteRow {}
                 }
             }
 
@@ -965,6 +1049,22 @@ FocusScope {
             }
 
             SettingsSection {
+                id: performanceSection
+                title: "Rendimiento"
+                icon: "performance"
+                description: "Para que Mitis gaste menos memoria."
+
+                ChoiceRow {
+                    divider: false
+                    title: "Suspender las pestañas que no usas"
+                    description: "A los 5 minutos sin verla, una pestaña se congela; tras el tiempo elegido, se descarga de la memoria y se vuelve a cargar al abrirla. Nunca se suspenden las fijadas, las que suenan, las que pueden mandarte notificaciones ni las que tienen un formulario a medio rellenar."
+                    options: root.suspendOptions
+                    isSelected: value => Settings.suspendAfter === value
+                    onChosen: value => Settings.suspendAfter = value
+                }
+            }
+
+            SettingsSection {
                 id: developerSection
                 title: "Desarrollo"
                 icon: "devtools"
@@ -972,7 +1072,7 @@ FocusScope {
                 SettingRow {
                     divider: false
                     title: "Herramientas de desarrollo"
-                    description: "Muestra «Inspeccionar» en el menú contextual y abre el panel con F12."
+                    description: "Muestra «Inspeccionar» en el menú contextual y abre el panel con F12. Añade «Uso de memoria» al menú de opciones (Shift+Esc)."
 
                     Toggle {
                         checked: Settings.devTools
@@ -1006,6 +1106,16 @@ FocusScope {
                     StatusBadge {
                         ok: BrowserProfile.widevineAvailable
                         text: ok ? "Disponible" : "No disponible"
+                    }
+                }
+                SettingRow {
+                    title: "Licencias"
+                    description: "Mitis es software libre (GPL-3.0). Usa Qt y Qt WebEngine (LGPL-3.0), Chromium y otros componentes de terceros, cada uno con su licencia."
+
+                    TextButton {
+                        visible: BrowserProfile.licensesPath !== ""
+                        text: "Ver licencias"
+                        onClicked: Qt.openUrlExternally(Urls.fileUrl(BrowserProfile.licensesPath))
                     }
                 }
                 SettingRow {
@@ -1476,6 +1586,256 @@ FocusScope {
 
         HoverHandler {
             id: siteHover
+        }
+    }
+
+    // Tema de la interfaz: una tarjeta con la vista previa de cada uno
+    component ThemeRow: Item {
+        width: parent ? parent.width : 0
+        implicitHeight: themeColumn.implicitHeight + 2 * Theme.margin
+
+        Column {
+            id: themeColumn
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: Theme.margin + Theme.spacing
+            anchors.rightMargin: Theme.margin + Theme.spacing
+            y: Theme.margin
+            spacing: Theme.spacing / 4
+
+            Text {
+                width: parent.width
+                text: "Tema"
+                color: Theme.ink
+                font.pixelSize: Theme.fontSize
+                font.weight: Font.DemiBold
+            }
+            Text {
+                width: parent.width
+                text: "Mitis cambia al momento. Las páginas que tienen versión oscura la usan con los temas oscuros (desde la próxima vez que abras Mitis)."
+                color: Theme.inkMuted
+                font.pixelSize: Theme.fontSizeSmall
+                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+            }
+            // Separación con las tarjetas
+            Item {
+                width: 1
+                height: Theme.spacing
+            }
+            Flow {
+                width: parent.width
+                spacing: Theme.spacing + Theme.spacing / 2
+
+                Repeater {
+                    model: Theme.themes
+
+                    delegate: ThemeTile {}
+                }
+            }
+        }
+    }
+
+    // Vista previa de un tema con sus propios colores (no los del tema en uso):
+    // barra de título, una página con texto y los controles inferiores
+    component ThemeTile: Item {
+        id: tile
+
+        required property var modelData
+        readonly property var colors: Theme.palettes[modelData.key]
+        readonly property bool selected: Theme.current === modelData.key
+
+        width: Theme.themeTileWidth
+        height: preview.height + Theme.spacing + label.height
+
+        Rectangle {
+            id: preview
+            width: parent.width
+            height: Theme.themeTilePreviewHeight
+            radius: Theme.radiusSmall
+            color: tile.colors.bgBase
+            border.width: tile.selected ? 2 : 1
+            border.color: tile.selected ? Theme.focusRing : (tileHover.hovered ? Theme.hairlineHover : Theme.hairline)
+
+            // Barra de título con la marca
+            Rectangle {
+                id: miniTitle
+                x: Theme.spacing / 2
+                y: Theme.spacing / 2
+                width: parent.width - Theme.spacing
+                height: parent.height * 0.14
+                radius: Theme.spacing / 2
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: tile.colors.titleBarStart }
+                    GradientStop { position: 1.0; color: tile.colors.titleBarEnd }
+                }
+                Rectangle {
+                    x: height
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.height * 0.6
+                    height: width
+                    radius: width / 2
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: tile.colors.brand1 }
+                        GradientStop { position: 1.0; color: tile.colors.brand2 }
+                    }
+                }
+            }
+            // Una tarjeta con dos líneas de texto
+            Rectangle {
+                x: Theme.spacing
+                anchors.top: miniTitle.bottom
+                anchors.topMargin: Theme.spacing / 2
+                width: parent.width * 0.6
+                height: parent.height * 0.32
+                radius: Theme.spacing / 2
+                color: tile.colors.surfacePopup
+                border.width: 1
+                border.color: tile.colors.hairline
+
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    x: Theme.spacing / 2
+                    spacing: Theme.spacing / 2
+
+                    Rectangle {
+                        width: tile.width * 0.38
+                        height: Theme.spacing / 2
+                        radius: height / 2
+                        color: tile.colors.ink
+                    }
+                    Rectangle {
+                        width: tile.width * 0.26
+                        height: Theme.spacing / 2
+                        radius: height / 2
+                        color: tile.colors.inkMuted
+                    }
+                }
+            }
+            // Controles inferiores, con el acento de la marca
+            Rectangle {
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: Theme.spacing / 2
+                width: parent.width * 0.55
+                height: parent.height * 0.16
+                radius: height / 2
+                border.width: 1
+                border.color: tile.colors.hairline
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: tile.colors.controlsStart }
+                    GradientStop { position: 1.0; color: tile.colors.controlsEnd }
+                }
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: parent.width * 0.5
+                    height: parent.height * 0.4
+                    radius: height / 2
+                    color: tile.colors.brandLight1
+                }
+            }
+        }
+
+        Row {
+            id: label
+            anchors.top: preview.bottom
+            anchors.topMargin: Theme.spacing
+            spacing: Theme.spacing / 2
+
+            Icon {
+                visible: tile.selected
+                anchors.verticalCenter: parent.verticalCenter
+                name: "check"
+                size: Theme.iconSizeSmall
+                color: Theme.brandLight1
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: tile.modelData.name
+                color: tile.selected ? Theme.ink : Theme.inkSecondary
+                font.pixelSize: Theme.fontSize
+                font.weight: tile.selected ? Font.Bold : Font.Normal
+            }
+        }
+
+        HoverHandler {
+            id: tileHover
+            cursorShape: Qt.PointingHandCursor
+        }
+        TapHandler {
+            onTapped: Settings.theme = tile.modelData.key
+        }
+    }
+
+    // Sitio con el bloqueador desactivado; la ✕ lo vuelve a activar
+    component AllowedSiteRow: Item {
+        id: allowed
+
+        required property string modelData
+
+        width: parent ? parent.width : 0
+        height: Theme.pageRowHeight
+
+        Rectangle {
+            anchors.fill: parent
+            anchors.leftMargin: Theme.spacing / 2
+            anchors.rightMargin: Theme.spacing / 2
+            radius: Theme.radiusSmall
+            color: allowedHover.hovered ? Theme.tintHover : "transparent"
+            Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+        }
+
+        Icon {
+            id: allowedIcon
+            anchors.left: parent.left
+            anchors.leftMargin: Theme.margin + Theme.spacing
+            anchors.verticalCenter: parent.verticalCenter
+            name: "blocker"
+            color: Theme.inkSoft
+        }
+
+        Column {
+            anchors.left: allowedIcon.right
+            anchors.leftMargin: Theme.margin
+            anchors.right: unblock.left
+            anchors.rightMargin: Theme.margin
+            anchors.verticalCenter: parent.verticalCenter
+
+            Text {
+                width: parent.width
+                text: allowed.modelData
+                color: Theme.ink
+                font.pixelSize: Theme.fontSize
+                font.weight: Font.DemiBold
+                elide: Text.ElideRight
+            }
+            Text {
+                width: parent.width
+                text: "Anuncios y rastreadores permitidos"
+                color: Theme.warn
+                font.pixelSize: Theme.fontSizeSmall
+                elide: Text.ElideRight
+            }
+        }
+
+        IconButton {
+            id: unblock
+            anchors.right: parent.right
+            anchors.rightMargin: Theme.margin
+            anchors.verticalCenter: parent.verticalCenter
+            width: Theme.buttonSizeSmall
+            height: Theme.buttonSizeSmall
+            flat: true
+            icon: "close"
+            iconSize: Theme.iconSizeSmall
+            tooltip: "Volver a bloquear"
+            opacity: allowedHover.hovered ? 1 : 0
+            onClicked: Settings.adBlockAllowedSites = Settings.adBlockAllowedSites.filter(site => site !== allowed.modelData)
+        }
+
+        HoverHandler {
+            id: allowedHover
         }
     }
 

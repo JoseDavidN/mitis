@@ -1,73 +1,176 @@
 pragma Singleton
 import QtQuick
+import Mitis.Core
 
-// Tema de Mitis. Tema por defecto: Nocturno, violeta/rosa sobre negro
-// profundo, tomado del tema oscuro de StartCode Panel. Ningún componente
-// escribe colores, medidas ni duraciones a mano: todo sale de aquí.
+// Tema de Mitis: colores, medidas y duraciones. Ningún componente escribe
+// colores, medidas ni duraciones a mano: todo sale de aquí.
 // Reglas y uso de cada token: DESIGN.md.
+//
+// Tres temas, que se eligen en Configuración → Apariencia y cambian al
+// momento (cada color es un enlace a la paleta elegida):
+//  · Nocturno (el de serie): violeta/rosa sobre negro profundo, tomado del
+//    tema oscuro de StartCode Panel.
+//  · Oscuro: grises neutros y acento azul, como el modo oscuro de Chrome.
+//  · Claro: fondos claros con el violeta y el rosa de la marca.
+// Medidas, tipografía, movimiento y la paleta de DevTools son iguales en todos.
 QtObject {
-    readonly property string name: "Nocturno"
+    id: theme
+
+    // Temas que se pueden elegir, en el orden de Configuración
+    readonly property var themes: [
+        { key: "nocturno", name: "Nocturno" },
+        { key: "oscuro", name: "Oscuro" },
+        { key: "claro", name: "Claro" }
+    ]
+    readonly property var palettes: ({
+        nocturno: {
+            dark: true,
+            bgBase: "#07050d", bgMid: "#150a2e", bgGlow: "#2a1352",
+            titleBarStart: "#2a1352", titleBarEnd: "#4a1438",
+            controlsStart: Qt.rgba(0x1d / 255, 0x0d / 255, 0x39 / 255, 0.92),
+            controlsEnd: Qt.rgba(0x34 / 255, 0x0e / 255, 0x27 / 255, 0.92),
+            surfaceFloat: Qt.rgba(8 / 255, 3 / 255, 20 / 255, 0.88),
+            selectBg: "#1a0f3d",
+            backgroundScrim: Qt.rgba(7 / 255, 5 / 255, 13 / 255, 0.55),
+            faviconBackdrop: Qt.rgba(1, 1, 1, 0.92),
+            surfacePopup: Qt.rgba(8 / 255, 3 / 255, 20 / 255, 1),
+            hairline: Qt.rgba(1, 1, 1, 0.13), hairlineSoft: Qt.rgba(1, 1, 1, 0.12),
+            hairlineStrong: Qt.rgba(1, 1, 1, 0.20), hairlineHover: Qt.rgba(1, 1, 1, 0.18),
+            line: Qt.rgba(1, 1, 1, 0.07),
+            tintHover: Qt.rgba(1, 1, 1, 0.06), tintActive: Qt.rgba(1, 1, 1, 0.10), tintSunken: Qt.rgba(1, 1, 1, 0.04),
+            ink: "#f4f1ff", inkStrong: Qt.rgba(1, 1, 1, 0.85), inkSoft: Qt.rgba(1, 1, 1, 0.75),
+            inkSecondary: Qt.rgba(1, 1, 1, 0.65), inkMuted: Qt.rgba(1, 1, 1, 0.45),
+            inkFaint: Qt.rgba(1, 1, 1, 0.35), inkDisabled: Qt.rgba(1, 1, 1, 0.30),
+            brand1: "#a855f7", brand2: "#ec4899", brandLight1: "#c084fc", brandLight2: "#f472b6",
+            onBrand: "#ffffff", focusRing: "#c084fc",
+            selection: Qt.rgba(168 / 255, 85 / 255, 247 / 255, 0.35),
+            ok: "#34d399", warn: "#fbbf24", danger: "#fb7185", dangerStrong: "#f43f5e"
+        },
+        // Los grises y el azul del modo oscuro de Chrome
+        oscuro: {
+            dark: true,
+            bgBase: "#202124", bgMid: "#202124", bgGlow: "#2d2e31",
+            titleBarStart: "#1b1c1f", titleBarEnd: "#1b1c1f",
+            controlsStart: Qt.rgba(0x35 / 255, 0x36 / 255, 0x3a / 255, 0.94),
+            controlsEnd: Qt.rgba(0x35 / 255, 0x36 / 255, 0x3a / 255, 0.94),
+            surfaceFloat: Qt.rgba(0x29 / 255, 0x2a / 255, 0x2d / 255, 0.94),
+            selectBg: "#35363a",
+            backgroundScrim: Qt.rgba(0x20 / 255, 0x21 / 255, 0x24 / 255, 0.55),
+            faviconBackdrop: Qt.rgba(1, 1, 1, 0.92),
+            surfacePopup: "#292a2d",
+            hairline: Qt.rgba(1, 1, 1, 0.12), hairlineSoft: Qt.rgba(1, 1, 1, 0.08),
+            hairlineStrong: Qt.rgba(1, 1, 1, 0.18), hairlineHover: Qt.rgba(1, 1, 1, 0.20),
+            line: Qt.rgba(1, 1, 1, 0.08),
+            tintHover: Qt.rgba(1, 1, 1, 0.06), tintActive: Qt.rgba(1, 1, 1, 0.10), tintSunken: Qt.rgba(1, 1, 1, 0.04),
+            ink: "#e8eaed", inkStrong: Qt.rgba(0xe8 / 255, 0xea / 255, 0xed / 255, 0.92),
+            inkSoft: Qt.rgba(0xe8 / 255, 0xea / 255, 0xed / 255, 0.80),
+            inkSecondary: "#bdc1c6", inkMuted: "#9aa0a6",
+            inkFaint: Qt.rgba(1, 1, 1, 0.38), inkDisabled: Qt.rgba(1, 1, 1, 0.30),
+            brand1: "#1a73e8", brand2: "#1a73e8", brandLight1: "#8ab4f8", brandLight2: "#8ab4f8",
+            onBrand: "#ffffff", focusRing: "#8ab4f8",
+            selection: Qt.rgba(0x8a / 255, 0xb4 / 255, 0xf8 / 255, 0.35),
+            ok: "#81c995", warn: "#fdd663", danger: "#f28b82", dangerStrong: "#d93025"
+        },
+        claro: {
+            dark: false,
+            bgBase: "#f7f5fb", bgMid: "#f1ebfd", bgGlow: "#e4d7fc",
+            titleBarStart: "#ebe0fe", titleBarEnd: "#fbe1ef",
+            controlsStart: Qt.rgba(0xf4 / 255, 0xee / 255, 0xff / 255, 0.94),
+            controlsEnd: Qt.rgba(0xfd / 255, 0xec / 255, 0xf5 / 255, 0.94),
+            surfaceFloat: Qt.rgba(1, 1, 1, 0.94),
+            selectBg: "#ede7fb",
+            backgroundScrim: Qt.rgba(0xf7 / 255, 0xf5 / 255, 0xfb / 255, 0.6),
+            // Gris muy claro: los favicons blancos no desaparecen
+            faviconBackdrop: "#ece9f2",
+            surfacePopup: "#ffffff",
+            hairline: Qt.rgba(0, 0, 0, 0.12), hairlineSoft: Qt.rgba(0, 0, 0, 0.08),
+            hairlineStrong: Qt.rgba(0, 0, 0, 0.16), hairlineHover: Qt.rgba(0, 0, 0, 0.22),
+            line: Qt.rgba(0, 0, 0, 0.07),
+            tintHover: Qt.rgba(0, 0, 0, 0.05), tintActive: Qt.rgba(0, 0, 0, 0.08), tintSunken: Qt.rgba(0, 0, 0, 0.04),
+            ink: "#1d1631", inkStrong: Qt.rgba(0x1d / 255, 0x16 / 255, 0x31 / 255, 0.88),
+            inkSoft: Qt.rgba(0x1d / 255, 0x16 / 255, 0x31 / 255, 0.75),
+            inkSecondary: Qt.rgba(0x1d / 255, 0x16 / 255, 0x31 / 255, 0.68),
+            inkMuted: Qt.rgba(0x1d / 255, 0x16 / 255, 0x31 / 255, 0.54),
+            inkFaint: Qt.rgba(0x1d / 255, 0x16 / 255, 0x31 / 255, 0.42),
+            inkDisabled: Qt.rgba(0x1d / 255, 0x16 / 255, 0x31 / 255, 0.30),
+            brand1: "#9333ea", brand2: "#db2777", brandLight1: "#7c3aed", brandLight2: "#be185d",
+            onBrand: "#ffffff", focusRing: "#7c3aed",
+            selection: Qt.rgba(147 / 255, 51 / 255, 234 / 255, 0.22),
+            ok: "#059669", warn: "#b45309", danger: "#e11d48", dangerStrong: "#e11d48"
+        }
+    })
+
+    // Tema en uso (uno de `themes`; si el guardado no existe, Nocturno)
+    readonly property string current: palettes[Settings.theme] ? Settings.theme : "nocturno"
+    readonly property string name: themes.find(item => item.key === current).name
+    readonly property var palette: palettes[current]
+    // Tema oscuro (Nocturno, Oscuro) o claro. Lo siguen los diálogos del
+    // sistema y, desde el próximo arranque, las páginas que tienen versión
+    // oscura (prefers-color-scheme: lo fija main.cpp al iniciar el motor)
+    readonly property bool dark: palette.dark
+    onDarkChanged: Application.styleHints.colorScheme = dark ? Qt.ColorScheme.Dark : Qt.ColorScheme.Light
+    Component.onCompleted: Application.styleHints.colorScheme = dark ? Qt.ColorScheme.Dark : Qt.ColorScheme.Light
 
     // ── Fondo ────────────────────────────────────────────────────────
-    readonly property color bgBase: "#07050d"
-    readonly property color bgMid: "#150a2e"
-    readonly property color bgGlow: "#2a1352"
-    // Barra de título: versión oscura del degradado de marca (violeta → rosa)
-    readonly property color titleBarStart: "#2a1352"
-    readonly property color titleBarEnd: "#4a1438"
-    // Controles inferiores: el mismo degradado, más oscuro y con un 8 % de
-    // transparencia, repartido entre todos los controles de lado a lado
-    readonly property color controlsStart: Qt.rgba(0x1d / 255, 0x0d / 255, 0x39 / 255, 0.92)
-    readonly property color controlsEnd: Qt.rgba(0x34 / 255, 0x0e / 255, 0x27 / 255, 0.92)
+    readonly property color bgBase: palette.bgBase
+    readonly property color bgMid: palette.bgMid
+    readonly property color bgGlow: palette.bgGlow
+    // Barra de título: versión oscura (o clara) del degradado de marca
+    readonly property color titleBarStart: palette.titleBarStart
+    readonly property color titleBarEnd: palette.titleBarEnd
+    // Controles inferiores: el mismo degradado, con un poco de transparencia,
+    // repartido entre todos los controles de lado a lado
+    readonly property color controlsStart: palette.controlsStart
+    readonly property color controlsEnd: palette.controlsEnd
 
     // ── Superficies ──────────────────────────────────────────────────
     // Flotan sobre la página: casi opacas para separarse de cualquier web
     // (equivale a glass-float, sin blur para no gastar GPU ni RAM)
-    readonly property color surfaceFloat: Qt.rgba(8 / 255, 3 / 255, 20 / 255, 0.88)
-    readonly property color selectBg: "#1a0f3d"
+    readonly property color surfaceFloat: palette.surfaceFloat
+    readonly property color selectBg: palette.selectBg
     // Velo sobre una imagen de fondo propia: mantiene legible el texto
-    readonly property color backgroundScrim: Qt.rgba(7 / 255, 5 / 255, 13 / 255, 0.55)
-    // Círculo claro tras los favicons: muchos son negros y no se verían
-    readonly property color faviconBackdrop: Qt.rgba(1, 1, 1, 0.92)
+    readonly property color backgroundScrim: palette.backgroundScrim
+    // Círculo tras los favicons: muchos son negros (o blancos) y no se verían
+    readonly property color faviconBackdrop: palette.faviconBackdrop
     // Listas desplegables: opacas, porque sin blur el texto de la página de
     // detrás se mezclaría con el de la lista
-    readonly property color surfacePopup: Qt.rgba(8 / 255, 3 / 255, 20 / 255, 1)
+    readonly property color surfacePopup: palette.surfacePopup
 
     // ── Bordes y separadores ─────────────────────────────────────────
-    readonly property color hairline: Qt.rgba(1, 1, 1, 0.13)
-    readonly property color hairlineSoft: Qt.rgba(1, 1, 1, 0.12)
-    readonly property color hairlineStrong: Qt.rgba(1, 1, 1, 0.20)
-    readonly property color hairlineHover: Qt.rgba(1, 1, 1, 0.18)
-    readonly property color line: Qt.rgba(1, 1, 1, 0.07)
+    readonly property color hairline: palette.hairline
+    readonly property color hairlineSoft: palette.hairlineSoft
+    readonly property color hairlineStrong: palette.hairlineStrong
+    readonly property color hairlineHover: palette.hairlineHover
+    readonly property color line: palette.line
 
     // ── Tintes de realce ─────────────────────────────────────────────
-    readonly property color tintHover: Qt.rgba(1, 1, 1, 0.06)
-    readonly property color tintActive: Qt.rgba(1, 1, 1, 0.10)
-    readonly property color tintSunken: Qt.rgba(1, 1, 1, 0.04)
+    readonly property color tintHover: palette.tintHover
+    readonly property color tintActive: palette.tintActive
+    readonly property color tintSunken: palette.tintSunken
 
     // ── Tinta (texto e iconos) ───────────────────────────────────────
-    readonly property color ink: "#f4f1ff"
-    readonly property color inkStrong: Qt.rgba(1, 1, 1, 0.85)
-    readonly property color inkSoft: Qt.rgba(1, 1, 1, 0.75)
-    readonly property color inkSecondary: Qt.rgba(1, 1, 1, 0.65)
-    readonly property color inkMuted: Qt.rgba(1, 1, 1, 0.45)
-    readonly property color inkFaint: Qt.rgba(1, 1, 1, 0.35)
-    readonly property color inkDisabled: Qt.rgba(1, 1, 1, 0.30)
+    readonly property color ink: palette.ink
+    readonly property color inkStrong: palette.inkStrong
+    readonly property color inkSoft: palette.inkSoft
+    readonly property color inkSecondary: palette.inkSecondary
+    readonly property color inkMuted: palette.inkMuted
+    readonly property color inkFaint: palette.inkFaint
+    readonly property color inkDisabled: palette.inkDisabled
 
     // ── Marca ────────────────────────────────────────────────────────
-    readonly property color brand1: "#a855f7"
-    readonly property color brand2: "#ec4899"
-    readonly property color brandLight1: "#c084fc"
-    readonly property color brandLight2: "#f472b6"
-    readonly property color onBrand: "#ffffff"
-    readonly property color focusRing: "#c084fc"
-    readonly property color selection: Qt.rgba(168 / 255, 85 / 255, 247 / 255, 0.35)
+    readonly property color brand1: palette.brand1
+    readonly property color brand2: palette.brand2
+    readonly property color brandLight1: palette.brandLight1
+    readonly property color brandLight2: palette.brandLight2
+    readonly property color onBrand: palette.onBrand
+    readonly property color focusRing: palette.focusRing
+    readonly property color selection: palette.selection
 
     // ── Semánticos ───────────────────────────────────────────────────
-    readonly property color ok: "#34d399"
-    readonly property color warn: "#fbbf24"
-    readonly property color danger: "#fb7185"
-    readonly property color dangerStrong: "#f43f5e"
+    readonly property color ok: palette.ok
+    readonly property color warn: palette.warn
+    readonly property color danger: palette.danger
+    readonly property color dangerStrong: palette.dangerStrong
 
     // ── Medidas ──────────────────────────────────────────────────────
     readonly property int titleBarHeight: 30
@@ -116,6 +219,9 @@ QtObject {
     readonly property int settingsSectionSpacing: 32
     readonly property int settingsRowHeight: 60
     readonly property int settingsIconBox: 36
+    // Tarjeta de un tema en Configuración: ancho y alto de su vista previa
+    readonly property int themeTileWidth: 150
+    readonly property int themeTilePreviewHeight: 84
     // Interruptor (Toggle): pista y separación de la bola
     readonly property int toggleWidth: 38
     readonly property int toggleHeight: 22
@@ -131,6 +237,9 @@ QtObject {
     readonly property int miniPlayerHeight: 34
     // Descarga actual: panel, barra de progreso y anillo del botón
     readonly property int downloadPanelWidth: 340
+    // Panel de memoria (desarrollo): ancho y cada cuánto vuelve a medir (ms)
+    readonly property int memoryPanelWidth: 360
+    readonly property int memoryPanelRefresh: 2000
     readonly property int downloadBarHeight: 4
     readonly property int progressRingWidth: 2
     // Sin total conocido: tramo que recorre la barra y arco que gira (fracción)
@@ -202,6 +311,8 @@ QtObject {
     readonly property real pressScale: 0.92
     // Fila arrastrada: algo transparente para ver qué hay debajo
     readonly property real dragOpacity: 0.85
+    // Favicon de una pestaña suspendida en la lista de pestañas
+    readonly property real suspendedOpacity: 0.45
     // Cada cuánto avanza el auto-scroll al arrastrar cerca de un borde (~60 fps)
     readonly property int dragScrollInterval: 16
 }

@@ -12,6 +12,9 @@ Item {
     // Segunda línea; vacía = la dirección sin esquema
     property string detail: ""
     property string removeTooltip: "Quitar"
+    // Sin ✕ para quitarla: en su lugar, `value` a la derecha (p. ej. memoria)
+    property bool removable: true
+    property string value: ""
 
     signal clicked()
     signal removeRequested()
@@ -65,7 +68,7 @@ Item {
     Column {
         anchors.left: faviconBox.right
         anchors.leftMargin: Theme.spacing + Theme.spacing / 2
-        anchors.right: removeButton.left
+        anchors.right: root.removable ? removeButton.left : valueText.left
         anchors.rightMargin: Theme.spacing / 2
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.spacing / 4
@@ -86,8 +89,21 @@ Item {
         }
     }
 
+    Text {
+        id: valueText
+        visible: !root.removable
+        anchors.right: parent.right
+        anchors.rightMargin: Theme.margin
+        anchors.verticalCenter: parent.verticalCenter
+        text: root.value
+        color: Theme.inkSecondary
+        font.pixelSize: Theme.fontSizeSmall
+        font.weight: Font.DemiBold
+    }
+
     IconButton {
         id: removeButton
+        visible: root.removable
         anchors.right: parent.right
         anchors.rightMargin: Theme.spacing / 2
         anchors.verticalCenter: parent.verticalCenter

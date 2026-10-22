@@ -1,0 +1,240 @@
+# Compila Mitis en Linux, Windows y macOS en cada push y en cada pull request.
+# En Windows crea además el instalador propio (installer/) y en macOS el .dmg.
+# Con una etiqueta «v*» (p. ej. v0.2.0) los publica en un release de GitHub.
+name: Compilar
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  # La misma versión de Qt que en desarrollo (el mínimo es la 6.8). La variable
+  # del repositorio QT_VERSION la fija (p. ej. 6.11.2) para usar Qt con códecs
+  QT_VERSION: ${{ vars.QT_VERSION || '6.11.*' }}
+  QT_MODULES: "qtwebengine qtwebchannel qtpositioning"
+  # Qt WebEngine con códecs propietarios (H.264, AAC), compilado aparte
+  # (docs/codecs.md): release con los archivos. Vacío: el Qt oficial, sin códecs
+  QT_CODECS_RELEASE: ${{ vars.QT_CODECS_RELEASE }}
+  QT_CODECS_REPO: ${{ vars.QT_CODECS_REPO || github.repository }}
+  # Otra clave de caché con códecs: el Qt modificado no debe pisar al oficial
+  QT_CACHE_PREFIX: ${{ vars.QT_CODECS_RELEASE && format('qt-codecs-{0}', vars.QT_CODECS_RELEASE) || 'install-qt-action' }}
+
+jobs:
+  linux:
+    name: Linux
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependencias del sistema
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgl1-mesa-dev libxkbcommon-dev libxkbcommon-x11-dev libvulkan-dev
+
+      - name: Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          modules: ${{ env.QT_MODULES }}
+          cache: true
+          cache-key-prefix: ${{ env.QT_CACHE_PREFIX }}
+
+      - name: Compilar
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+
+      # Bibliotecas que linuxdeploy debe encontrar para copiarlas dentro del
+      # AppImage (dependencias de libqxcb y de Qt WebEngine)
+      - name: Dependencias del AppImage
+        run: |
+          sudo apt-get install -y libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+            libxcb-render-util0 libxcb-xinerama0 libxcb-shape0 libxcb-xkb1 libxkbcommon-x11-0 \
+            libnss3 libxcomposite1 libxdamage1 libxrandr2 libxtst6 libxkbfile1 libasound2t64 \
+            libegl1 libfontconfig1 libdbus-1-3
+
+      # El script calcula la versión desde CMakeLists.txt
+      - name: Empaquetar (AppImage)
+        run: packaging/linux/appimage.sh build .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mitis-linux
+          path: Mitis-*-x86_64.AppImage
+          if-no-files-found: error
+
+  windows:
+    name: Windows (instalador)
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Consola de Visual Studio (x64)
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          modules: ${{ env.QT_MODULES }}
+          cache: true
+          cache-key-prefix: ${{ env.QT_CACHE_PREFIX }}
+
+      # Encima del Qt oficial; windeployqt lo copia después al instalador
+      - name: Qt WebEngine con códecs propietarios
+        if: env.QT_CODECS_RELEASE != ''
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.QT_CODECS_TOKEN || github.token }}
+        run: |
+          gh release download $env:QT_CODECS_RELEASE --repo $env:QT_CODECS_REPO --pattern "qtwebengine-codecs-*-windows-*.7z" --dir codecs
+          if ($LASTEXITCODE -ne 0) { throw "No se pudo descargar el Qt con códecs de $env:QT_CODECS_REPO ($env:QT_CODECS_RELEASE)" }
+          $archivo = Get-ChildItem codecs -Filter *.7z | Select-Object -First 1
+          7z x $archivo.FullName -ocodecs/qt -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "No se pudo extraer $($archivo.Name)" }
+          # Misma versión exacta: Qt WebEngine usa API privada de Qt
+          $qt = (& "$env:QT_ROOT_DIR/bin/qmake.exe" -query QT_VERSION).Trim()
+          $marca = Get-Content codecs/qt/mitis-codecs.txt
+          if (-not ($marca -contains "qt=$qt")) { throw "El Qt con códecs no es para Qt $qt ($($marca -join ', ')): ajusta la variable QT_VERSION" }
+          # robocopy: 0-7 es éxito (1 = archivos copiados)
+          robocopy codecs/qt $env:QT_ROOT_DIR /E /NFL /NDL /NJH /NJS /NP
+          if ($LASTEXITCODE -ge 8) { throw "No se pudo copiar el Qt con códecs" }
+          Write-Host "Qt WebEngine con códecs propietarios ($($marca -join ', '))"
+          exit 0
+
+      - name: Versión
+        id: version
+        shell: bash
+        run: echo "valor=$(sed -n '/^project(Mitis/,/)/s/^ *VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Compilar Mitis
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+
+      - name: Compilar el instalador
+        run: |
+          cmake -S installer -B build-instalador -G Ninja -DCMAKE_BUILD_TYPE=Release -DMITIS_VERSION=${{ steps.version.outputs.valor }}
+          cmake --build build-instalador
+
+      - name: Empaquetar
+        shell: pwsh
+        run: >
+          ./installer/empaquetar.ps1
+          -Mitis build/bin/Mitis.exe
+          -Instalador build-instalador/MitisInstalador.exe
+          -Salida Mitis-${{ steps.version.outputs.valor }}-Instalador.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mitis-windows
+          path: Mitis-*-Instalador.exe
+          if-no-files-found: error
+
+  macos:
+    name: macOS (.dmg)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: mac
+          target: desktop
+          arch: clang_64
+          modules: ${{ env.QT_MODULES }}
+          cache: true
+          cache-key-prefix: ${{ env.QT_CACHE_PREFIX }}
+
+      # Encima del Qt oficial; macdeployqt lo copia después a Mitis.app
+      - name: Qt WebEngine con códecs propietarios
+        if: env.QT_CODECS_RELEASE != ''
+        env:
+          GH_TOKEN: ${{ secrets.QT_CODECS_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          gh release download "$QT_CODECS_RELEASE" --repo "$QT_CODECS_REPO" --pattern "qtwebengine-codecs-*-macos-*.tar.xz" --dir codecs
+          mkdir -p codecs/qt
+          tar -xJf codecs/qtwebengine-codecs-*-macos-*.tar.xz -C codecs/qt
+          # Misma versión exacta: Qt WebEngine usa API privada de Qt
+          qt=$("$QT_ROOT_DIR/bin/qmake" -query QT_VERSION)
+          if ! grep -qx "qt=$qt" codecs/qt/mitis-codecs.txt; then
+            echo "::error::El Qt con códecs no es para Qt $qt ($(tr '\n' ' ' < codecs/qt/mitis-codecs.txt)): ajusta la variable QT_VERSION"
+            exit 1
+          fi
+          # ditto mezcla carpetas y conserva los enlaces simbólicos de los frameworks
+          ditto codecs/qt "$QT_ROOT_DIR"
+          echo "Qt WebEngine con códecs propietarios: $(tr '\n' ' ' < codecs/qt/mitis-codecs.txt)"
+
+      - name: Versión
+        id: version
+        run: echo "valor=$(sed -n '/^project(Mitis/,/)/s/^ *VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Compilar
+        run: |
+          brew install ninja
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+
+      # Qt va dentro de Mitis.app; el .dmg se abre y se arrastra a Aplicaciones
+      - name: Empaquetar
+        run: |
+          cp LICENSE build/bin/Mitis.app/Contents/Resources/
+          cp -R licencias build/bin/Mitis.app/Contents/Resources/
+          macdeployqt build/bin/Mitis.app -qmldir=qml -dmg
+          mv build/bin/Mitis.dmg Mitis-${{ steps.version.outputs.valor }}-macOS.dmg
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mitis-macos
+          path: Mitis-*-macOS.dmg
+          if-no-files-found: error
+
+  release:
+    name: Publicar
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [linux, windows, macos]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      # CMakeLists.txt y CHANGELOG.md
+      - uses: actions/checkout@v4
+
+      # La etiqueta debe coincidir con project(VERSION) y tener su sección en CHANGELOG.md
+      - name: Versión y notas
+        run: |
+          version=$(sed -n '/^project(Mitis/,/)/s/^ *VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
+          if [ "${GITHUB_REF_NAME#v}" != "$version" ]; then
+            echo "::error::La etiqueta $GITHUB_REF_NAME no coincide con project(VERSION $version) de CMakeLists.txt"
+            exit 1
+          fi
+          awk -v v="$version" '/^## \[/ { if (dentro) exit; dentro = (index($0, "## [" v "]") == 1); next } dentro' CHANGELOG.md > notas.md
+          if ! grep -q '[^[:space:]]' notas.md; then
+            echo "::error::CHANGELOG.md no tiene la sección «## [$version]»"
+            exit 1
+          fi
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: paquetes
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Mitis ${{ github.ref_name }}
+          files: paquetes/*
+          body_path: notas.md

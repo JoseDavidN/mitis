@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(Mitis
-    VERSION 0.1.0
+    VERSION 0.5.0
     DESCRIPTION "Navegador web ligero, multiplataforma y con interfaz propia"
     LANGUAGES CXX
 )
@@ -13,6 +13,15 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS Quick Network Sql WebEngineCore WebEngi
 
 qt_standard_project_setup(REQUIRES 6.8)
 
+# Windows: <windows.h> (memorymonitor.cpp) no debe definir min/max, y MSVC
+# debe leer el código como UTF-8 (textos con tildes)
+if(WIN32)
+    add_compile_definitions(NOMINMAX)
+endif()
+if(MSVC)
+    add_compile_options(/utf-8)
+endif()
+
 qt_add_executable(mitis
     src/main.cpp
     src/devreloader.h
@@ -23,6 +32,10 @@ qt_add_executable(mitis
     src/networkfactory.cpp
     src/requestinterceptor.h
     src/requestinterceptor.cpp
+    src/filterengine.h
+    src/filterengine.cpp
+    src/contentblocker.h
+    src/contentblocker.cpp
     src/enginebridge.h
     src/enginebridge.cpp
     src/widevine.h
@@ -44,10 +57,14 @@ qt_add_qml_module(mitiscore
         src/history.cpp
         src/bookmarks.h
         src/bookmarks.cpp
+        src/memorymonitor.h
+        src/memorymonitor.cpp
+        src/links.h
+        src/links.cpp
 )
 # El registro de tipos generado incluye "settings.h" sin ruta
 target_include_directories(mitiscore PRIVATE src)
-target_link_libraries(mitiscore PRIVATE Qt6::Sql)
+target_link_libraries(mitiscore PRIVATE Qt6::Sql Qt6::Network Qt6::Gui)
 
 # Iconos SVG (Lucide, ISC: assets/icons/LICENSE), empaquetados en :/icons
 file(GLOB MITIS_ICON_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" CONFIGURE_DEPENDS assets/icons/*.svg)
@@ -61,7 +78,7 @@ qt_add_resources(mitis "icons"
 qt_add_resources(mitis "scripts"
     PREFIX "/scripts"
     BASE assets/scripts
-    FILES assets/scripts/media.js assets/scripts/devtools.js assets/scripts/drm.js
+    FILES assets/scripts/media.js assets/scripts/devtools.js assets/scripts/drm.js assets/scripts/google.js
 )
 
 # Fuente de la interfaz: Nunito (SIL OFL: assets/fonts/OFL.txt), en :/fonts
@@ -110,6 +127,7 @@ set(MITIS_QML_FILES
     qml/RadioMark.qml
     qml/CheckMark.qml
     qml/PageRow.qml
+    qml/MemoryPanel.qml
     qml/BookmarksPopup.qml
     qml/HistoryPopup.qml
     qml/ResizeHandles.qml
@@ -162,6 +180,8 @@ set_target_properties(mitis PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER "app.mitis.browser"
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
+    # Con http/https y HTML: se puede elegir como navegador predeterminado
+    MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/packaging/macos/Info.plist.in"
 )
 
 include(GNUInstallDirs)
@@ -169,3 +189,12 @@ install(TARGETS mitis
     BUNDLE DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+
+# Linux: entrada de escritorio, icono y licencias (la de Mitis y las de
+# terceros, en share/licenses/mitis)
+if(UNIX AND NOT APPLE)
+    install(FILES packaging/linux/mitis.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+    install(FILES packaging/linux/mitis.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+    install(FILES LICENSE DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/licenses/mitis)
+    install(DIRECTORY licencias/ DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/licenses/mitis)
+endif()

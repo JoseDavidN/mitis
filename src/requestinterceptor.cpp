@@ -1,16 +1,12 @@
 #include "requestinterceptor.h"
 
+#include "contentblocker.h"
+
 #include <QHash>
 #include <QHostAddress>
 #include <QWebEngineUrlRequestInfo>
-#include <QtWebEngineCore/qtwebenginecoreglobal.h>
 
 namespace {
-bool isGoogleSignIn(const QUrl &url)
-{
-    return url.host() == QLatin1String("accounts.google.com");
-}
-
 // Red local: direcciones IP, localhost, *.local y nombres sin dominio
 // ("router"). Ahí https casi nunca existe y no se sube.
 bool isLocalHost(const QString &host)
@@ -20,48 +16,54 @@ bool isLocalHost(const QString &host)
         || !QHostAddress(host).isNull();
 }
 
-// Chrome estable vigente (Arch: paquete chromium). Si Google vuelve a
-// rechazar el inicio de sesión, lo primero es subir esta versión.
-constexpr auto CurrentChromeVersion = "153.0.8010.36";
-
-int majorOf(const QByteArray &version)
+// Tipo de recurso del motor → el de las listas de filtros
+FilterEngine::Type filterType(QWebEngineUrlRequestInfo::ResourceType type)
 {
-    return version.left(version.indexOf('.')).toInt();
+    switch (type) {
+    case QWebEngineUrlRequestInfo::ResourceTypeMainFrame:
+    case QWebEngineUrlRequestInfo::ResourceTypeNavigationPreloadMainFrame:
+        return FilterEngine::Document;
+    case QWebEngineUrlRequestInfo::ResourceTypeSubFrame:
+    case QWebEngineUrlRequestInfo::ResourceTypeNavigationPreloadSubFrame:
+        return FilterEngine::Subdocument;
+    case QWebEngineUrlRequestInfo::ResourceTypeStylesheet:
+        return FilterEngine::Stylesheet;
+    case QWebEngineUrlRequestInfo::ResourceTypeScript:
+    case QWebEngineUrlRequestInfo::ResourceTypeWorker:
+    case QWebEngineUrlRequestInfo::ResourceTypeSharedWorker:
+    case QWebEngineUrlRequestInfo::ResourceTypeServiceWorker:
+        return FilterEngine::Script;
+    case QWebEngineUrlRequestInfo::ResourceTypeImage:
+    case QWebEngineUrlRequestInfo::ResourceTypeFavicon:
+        return FilterEngine::Image;
+    case QWebEngineUrlRequestInfo::ResourceTypeFontResource:
+        return FilterEngine::Font;
+    case QWebEngineUrlRequestInfo::ResourceTypeObject:
+    case QWebEngineUrlRequestInfo::ResourceTypePluginResource:
+        return FilterEngine::Object;
+    case QWebEngineUrlRequestInfo::ResourceTypeMedia:
+        return FilterEngine::Media;
+    case QWebEngineUrlRequestInfo::ResourceTypeXhr:
+    case QWebEngineUrlRequestInfo::ResourceTypeJson:
+        return FilterEngine::Xhr;
+    case QWebEngineUrlRequestInfo::ResourceTypePing:
+    case QWebEngineUrlRequestInfo::ResourceTypeCspReport:
+        return FilterEngine::Ping;
+    case QWebEngineUrlRequestInfo::ResourceTypeWebSocket:
+        return FilterEngine::WebSocket;
+    default:
+        return FilterEngine::Other;
+    }
 }
 
-// La marca "de relleno" que añade Chromium (GREASE) para su versión
-constexpr auto GreaseBrand = R"("Not=A?Brand";v="24")";
-constexpr auto GreaseFullBrand = R"("Not=A?Brand";v="24.0.0.0")";
 }
 
-QByteArray RequestInterceptor::googleChromeVersion()
-{
-    const QByteArray engine = qWebEngineChromiumVersion();
-    const QByteArray current = CurrentChromeVersion;
-    return majorOf(engine) >= majorOf(current) ? engine : current;
-}
-
-RequestInterceptor::RequestInterceptor(QObject *parent)
+RequestInterceptor::RequestInterceptor(ContentBlocker *blocker, QObject *parent)
     : QWebEngineUrlRequestInterceptor(parent)
+    , m_blocker(blocker)
 {
-    // 153.0.8010.36 → mayor 153
-    const QByteArray full = googleChromeVersion();
-    const QByteArray major = QByteArray::number(majorOf(full));
-#if defined(Q_OS_WIN)
-    const QByteArray platform = "Windows NT 10.0; Win64; x64";
-#elif defined(Q_OS_MACOS)
-    const QByteArray platform = "Macintosh; Intel Mac OS X 10_15_7";
-#else
-    const QByteArray platform = "X11; Linux x86_64";
-#endif
-    // Como el de Chrome: solo la versión mayor, el resto a cero
-    m_userAgent = "Mozilla/5.0 (" + platform + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/"
-        + major + ".0.0.0 Safari/537.36";
-    m_brands = QByteArray(GreaseBrand) + R"(, "Chromium";v=")" + major
-        + R"(", "Google Chrome";v=")" + major + '"';
-    m_fullVersionList = QByteArray(GreaseFullBrand) + R"(, "Chromium";v=")" + full
-        + R"(", "Google Chrome";v=")" + full + '"';
 }
+
 
 bool RequestInterceptor::takeHttpsFallback(const QString &host)
 {
@@ -78,36 +80,37 @@ void RequestInterceptor::confirmHttps(const QString &host)
 
 void RequestInterceptor::interceptRequest(QWebEngineUrlRequestInfo &info)
 {
+    const QUrl url = info.requestUrl();
+    const bool mainFrame = info.resourceType() == QWebEngineUrlRequestInfo::ResourceTypeMainFrame;
+
+    // Anuncios y rastreadores. La página que abre el usuario solo se bloquea
+    // si una lista lo pide expresamente ($document: sitios de estafas…)
+    if (m_blocker->shouldBlock(url, mainFrame ? url : info.firstPartyUrl(), filterType(info.resourceType()))) {
+        info.block(true);
+        return;
+    }
+
     if (doNotTrack) {
         info.setHttpHeader("DNT", "1");
         info.setHttpHeader("Sec-GPC", "1");
     }
 
     // Solo la página (marco principal): sus recursos http dentro de una
-    // página https ya los sube o bloquea el propio motor
-    const QUrl url = info.requestUrl();
-    if (httpsUpgrade && url.scheme() == QLatin1String("http")
-        && info.resourceType() == QWebEngineUrlRequestInfo::ResourceTypeMainFrame
-        && info.requestMethod() == "GET") {
+    // página https ya los sube o bloquea el propio motor. Sin parámetros de
+    // rastreo y, si es http, por https: todo en una sola redirección.
+    if (mainFrame && info.requestMethod() == "GET") {
+        QUrl target = m_blocker->withoutTrackingParams(url);
         const QString host = url.host();
-        if (!isLocalHost(host) && !m_httpAllowed.contains(host)) {
-            QUrl secure = url;
-            secure.setScheme(QStringLiteral("https"));
+        if (httpsUpgrade && url.scheme() == QLatin1String("http") && !isLocalHost(host)
+            && !m_httpAllowed.contains(host)) {
+            target.setScheme(QStringLiteral("https"));
             if (url.port() == 80)
-                secure.setPort(-1);
+                target.setPort(-1);
             m_upgraded.insert(host);
-            info.redirect(secure);
+        }
+        if (target != url) {
+            info.redirect(target);
             return;
         }
     }
-
-    if (!isGoogleSignIn(url) && !isGoogleSignIn(info.firstPartyUrl()))
-        return;
-
-    // Solo se reemplazan las que el motor ya envía: el Chrome real manda
-    // sec-ch-ua siempre y la lista completa solo si la página la pidió
-    info.setHttpHeader("User-Agent", m_userAgent);
-    info.setHttpHeader("sec-ch-ua", m_brands);
-    if (info.httpHeaders().contains("sec-ch-ua-full-version-list"))
-        info.setHttpHeader("sec-ch-ua-full-version-list", m_fullVersionList);
 }

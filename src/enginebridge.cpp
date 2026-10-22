@@ -1,21 +1,78 @@
 #include "enginebridge.h"
 
+#include <QCoreApplication>
+#include <QDir>
+#include <QFileInfo>
+#include <QQmlEngine>
 #include <QQuickWebEngineProfile>
 #include <QWebEngineCookieStore>
 #include <QtDebug>
 
+#include "contentblocker.h"
 #include "requestinterceptor.h"
 
 EngineBridge::EngineBridge(const QString &widevinePath, QObject *parent)
     : QObject(parent)
-    , m_interceptor(new RequestInterceptor(this))
+    , m_blocker(new ContentBlocker(this))
+    , m_interceptor(new RequestInterceptor(m_blocker, this))
     , m_widevinePath(widevinePath)
 {
+    connect(m_blocker, &ContentBlocker::stateChanged, this, &EngineBridge::adBlockStateChanged);
+    connect(m_blocker, &ContentBlocker::blockedCountChanged, this, &EngineBridge::adBlockBlockedChanged);
+
+    // En disco, en la carpeta de datos de Mitis (QtWebEngine/Mitis): la misma
+    // que usaba el perfil creado en QML, así se conservan cookies y permisos
+    m_profile = new QQuickWebEngineProfile(QStringLiteral("Mitis"), this);
+    m_profile->setHttpCacheType(QQuickWebEngineProfile::DiskHttpCache);
+    m_profile->setPersistentCookiesPolicy(QQuickWebEngineProfile::AllowPersistentCookies);
+    // Permisos concedidos o bloqueados (ubicación, notificaciones…): los
+    // guarda el motor, por sitio. Cámara y micrófono: BrowserProfile.qml.
+    m_profile->setPersistentPermissionsPolicy(QQuickWebEngineProfile::PersistentPermissionsPolicy::StoreOnDisk);
+    installInterceptor(m_profile);
 }
 
-QString EngineBridge::googleChromeVersion() const
+// Los perfiles se destruyen antes que la aplicación (main.cpp): después,
+// Qt WebEngine se queda bloqueado al cerrar
+EngineBridge::~EngineBridge()
 {
-    return QString::fromLatin1(RequestInterceptor::googleChromeVersion());
+    delete m_profile;
+}
+
+QQuickWebEngineProfile *EngineBridge::createPrivateProfile()
+{
+    // Nombre de almacenamiento vacío: sin disco. (El constructor sin nombre
+    // también lo haría, pero Qt avisa de que quedará obsoleto.)
+    auto *profile = new QQuickWebEngineProfile(QString(), this);
+    profile->setHttpCacheType(QQuickWebEngineProfile::MemoryHttpCache);
+    profile->setPersistentCookiesPolicy(QQuickWebEngineProfile::NoPersistentCookies);
+    profile->setPersistentPermissionsPolicy(QQuickWebEngineProfile::PersistentPermissionsPolicy::StoreInMemory);
+    installInterceptor(profile);
+    // Es de C++: QML no debe recogerlo como basura
+    QQmlEngine::setObjectOwnership(profile, QQmlEngine::CppOwnership);
+    return profile;
+}
+
+void EngineBridge::destroyPrivateProfile(QObject *profile)
+{
+    if (profile && profile != m_profile && profile->parent() == this)
+        profile->deleteLater();
+}
+
+// Junto al ejecutable (Windows), en Contents/Resources (macOS) o en
+// share/licenses/mitis (Linux)
+QString EngineBridge::licensesPath() const
+{
+    const QDir app(QCoreApplication::applicationDirPath());
+    const QStringList candidatas = {
+        app.filePath(QStringLiteral("licencias")),
+        app.filePath(QStringLiteral("../Resources/licencias")),
+        app.filePath(QStringLiteral("../share/licenses/mitis")),
+    };
+    for (const QString &carpeta : candidatas) {
+        if (QFileInfo(carpeta).isDir())
+            return QDir::cleanPath(carpeta);
+    }
+    return QString();
 }
 
 void EngineBridge::setBlockThirdPartyCookies(bool value)
@@ -46,15 +103,79 @@ void EngineBridge::setHttpsUpgrade(bool value)
         emit preferencesChanged();
 }
 
-// Un solo interceptor para toda la app: en --dev el perfil se vuelve a crear
-// en cada recarga y se le instala el mismo
-void EngineBridge::installInterceptor(QObject *profile)
+bool EngineBridge::adBlock() const
 {
-    auto *webProfile = qobject_cast<QQuickWebEngineProfile *>(profile);
-    if (!webProfile) {
-        qWarning("[Mitis] installInterceptor: no es un perfil de Qt WebEngine");
+    return m_blocker->isEnabled();
+}
+
+void EngineBridge::setAdBlock(bool value)
+{
+    if (m_blocker->isEnabled() == value)
         return;
-    }
+    m_blocker->setEnabled(value);
+    emit preferencesChanged();
+}
+
+void EngineBridge::setAdBlockAllowedSites(const QStringList &sites)
+{
+    if (m_adBlockAllowedSites == sites)
+        return;
+    m_adBlockAllowedSites = sites;
+    m_blocker->setAllowedSites(sites);
+    emit preferencesChanged();
+}
+
+bool EngineBridge::stripTrackingParams() const
+{
+    return m_blocker->stripTracking;
+}
+
+void EngineBridge::setStripTrackingParams(bool value)
+{
+    if (m_blocker->stripTracking == value)
+        return;
+    m_blocker->stripTracking = value;
+    emit preferencesChanged();
+}
+
+int EngineBridge::adBlockRules() const
+{
+    return m_blocker->ruleCount();
+}
+
+QDateTime EngineBridge::adBlockUpdated() const
+{
+    return m_blocker->updated();
+}
+
+bool EngineBridge::adBlockUpdating() const
+{
+    return m_blocker->updating();
+}
+
+double EngineBridge::adBlockBlocked() const
+{
+    return double(m_blocker->blockedCount());
+}
+
+void EngineBridge::updateFilterLists()
+{
+    m_blocker->update();
+}
+
+QString EngineBridge::cosmeticCss(const QUrl &url) const
+{
+    return m_blocker->cosmeticCss(url);
+}
+
+QString EngineBridge::siteOf(const QUrl &url) const
+{
+    return ContentBlocker::siteOf(url);
+}
+
+// Un solo interceptor para los dos perfiles
+void EngineBridge::installInterceptor(QQuickWebEngineProfile *webProfile)
+{
     webProfile->setUrlRequestInterceptor(m_interceptor);
     // Cookies de terceros: las de otro sitio dentro de la página (anuncios,
     // rastreadores, botones de redes sociales). El puente vive toda la app.

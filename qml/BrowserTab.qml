@@ -16,7 +16,8 @@ Item {
     // Dirección que se carga al crear la pestaña; vacía = página de nueva pestaña
     property string initialUrl: ""
     // Pestaña restaurada: no carga initialUrl hasta llamar a load() (al
-    // seleccionarla). Mientras, no gasta un proceso del motor.
+    // seleccionarla). Mientras, está descargada y no gasta un proceso del
+    // motor (aun sin dirección, el motor le daría uno con una página en blanco).
     property bool deferred: false
     // De una ventana privada: usa el perfil sin disco. Solo al crearla.
     property bool privateMode: false
@@ -47,6 +48,19 @@ Item {
 
     // La página está en pantalla completa (p. ej. el botón de un vídeo)
     readonly property alias pageFullScreen: view.isFullScreen
+
+    // ── Memoria ──────────────────────────────────────────────────────
+    // Proceso del motor que dibuja la página (para medir su memoria); 0 si
+    // no tiene (sin cargar o descargada). Varias pestañas pueden compartirlo.
+    readonly property alias renderProcessPid: view.renderProcessPid
+    // "active"; "frozen" (congelada: no ejecuta nada pero sigue en memoria)
+    // o "discarded" (descargada: sin proceso, se recarga al volver a ella).
+    // Ver suspend(). Una restaurada sin cargar (deferred) cuenta como activa.
+    readonly property string lifecycle: view.lifecycleState === WebEngineView.LifecycleState.Discarded ? "discarded"
+                                      : view.lifecycleState === WebEngineView.LifecycleState.Frozen ? "frozen"
+                                      : "active"
+    // Desde cuándo está oculta (ms, como Date.now()); 0 mientras se ve
+    readonly property alias hiddenSince: suspendState.hiddenSince
 
     // ── Peticiones de la página ──────────────────────────────────────
     // Quiere abrir algo en una pestaña nueva (enlace con clic central,
@@ -114,13 +128,48 @@ Item {
         if (!deferred)
             return
         deferred = false
+        root._wake()
         if (initialUrl !== "")
             view.url = initialUrl
     }
     function navigate(target) {
         deferred = false
         root._cancelCertificateError()
+        root._wake()
         view.url = target
+    }
+    // Ahorra memoria con la pestaña oculta: la congela o, con `discard`, la
+    // descarga (si ya estaba congelada, pasa de una a otra). No hace nada si
+    // la página suena o graba, tiene DevTools abiertas, puede mandar
+    // notificaciones (un chat dejaría de avisar) o un formulario a medio
+    // rellenar. Quién y cuándo la suspende lo decide la interfaz (fijadas no).
+    function suspend(discard) {
+        if (root.deferred || root.visible || root.audible || devTools.item)
+            return
+        const State = WebEngineView.LifecycleState
+        let target = discard ? State.Discarded : State.Frozen
+        if (view.lifecycleState >= target)
+            return
+        // El motor sabe más (cámara o pantalla en uso, aviso de salir…): Active
+        // = no suspender; Frozen = como mucho congelar
+        const recommended = view.recommendedState
+        if (recommended === State.Active)
+            return
+        target = Math.min(target, recommended)
+        if (view.lifecycleState >= target || root._canNotify())
+            return
+        // Congelada ya no ejecuta scripts: el formulario se miró al congelarla
+        // (y oculta no ha podido cambiar)
+        if (view.lifecycleState === State.Frozen) {
+            view.lifecycleState = target
+            return
+        }
+        // En un mundo aparte: la página no puede interferir. Si no responde
+        // (JavaScript desactivado…), no se sabe y no se suspende.
+        view.runJavaScript(root._editedFormScript, WebEngineScript.ApplicationWorld, edited => {
+            if (edited === false && !root.visible && view.lifecycleState < target)
+                view.lifecycleState = target
+        })
     }
     function goBack() {
         root._cancelCertificateError()
@@ -308,7 +357,7 @@ Item {
 
         WebEngineView {
             anchors.fill: parent
-            profile: BrowserProfile
+            profile: BrowserProfile.profile
             // Los colores, de Theme: el script solo los aplica
             onLoadingChanged: info => {
                 if (info.status !== WebEngineLoadingInfo.LoadSucceededStatus)
@@ -339,6 +388,105 @@ Item {
             }
         }
     }
+
+    // ── Ocultar huecos de anuncios ───────────────────────────────────
+    // El bloqueador (C++) quita las peticiones; lo que queda en la página
+    // (cajas vacías, avisos de «publicidad») lo ocultan las reglas de
+    // ocultación del sitio. Al empezar cada carga de la página (también al
+    // recargar o ir atrás) se pone en la vista un script con el CSS de ese
+    // sitio (solo el suyo: nada que cueste memoria en las demás), que se
+    // aplica al crearse el documento.
+    function _applyCosmetics(address) {
+        // qmllint disable unqualified
+        const css = MitisEngine.cosmeticCss(address)
+        // qmllint enable unqualified
+        const scripts = view.userScripts
+        for (const old of scripts.find("mitis-cosmetic"))
+            scripts.remove(old)
+        if (css === "")
+            return
+        const script = WebEngine.script()
+        script.name = "mitis-cosmetic"
+        script.injectionPoint = WebEngineScript.DocumentCreation
+        // Aparte de la página: no puede quitarlo ni lo frena su CSP
+        script.worldId = WebEngineScript.ApplicationWorld
+        script.runsOnSubFrames = false
+        script.sourceCode = "(function (css) {"
+            + "  const sheet = new CSSStyleSheet();"
+            + "  sheet.replaceSync(css);"
+            + "  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];"
+            + "})(" + JSON.stringify(css) + ")"
+        scripts.insert(script)
+    }
+
+    // ── Suspensión ───────────────────────────────────────────────────
+    QtObject {
+        id: suspendState
+        property real hiddenSince: 0
+    }
+    // Se mira un momento después: al reordenar pestañas, una puede verse
+    // un instante sin que nadie la haya abierto (y no debe despertarse)
+    onVisibleChanged: Qt.callLater(root._visibilitySettled)
+    function _visibilitySettled() {
+        if (visible) {
+            suspendState.hiddenSince = 0
+            root._wake()
+        } else if (suspendState.hiddenSince === 0) {
+            suspendState.hiddenSince = Date.now()
+        }
+    }
+    // Una suspendida vuelve a estar activa (la descargada se recarga)
+    function _wake() {
+        if (view.lifecycleState !== WebEngineView.LifecycleState.Active)
+            view.lifecycleState = WebEngineView.LifecycleState.Active
+    }
+    // Restaurada sin cargar: aun sin dirección, el motor le da un proceso
+    // con una página en blanco poco después de crear la vista. Se descarga en
+    // cuanto existe; no hay aviso (renderProcessPidChanged no llega a QML),
+    // así que se mira cada poco durante unos segundos.
+    Timer {
+        property int tries: 0
+        interval: 500
+        repeat: true
+        running: root.deferred && !root.visible && tries < 20
+                 && view.lifecycleState === WebEngineView.LifecycleState.Active
+        onTriggered: {
+            tries++
+            if (view.renderProcessPid > 0)
+                view.lifecycleState = WebEngineView.LifecycleState.Discarded
+        }
+    }
+    // El sitio tiene permiso para mandar notificaciones
+    function _canNotify() {
+        const origin = /^https?:\/\/[^\/?#]+/i.exec(view.url.toString())
+        return origin !== null && view.profile.queryPermission(origin[0], WebEnginePermission.PermissionType.Notifications)
+                                      .state === WebEnginePermission.State.Granted
+    }
+    // true si algún campo de la página tiene algo distinto de lo que traía
+    // (texto escrito, casilla marcada, otra opción elegida) o se está
+    // escribiendo en un editor (contenteditable, como el de un correo)
+    readonly property string _editedFormScript: `(function () {
+        for (const field of document.querySelectorAll('input, textarea, select')) {
+            if (field.disabled)
+                continue
+            if (field.tagName === 'SELECT') {
+                const initial = Array.from(field.options).findIndex(option => option.defaultSelected)
+                if (field.selectedIndex !== (initial >= 0 ? initial : (field.multiple ? -1 : 0)))
+                    return true
+                continue
+            }
+            const type = (field.type || '').toLowerCase()
+            if (type === 'checkbox' || type === 'radio') {
+                if (field.checked !== field.defaultChecked)
+                    return true
+            } else if (!['hidden', 'submit', 'button', 'reset', 'image', 'file'].includes(type)
+                       && field.value !== field.defaultValue) {
+                return true
+            }
+        }
+        const active = document.activeElement
+        return !!(active && active.isContentEditable && active.textContent.trim() !== '')
+    })()`
 
     QtObject {
         id: zoomState
@@ -384,7 +532,7 @@ Item {
     WebEngineView {
         id: view
         anchors.fill: parent
-        profile: root.privateMode ? BrowserProfile.privateProfile : BrowserProfile
+        profile: root.privateMode ? BrowserProfile.privateProfile : BrowserProfile.profile
         // Visor de PDF integrado (también lo esperan algunos sitios: un
         // navegador sin él parece un motor embebido)
         settings.pluginsEnabled: true
@@ -444,6 +592,7 @@ Item {
                 root.pageLoaded()
             }
             if (loadingInfo.status === WebEngineView.LoadStartedStatus) {
+                root._applyCosmetics(loadingInfo.url)
                 for (const dialog of dialogState.pending.slice()) {
                     if (dialog.type !== "beforeunload") {
                         dialog.reject()
@@ -706,6 +855,8 @@ Item {
     }
 
     Component.onCompleted: {
+        if (!visible)
+            suspendState.hiddenSince = Date.now()
         view.zoomFactor = zoomState.level
         if (initialUrl !== "" && !deferred)
             view.url = initialUrl

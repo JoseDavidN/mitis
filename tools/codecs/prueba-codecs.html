@@ -1,0 +1,90 @@
+<!doctype html>
+<!-- Comprueba si el motor de Mitis tiene códecs propietarios (docs/codecs.md).
+     Abrirla en Mitis: arrastrarla a la ventana o escribir su ruta en la barra
+     de dirección. No es parte de la interfaz: solo una página de prueba. -->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prueba de códecs</title>
+<style>
+  body { font: 16px/1.5 system-ui, sans-serif; max-width: 46rem; margin: 2rem auto; padding: 0 1rem; }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { border-bottom: 1px solid #8884; padding: .4rem; text-align: left; }
+  code { font-size: .9em; }
+  .si { color: #1a7f37; font-weight: bold; }
+  .no { color: #cf222e; font-weight: bold; }
+  #veredicto { font-size: 1.2rem; margin: 1rem 0; }
+  video { width: 100%; margin-top: 1rem; background: #000; }
+</style>
+</head>
+<body>
+<h1>Prueba de códecs</h1>
+<p id="veredicto"></p>
+<table>
+  <thead><tr><th>Formato</th><th>canPlayType</th><th>MediaSource</th></tr></thead>
+  <tbody id="filas"></tbody>
+</table>
+<p>Sin códecs propietarios, H.264 y AAC dan «» (vacío) y <code>false</code>.
+   Con ellos, «probably» y <code>true</code>. VP9, Opus, AV1 y MP3 están siempre: sirven de control.</p>
+
+<h2>Reproducir un archivo</h2>
+<p>Elige un <code>.mp4</code> con H.264 y AAC: con códecs debe verse y oírse.</p>
+<input type="file" id="archivo" accept="video/mp4,audio/mp4,.mp4,.m4a">
+<p id="estado"></p>
+<video id="video" controls hidden></video>
+
+<script>
+// Propietarios: los que faltan en el Qt WebEngine oficial de Windows y macOS
+const formatos = [
+  ["H.264 (MP4)", 'video/mp4; codecs="avc1.42E01E"', true],
+  ["AAC-LC (MP4)", 'audio/mp4; codecs="mp4a.40.2"', true],
+  ["H.264 + AAC", 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"', true],
+  // MP3 ya no es propietario en Chromium (patentes caducadas): control
+  ["MP3", 'audio/mpeg', false],
+  ["VP9 (WebM)", 'video/webm; codecs="vp9"', false],
+  ["Opus (WebM)", 'audio/webm; codecs="opus"', false],
+  ["AV1 (MP4)", 'video/mp4; codecs="av01.0.05M.08"', false],
+];
+
+const video = document.createElement("video");
+const filas = document.getElementById("filas");
+let propietarios = true;
+
+for (const [nombre, tipo, propietario] of formatos) {
+  const puede = video.canPlayType(tipo);
+  const mse = window.MediaSource ? MediaSource.isTypeSupported(tipo) : false;
+  if (propietario && puede !== "probably") propietarios = false;
+  const fila = filas.insertRow();
+  fila.insertCell().innerHTML = `${nombre}<br><code>${tipo}</code>`;
+  const c1 = fila.insertCell(); c1.textContent = puede ? `«${puede}»` : "«» (no)"; c1.className = puede ? "si" : "no";
+  const c2 = fila.insertCell(); c2.textContent = String(mse); c2.className = mse ? "si" : "no";
+}
+
+const veredicto = document.getElementById("veredicto");
+veredicto.textContent = propietarios
+  ? "✔ H.264 y AAC disponibles: este Qt WebEngine tiene códecs propietarios."
+  : "✘ Sin H.264/AAC: es el Qt WebEngine oficial (o la compilación no los activó).";
+veredicto.className = propietarios ? "si" : "no";
+
+// Reproducción real: canPlayType solo dice lo que el motor declara
+const reproductor = document.getElementById("video");
+const estado = document.getElementById("estado");
+document.getElementById("archivo").addEventListener("change", (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  reproductor.hidden = false;
+  reproductor.src = URL.createObjectURL(f);
+  estado.textContent = "Cargando…";
+  reproductor.onloadedmetadata = () => {
+    estado.textContent = `Se puede reproducir: ${reproductor.videoWidth}×${reproductor.videoHeight}, ${reproductor.duration.toFixed(1)} s.`;
+    reproductor.play();
+  };
+  reproductor.onerror = () => {
+    const err = reproductor.error;
+    estado.textContent = `No se puede reproducir (código ${err && err.code}: ${err && err.message || "formato no admitido"}).`;
+  };
+});
+</script>
+</body>
+</html>

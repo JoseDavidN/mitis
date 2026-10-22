@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Shapes
 
 // Fondo del tema para las páginas propias (nueva pestaña, Configuración):
-// resplandor violeta arriba a la izquierda que se funde en negro.
+// resplandor arriba a la izquierda (Theme.bgGlow) que se funde en el fondo.
 Shape {
     id: root
 

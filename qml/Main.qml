@@ -63,13 +63,45 @@ Window {
     }
 
     Component.onCompleted: {
+        // Enlaces con los que se abrió Mitis (navegador predeterminado): con
+        // ellos no hace falta la página de inicio ni la de nueva pestaña
+        const links = privateMode ? [] : Links.takePending()
         if (privateMode) {
             BrowserProfile.retainPrivate()
             openNewTabPage()
-        } else if (Settings.startupMode === "page" && Settings.startupUrl !== "") {
+        } else if (Settings.startupMode === "page" && Settings.startupUrl !== "" && links.length === 0) {
             newTab(Settings.startupUrl)
-        } else if (!(Settings.startupMode === "restore" && restoreSession())) {
+        } else if (!(Settings.startupMode === "restore" && restoreSession(links.length > 0))
+                   && links.length === 0) {
             openNewTabPage()
+        }
+        openLinks(links)
+    }
+
+    // ── Enlaces de fuera (navegador predeterminado) ──────────────────
+    // Cada uno en una pestaña nueva al final, como Chrome (en la de nueva
+    // pestaña si es la que se ve), y la ventana se pone delante. Solo la
+    // ventana principal: una privada nunca recibe enlaces de fuera.
+    function openLinks(urls) {
+        if (urls.length === 0)
+            return
+        closeSettings()
+        for (const url of urls) {
+            if (currentView && showingNewTabPage)
+                currentView.navigate(url)
+            else
+                newTab(url)
+        }
+    }
+    Connections {
+        target: Links
+        enabled: !win.privateMode
+        function onReceived() {
+            win.openLinks(Links.takePending())
+            if (win.visibility === Window.Minimized)
+                win.showNormal()
+            win.raise()
+            win.requestActivate()
         }
     }
     Component.onDestruction: {
@@ -108,8 +140,9 @@ Window {
         Settings.setValue("Session/tabs", JSON.stringify({ current: currentIndex, tabs: list }))
     }
 
-    // false si no había nada que restaurar
-    function restoreSession() {
+    // false si no había nada que restaurar. Con `deferAll`, ni la que estaba
+    // activa carga todavía (se va a abrir otra: un enlace de fuera)
+    function restoreSession(deferAll) {
         let saved = null
         try {
             saved = JSON.parse(Settings.value("Session/tabs", "null"))
@@ -125,8 +158,8 @@ Window {
             const url = typeof tab.url === "string" ? tab.url : ""
             const pinned = tab.pinned === true
             tabs.append({ initialUrl: url, url: url, title: tab.title ?? "", icon: tab.icon ?? "",
-                          audible: false, muted: false, pinned: pinned,
-                          deferred: i !== currentIndex && url !== "" })
+                          audible: false, muted: false, pinned: pinned, lifecycle: "active",
+                          deferred: (deferAll === true || i !== currentIndex) && url !== "" })
             if (pinned)
                 pinnedCount++
         }
@@ -157,6 +190,95 @@ Window {
             History.addVisit(tab.url.toString(), tab.title)
     }
 
+    // ── Suspensión de pestañas ───────────────────────────────────────
+    // Para ahorrar memoria, las pestañas que no se ven se congelan a los
+    // cinco minutos y se descargan a los de Configuración → Rendimiento
+    // (BrowserTab.suspend() pone el resto de excepciones). Nunca las fijadas
+    // ni la del mini reproductor (sus botones dejarían de responder).
+    readonly property int freezeAfter: 5 * 60 * 1000
+    function suspendIdleTabs() {
+        const discardAfter = Settings.suspendAfter * 60 * 1000
+        const now = Date.now()
+        for (let i = 0; i < tabs.count; i++) {
+            const tab = views.itemAt(i) as BrowserTab
+            if (!tab || tab.hiddenSince === 0 || tabs.get(i).pinned || tab === mediaView)
+                continue
+            const hidden = now - tab.hiddenSince
+            if (hidden >= discardAfter)
+                tab.suspend(true)
+            else if (hidden >= Math.min(freezeAfter, discardAfter))
+                tab.suspend(false)
+        }
+    }
+    Timer {
+        interval: 30 * 1000
+        repeat: true
+        running: Settings.suspendAfter > 0 && tabs.count > 1
+        onTriggered: win.suspendIdleTabs()
+    }
+
+    // ── Memoria (panel de desarrollo) ────────────────────────────────
+    // Lo que mide MemoryMonitor, repartido: el proceso de cada pestaña de
+    // esta ventana (contado una vez aunque lo compartan varias) y el resto
+    // por tipo. Los de otras ventanas van en «otros».
+    function measureMemory() {
+        const measured = MemoryMonitor.measure()
+        const byPid = {}
+        for (const process of measured.processes)
+            byPid[process.pid] = process
+        const sharing = {}
+        for (let i = 0; i < tabs.count; i++) {
+            const pid = (views.itemAt(i) as BrowserTab).renderProcessPid
+            if (pid > 0)
+                sharing[pid] = (sharing[pid] ?? 0) + 1
+        }
+        const states = { active: "Activa", frozen: "Congelada", discarded: "Descargada" }
+        const list = []
+        const counted = {}
+        let pages = 0
+        for (let i = 0; i < tabs.count; i++) {
+            const tab = views.itemAt(i) as BrowserTab
+            const process = byPid[tab.renderProcessPid]
+            let detail = i === currentIndex ? "En pantalla" : tab.deferred ? "Sin cargar" : states[tab.lifecycle]
+            if (tabs.get(i).pinned)
+                detail = "Fijada · " + detail
+            if (process && sharing[process.pid] > 1)
+                detail += " · proceso compartido con " + (sharing[process.pid] - 1)
+                          + (sharing[process.pid] === 2 ? " pestaña" : " pestañas")
+            list.push({ url: tab.url.toString(), title: tabs.get(i).title,
+                        bytes: process ? process.bytes : 0, detail: detail })
+            if (process && !counted[process.pid]) {
+                counted[process.pid] = true
+                pages += process.bytes
+            }
+        }
+        let browser = 0, gpu = 0, other = 0
+        for (const process of measured.processes) {
+            if (counted[process.pid])
+                continue
+            if (process.kind === "browser")
+                browser += process.bytes
+            else if (process.kind === "gpu")
+                gpu += process.bytes
+            else
+                other += process.bytes
+        }
+        const groups = [
+            { label: "Proceso principal (interfaz y motor)", bytes: browser },
+            { label: "Páginas de esta ventana", bytes: pages }
+        ]
+        if (gpu > 0)
+            groups.push({ label: "GPU", bytes: gpu })
+        groups.push({ label: "Otros procesos del motor", bytes: other })
+        memoryPanel.sample = { total: measured.total, processCount: measured.processes.length,
+                               groups: groups, tabs: list }
+    }
+    function toggleMemoryPanel() {
+        memoryPanel.shown = !memoryPanel.shown
+        if (!memoryPanel.shown)
+            memoryPanel.sample = null
+    }
+
 
     property int currentIndex: 0
     property BrowserTab currentView: null
@@ -174,7 +296,8 @@ Window {
             closeSettings()
         const address = target ? target.toString() : ""
         tabs.insert(at, { initialUrl: address, url: address, title: "", icon: "",
-                          audible: false, muted: false, pinned: false, deferred: false })
+                          audible: false, muted: false, pinned: false, lifecycle: "active",
+                          deferred: false })
         if (activate !== false)
             currentIndex = at
         else if (at <= currentIndex)
@@ -629,7 +752,8 @@ Window {
         onTriggered: win.pollMedia()
     }
 
-    // Roles: initialUrl (solo al crear), url, title, icon, audible, muted, pinned
+    // Roles: initialUrl (solo al crear), url, title, icon, audible, muted, pinned,
+    // lifecycle ("active", "frozen" o "discarded": BrowserTab.lifecycle)
     ListModel {
         id: tabs
     }
@@ -721,10 +845,15 @@ Window {
                 visible: current
                 privateMode: win.privateMode
 
-                // Una restaurada carga al seleccionarla
+                // Una restaurada carga al seleccionarla. Se mira un momento
+                // después: al mover filas (moveTab) otra pestaña puede ser «la
+                // actual» un instante, y no debe cargarse por eso
                 onCurrentChanged: if (current) {
                     win.currentView = tab
-                    tab.load()
+                    Qt.callLater(() => {
+                        if (tab.current)
+                            tab.load()
+                    })
                 }
                 Component.onCompleted: if (current) win.currentView = tab
 
@@ -737,6 +866,7 @@ Window {
                 }
                 onIconChanged: tabs.setProperty(index, "icon", icon.toString())
                 onMutedChanged: tabs.setProperty(index, "muted", tab.muted)
+                onLifecycleChanged: tabs.setProperty(index, "lifecycle", tab.lifecycle)
                 onAudibleChanged: {
                     tabs.setProperty(index, "audible", tab.audible)
                     if (tab.audible) {
@@ -911,6 +1041,7 @@ Window {
     OptionsPopup {
         id: optionsPopup
         parent: bottomBar.optionsButton
+        developer: Settings.devTools
         x: parent.width - width
         y: -height - Theme.floatingMargin
         onOptionSelected: key => {
@@ -922,6 +1053,8 @@ Window {
                 win.openPrivateWindow()
             else if (key === "settings")
                 win.openSettings()
+            else if (key === "memory")
+                win.toggleMemoryPanel()
         }
     }
 
@@ -966,6 +1099,18 @@ Window {
             }
             win.findTab = null
         }
+    }
+
+    MemoryPanel {
+        id: memoryPanel
+        z: 1
+        anchors.top: titleBar.bottom
+        anchors.topMargin: Theme.floatingMargin
+        anchors.left: parent.left
+        anchors.leftMargin: Theme.margin
+        onRefreshRequested: win.measureMemory()
+        onTabSelected: index => win.selectTab(index)
+        onCloseRequested: win.toggleMemoryPanel()
     }
 
     ZoomIndicator {
@@ -1048,6 +1193,14 @@ Window {
                  && (win.ownsShortcuts || win.devToolsFocused(win.currentView))
         onActivated: win.toggleDevTools(win.currentView)
         onActivatedAmbiguously: win.toggleDevTools(win.currentView)
+    }
+    // Panel de memoria (como el administrador de tareas de Chrome)
+    Shortcut {
+        sequence: "Shift+Esc"
+        context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts && (Settings.devTools || memoryPanel.shown)
+        onActivated: win.toggleMemoryPanel()
+        onActivatedAmbiguously: win.toggleMemoryPanel()
     }
     Shortcut {
         sequence: "F11"

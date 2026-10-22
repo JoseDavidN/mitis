@@ -4,11 +4,25 @@ Fuente de verdad del aspecto de Mitis. Toda pantalla, componente o cambio visual
 
 El tema por defecto, **Nocturno**, sale del tema oscuro de StartCode Panel (`/srv/proyectos/startcode_panel/FRONTEND/src/styles/themes/dark.css`): violeta y rosa sobre un negro con matiz morado. Mitis usa los mismos valores, adaptados a QML.
 
+### Temas
+
+Se eligen en Configuración → Apariencia e idioma (`Settings.theme`) y cambian al momento: cada token de color de `Theme` es un enlace a la paleta del tema en uso (`Theme.palettes`). Las tres paletas tienen las mismas claves. Las tablas de tokens de abajo dan los valores de Nocturno.
+
+| Tema | Clave | Carácter | Fondo · tinta · acento |
+|---|---|---|---|
+| Nocturno (de serie) | `nocturno` | Violeta y rosa sobre negro morado | `#07050d` · `#f4f1ff` · `#a855f7 → #ec4899` |
+| Oscuro | `oscuro` | Grises neutros y azul, como el modo oscuro de Chrome; barra de título y controles planos, sin degradado de color | `#202124` · `#e8eaed` · `#1a73e8` (marca), `#8ab4f8` (acento claro) |
+| Claro | `claro` | Fondos claros con la marca violeta/rosa; bordes y tintes en negro con alfa | `#f7f5fb` · `#1d1631` · `#9333ea → #db2777`, acento `#7c3aed` |
+
+- `Theme.dark` dice si el tema es oscuro. Con él se fija `Application.styleHints.colorScheme` (diálogos del sistema). Las páginas web con versión oscura (`prefers-color-scheme`) siguen al tema desde el próximo arranque: lo fija `main.cpp` con `--blink-settings=preferredColorScheme` (Qt WebEngine no deja cambiarlo en marcha ni hace caso de `colorScheme`).
+- Un tema nuevo: otra entrada en `Theme.themes` y en `Theme.palettes`, con todas las claves. Nada más cambia.
+- La paleta de DevTools, las medidas, la tipografía y el movimiento son iguales en todos los temas.
+
 ---
 
 ## Principios
 
-- **Oscuro y morado.** Fondo casi negro (`#07050d`) con resplandor violeta; la marca es el degradado violeta → rosa (`#a855f7 → #ec4899`).
+- **Oscuro y morado de serie.** Nocturno: fondo casi negro (`#07050d`) con resplandor violeta; la marca es el degradado violeta → rosa (`#a855f7 → #ec4899`). Además hay un tema Oscuro neutro y uno Claro.
 - **El color nunca se escribe en un componente.** Todo sale de `qml/Theme.qml`. Un `"#hex"` o un `Qt.rgba(...)` fuera de `Theme.qml` es un error.
 - **La interfaz flota sobre la página.** Arriba, una barra de título fina; abajo, controles sueltos (botones y campo de dirección) sin barra de fondo. Cada control lleva su propia superficie y borde, sin sombra.
 - **Ligero.** Nada de desenfoque (`blur`) ni efectos que obliguen a re-renderizar la página: Mitis prioriza RAM y GPU. Las superficies imitan el "glass" con alfa alto en lugar de borronear lo de detrás.
@@ -117,11 +131,13 @@ En QML: `easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeOut`.
 
 Alturas: botones inferiores `buttonSize` (32), campo de dirección `controlHeight` (34), barra de título `titleBarHeight` (30) con botones de `titleButtonSize` (24).
 
+Pestaña suspendida: `suspendedOpacity` (0,45) opacidad de su favicon en la lista.
 Arrastre de filas: `dragOpacity` (0,85) opacidad de la fila levantada, `dropIndicatorHeight` (2) grosor de la línea de destino, `dragScrollStep` (6 px por paso) velocidad del auto-scroll.
 
 Descargas: `downloadRowHeight` (52) fila de dos líneas del listado, `durationIndeterminate` (1,2 s) vuelta de la barra de progreso sin total conocido, `relativeTimeRefresh` (30 s) refresco de «hace 5 min» en el listado.
 
 Descarga actual: `downloadPanelWidth` (340) ancho del panel, `downloadBarHeight` (4) grosor de su barra, `progressRingWidth` (2) trazo del anillo del botón, `progressIndeterminateSpan` (0,3) fracción que ocupan el tramo de la barra y el arco del anillo sin total conocido, `durationSpin` (1 s) vuelta del anillo sin total, `downloadPanelHold` (10 s) lo que se quedan panel y botón al terminar.
+Panel de memoria: `memoryPanelWidth` (360) ancho, `memoryPanelRefresh` (2 s) cada cuánto vuelve a medir.
 
 Filas de página (marcadores, historial): `pageRowHeight` (48). `CheckMark`: `checkRadius` (5); «Datos borrados» se queda `clearedNoticeHold` (3 s).
 
@@ -174,6 +190,7 @@ Window (bgBase, sin marco)
 | `new-tab`, `reopen` | `plus`, `undo-2` | Lista de pestañas: nueva y reabrir cerrada (`reopen`, también en Historial y en «Al iniciar» de Configuración) |
 | `history`, `downloads`, `profile`, `settings` | `history`, `download`, `circle-user-round`, `settings` | Menú de opciones (`settings`, también en la cabecera de Configuración; `downloads` e `history`, en sus secciones; `history`, en las sugerencias del historial) |
 | `info` | `info` | Configuración: «Acerca de Mitis» |
+| `blocker` | `shield-ban` | Configuración: sección «Anuncios y rastreadores» y sitios donde se permiten |
 | `appearance`, `privacy`, `security`, `permissions` | `palette`, `eye-off`, `shield-check`, `sliders-horizontal` | Configuración: secciones Apariencia e idioma, Privacidad, Seguridad y Permisos de sitios (Contenido usa `open-image`) |
 | `private` | `venetian-mask` | Ventana privada: menú de opciones y «Privada» en la barra de título |
 | `check` | `check` | `CheckMark` marcada y «Datos borrados» |
@@ -190,6 +207,8 @@ Window (bgBase, sin marco)
 | `not-secure` | `shield-alert` | Aviso de certificado inválido |
 | `camera`, `microphone`, `camera-microphone`, `screen`, `location`, `notifications`, `clipboard`, `fonts` | `camera`, `mic`, `video`, `monitor`, `map-pin`, `bell`, `clipboard`, `type` | Diálogo de permisos: qué pide el sitio |
 | `protected-content` | `monitor-play` | Aviso de que falta Widevine (contenido protegido) |
+| `suspended` | `moon` | Lista de pestañas: pestaña suspendida |
+| `memory`, `performance` | `memory-stick`, `gauge` | Panel de memoria (y «Uso de memoria» del menú de opciones); sección «Rendimiento» de Configuración |
 | `devtools`, `inspect` | `code-xml`, `scan-search` | Ventana de herramientas de desarrollo (etiqueta «DevTools») y sección «Desarrollo» de Configuración; «Inspeccionar» del menú contextual |
 
 ### `IconButton` — botón flotante
@@ -214,6 +233,13 @@ Window (bgBase, sin marco)
 - Busca mientras se escribe. Intro: siguiente; Mayús+Intro: anterior; Esc: cerrar (el teclado vuelve a la página y se quita el resaltado).
 - Atajos globales: Ctrl+F abre (con el texto anterior seleccionado); F3/Ctrl+G siguiente; Mayús+F3/Ctrl+Mayús+G anterior. No se abre en la página de nueva pestaña. Se cierra al cambiar de pestaña.
 
+### `MemoryPanel` — uso de memoria (desarrollo)
+- Solo con las herramientas de desarrollo activadas: Shift+Esc u Opciones → «Uso de memoria». Flota **arriba a la izquierda**, bajo la barra de título (a `floatingMargin` de ella y `margin` del borde), ancho `memoryPanelWidth`, fondo `PopupBackground`. Aparece con fundido y desplazamiento (`durationBase`). No se cierra al usar la página: con su ✕ o el mismo atajo.
+- Cabecera de `popupRowHeight`: icono `memory` en `brandLight1`, «Memoria» y el total Bold `ink`, ✕ plana. Debajo, el número de procesos en `fontSizeSmall` `inkMuted`.
+- Reparto por tipo (proceso principal, páginas de esta ventana, GPU, otros) en `fontSizeSmall` `inkSecondary`, la cifra DemiBold a la derecha. Separador `line`.
+- «Pestañas de esta ventana»: un `PageRow` por pestaña sin ✕ (`removable: false`), con la memoria de su proceso a la derecha (`value`, DemiBold `inkSecondary`; «—» si no tiene) y el estado de detalle: Activa, Congelada, Descargada o Sin cargar, y «proceso compartido con N» si lo comparte. Pulsar una fila va a la pestaña.
+- Cifras: «123 MB», o «1,2 GB» desde 1024 MB.
+
 ### `ZoomIndicator` — zoom de la pestaña
 - Píldora de `controlHeight` **arriba a la derecha**, bajo la barra de título (a `floatingMargin` de ella y `margin` del borde), con el degradado de los controles y borde `hairline`.
 - Contenido: `IconButton` plano "−", el porcentaje (`ink`, DemiBold, ancho fijo `zoomLabelWidth` para que no baile), "+" y, si no está al 100 %, un separador `line` y "Restablecer" (`inkSecondary`, `ink` al pasar por encima).
@@ -228,6 +254,9 @@ Window (bgBase, sin marco)
 
 ### Pestaña con sonido
 - En la lista de pestañas, un `IconButton` plano `sound` junto a la ✕ mientras la pestaña suena; `muted` si está silenciada (se ve aunque no suene). Pulsarlo alterna el silencio.
+
+### Pestaña suspendida
+- Congelada o descargada para ahorrar memoria (también la restaurada que aún no se ha abierto): en la lista de pestañas, favicon con opacidad `suspendedOpacity` (0,45), título en `inkMuted` y, delante de los botones, el icono `suspended` (`iconSizeSmall`, `inkMuted`) en un hueco de `buttonSizeSmall`. No es un botón: al pasar por encima, un tooltip dice «Congelada para ahorrar memoria» o «Descargada para ahorrar memoria: se recargará al abrirla». Al abrirla vuelve a verse normal.
 
 ### Pestaña fijada
 - Las fijadas van siempre arriba en la lista, en el orden en que se fijaron. Entre ellas y el resto, un separador `line` en un hueco de `spacing`.
@@ -288,20 +317,31 @@ Window (bgBase, sin marco)
 - **Elección única en filas** (`OptionRow`, «Al iniciar»): título y descripción con un `RadioMark` a la derecha; toda la fila se pulsa (hover `tintHover`), la elegida con fondo `tintActive` y título Bold.
 - **Opciones en píldoras** (`ChoiceRow`: zoom, idiomas): título y descripción arriba y debajo los `Chip`, que saltan de línea si no caben. En los idiomas se marcan varios; la descripción dice el orden.
 - **Permisos guardados** (`SitePermissionRow`, de `pageRowHeight`): icono del permiso `inkSoft`, sitio DemiBold `ink` y «Ubicación · Permitido» en `inkMuted` (`warn` si es «Bloqueado»); ✕ plana para olvidarlo, visible al pasar.
+- **Sitios con anuncios permitidos** (`AllowedSiteRow`, como `SitePermissionRow`): icono `blocker` `inkSoft`, sitio DemiBold `ink` y «Anuncios y rastreadores permitidos» en `warn`; ✕ plana «Volver a bloquear», visible al pasar.
 - **Acción con confirmación** («Restablecer la configuración»): el primer clic cambia la descripción por la pregunta y muestra «Cancelar» junto al botón `danger`.
 - **Búsqueda:** cada buscador en una fila de `settingsRowHeight`: favicon de `faviconSize` sobre un círculo `faviconBackdrop` de `settingsIconBox` (sin favicon, `search` sobre `tintActive`), nombre DemiBold `ink` y dominio debajo en `fontSizeSmall` `inkMuted`, y un `RadioMark` a la derecha. Hover `tintHover`; el elegido, fondo `tintActive`, nombre Bold y `RadioMark` marcado. **Pulsar una fila lo elige al momento.** Debajo, «Personalizado»: nombre (un tercio) y dirección con `%s` (sin esquema se añade `https://`) en `FormField`, nota con un ejemplo en `fontSizeSmall` `inkMuted` (en `danger` si la dirección no vale) y «Guardar y usar» (`primary`). Guardado, el personalizado es la última fila de la lista.
 - **Borrar datos de navegación:** «Borrar datos de» y el periodo en `Chip` (píldoras de `buttonSizeSmall` + `spacing / 2`, borde `hairline`; la elegida, `tintActive`, borde `brandLight1` y texto Bold `ink`). Debajo, una `CheckRow` por dato (`CheckMark`, título y descripción; toda la fila se pulsa, hover `tintHover`): historial y listado de descargas (por periodo), cookies, caché y permisos de sitios (siempre enteros). Abajo, «Borrar datos» (`TextButton` `danger`) y, al terminar, «Datos borrados» con `check` en `ok`, que se desvanece a los `clearedNoticeHold`.
 - **Secciones:**
   - Al iniciar: continuar donde lo dejaste, pestaña nueva o una página (dirección en `FormField` y «Usar la página actual»).
-  - Apariencia e idioma: zoom de las páginas, modo oscuro en las páginas, idiomas de las páginas.
+  - Apariencia e idioma: tema (`ThemeTile`: una tarjeta de `themeTileWidth` por tema, con su vista previa de `themeTilePreviewHeight` dibujada con los colores de ese tema —barra de título, una tarjeta con texto, los controles con el acento—; borde `hairline`, `hairlineHover` al pasar y 2 px `focusRing` en el elegido; debajo el nombre, Bold `ink` con `check` `brandLight1` si está elegido), zoom de las páginas, modo oscuro en las páginas, idiomas de las páginas.
   - Búsqueda; Nueva pestaña (imagen de fondo: elegir o quitar).
   - Privacidad: cookies de terceros, borrar cookies y caché al cerrar, no rastrear, ocultar la IP local.
+  - Anuncios y rastreadores: bloquear (`Toggle`), estado de las listas («335.043 reglas, del 22 de octubre…», con lo bloqueado en la sesión) y «Actualizar ahora», quitar el rastreo de los enlaces, «Permitir en <sitio>» (el de la pestaña activa) y la lista de sitios permitidos.
   - Seguridad: conexiones seguras, ventanas emergentes, JavaScript.
   - Permisos de sitios: «Preguntar» / «Bloquear» (`Chip`) por tipo y, debajo, lo decidido para cada sitio.
   - Contenido: imágenes, reproducción automática.
   - Borrar datos de navegación; Descargas (carpeta y preguntar dónde guardar).
-  - Desarrollo (`Toggle` «Herramientas de desarrollo»: con él, «Inspeccionar» y F12; al apagarlo se cierran las ventanas de DevTools abiertas).
+  - Rendimiento: suspender las pestañas que no usas (`ChoiceRow`: 15 min, 30 min, 1 hora, 2 horas, Nunca).
+  - Desarrollo (`Toggle` «Herramientas de desarrollo»: con él, «Inspeccionar», F12 y el panel de memoria; al apagarlo se cierran las ventanas de DevTools abiertas).
   - Acerca de Mitis (versión, Chromium, Widevine) y restablecer la configuración.
+
+### Instalador de Windows (`installer/`)
+- Ventana sin marco de 480 × 340 (a 100 %), centrada, esquinas redondeadas de Windows 11; se arrastra desde cualquier punto. Fondo `bgBase` con el resplandor `bgGlow` arriba a la izquierda (como `ThemeBackground`).
+- Arriba, el logo provisional de Mitis: círculo de 64 con el degradado `brand1 → brand2` y «Mitis» en Nunito Bold 28 `ink`.
+- Estado en 14 `inkSecondary`: «Instalando Mitis… 45 %», «Mitis está listo. Abriéndolo…»; un error, en `danger`, con un botón «Cerrar» (píldora `tintHover`/`tintActive`, borde `hairline`).
+- Barra de progreso de 6 de alto, redondeada: pista `tintActive` y relleno con el degradado de la marca; sigue al avance real con suavidad.
+- Abajo, «un proyecto de» (11, `inkMuted`) y el logo de StartCode (112 de ancho).
+- No se cierra a medias. Al terminar abre Mitis y se cierra solo.
 
 ### `CheckMark` — casilla
 - Cuadrado de `radioSize` con radio `checkRadius`. Sin marcar: borde `hairlineStrong` (`hairlineHover` al pasar por su fila). Marcada: degradado de marca con `check` en `onBrand` (`iconSizeSmall`). Solo dibuja: la fila atiende el clic.

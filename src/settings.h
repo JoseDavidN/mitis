@@ -69,8 +69,21 @@ class Settings : public QObject
     // "microphone", "notifications", "clipboard", "screen"
     Q_PROPERTY(QStringList blockedPermissions READ blockedPermissions WRITE setBlockedPermissions NOTIFY blockedPermissionsChanged)
 
+    // Tema de la interfaz: "nocturno" (de serie), "oscuro" o "claro" (Theme.qml)
+    Q_PROPERTY(QString theme READ theme WRITE setTheme NOTIFY themeChanged)
+
+    // Bloquear anuncios y rastreadores, y quitar el rastreo de los enlaces
+    Q_PROPERTY(bool blockAds READ blockAds WRITE setBlockAds NOTIFY blockAdsChanged)
+    Q_PROPERTY(bool stripTrackingParams READ stripTrackingParams WRITE setStripTrackingParams NOTIFY stripTrackingParamsChanged)
+    // Sitios (dominio registrable) donde el bloqueador no actúa. Es un dato
+    // del usuario, como los permisos: resetPreferences() no lo borra
+    Q_PROPERTY(QStringList adBlockAllowedSites READ adBlockAllowedSites WRITE setAdBlockAllowedSites NOTIFY adBlockAllowedSitesChanged)
+
     // Preguntar en qué carpeta guardar cada descarga
     Q_PROPERTY(bool askDownloadFolder READ askDownloadFolder WRITE setAskDownloadFolder NOTIFY askDownloadFolderChanged)
+    // Minutos sin usar tras los que una pestaña se descarga de la memoria
+    // (antes se congela); 0 = nunca se suspenden
+    Q_PROPERTY(int suspendAfter READ suspendAfter WRITE setSuspendAfter NOTIFY suspendAfterChanged)
 
 public:
     explicit Settings(QObject *parent = nullptr);
@@ -119,8 +132,18 @@ public:
     void setAutoplay(bool value);
     QStringList blockedPermissions() const;
     void setBlockedPermissions(const QStringList &value);
+    QString theme() const;
+    void setTheme(const QString &value);
+    bool blockAds() const;
+    void setBlockAds(bool value);
+    bool stripTrackingParams() const;
+    void setStripTrackingParams(bool value);
+    QStringList adBlockAllowedSites() const;
+    void setAdBlockAllowedSites(const QStringList &value);
     bool askDownloadFolder() const;
     void setAskDownloadFolder(bool value);
+    int suspendAfter() const;
+    void setSuspendAfter(int value);
 
     // Valor de `key` ("Categoría/nombre") o `defaultValue` si no está guardado
     Q_INVOKABLE QVariant value(const QString &key, const QVariant &defaultValue = {}) const;
@@ -152,7 +175,12 @@ signals:
     void blockPopupsChanged();
     void autoplayChanged();
     void blockedPermissionsChanged();
+    void themeChanged();
+    void blockAdsChanged();
+    void stripTrackingParamsChanged();
+    void adBlockAllowedSitesChanged();
     void askDownloadFolderChanged();
+    void suspendAfterChanged();
 
 private:
     // Guarda `value` en `key` y avisa si cambió

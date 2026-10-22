@@ -62,4 +62,4 @@ Solo hay que recompilar al cambiar código C++ o `CMakeLists.txt`.
 
 ## Estado
 
-Versión 0.1.0, etapa inicial.
+Versión 0.5.0: Fases 0–5 completas y la distribución (Fase 6) casi lista; falta Qt WebEngine con códecs propietarios para Windows y macOS (`docs/codecs.md`).

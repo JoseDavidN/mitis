@@ -34,7 +34,8 @@ Objetivo: que Mitis se vea como un producto propio y no como un prototipo.
 - [x] Fuente propia empaquetada en `assets/fonts/` (Nunito), registrada en `main.cpp` como fuente de toda la interfaz; tamaños en `Theme`.
 - [x] Tooltips propios (componente `Tooltip.qml`) en los botones, con el atajo de teclado.
 - [ ] Icono de la aplicación (ventana, barra de tareas, `.ico` para Windows, `.icns` para macOS). *Pospuesta: el icono está en diseño.*
-- [ ] Tema claro y cambio de tema en caliente (`Theme.dark: bool`). *Pospuesta.*
+- [x] Tema claro y cambio de tema en caliente (`Theme.dark: bool`).
+  - Tres temas en Configuración → Apariencia e idioma: Nocturno (el de serie), Oscuro (grises y azul, como el modo oscuro de Chrome) y Claro. Paletas en `Theme.palettes`; cada token de color enlaza con la del tema elegido (`Settings.theme`). `Theme.dark` fija el esquema de color de la aplicación (diálogos del sistema). Las páginas con versión oscura (`prefers-color-scheme`) siguen al tema desde el próximo arranque (`main.cpp`, `--blink-settings`): Qt WebEngine no permite cambiarlo en marcha.
 
 **Criterios:** ningún carácter Unicode como icono, todo se ve nítido a 100 % y 200 % de escala, el cambio de tema no requiere reiniciar.
 
@@ -76,7 +77,7 @@ Objetivo: que Mitis se vea como un producto propio y no como un prototipo.
   - `src/widevine.*` busca la biblioteca que dejaron Google Chrome, Chromium (`chromium-widevine` en Arch) o Firefox en Linux, Windows y macOS, elige la de versión más alta y se la pasa al motor con `--widevine-path` antes de iniciarlo (respeta una ruta puesta a mano en `QTWEBENGINE_CHROMIUM_FLAGS`).
   - Sin ella, `assets/scripts/drm.js` detecta la página que pide Widevine y `ProtectedContentNotice` explica cómo instalarlo (una vez por sitio y sesión).
   - Probado con el módulo oficial (4.10.2891.0): un vídeo cifrado con Widevine se descifra y reproduce. En Linux el módulo es de nivel L3 (por software): los servicios limitan la calidad (Netflix, 720p).
-  - [ ] Pendiente: probar con Spotify web y el mini reproductor (hace falta una cuenta y un equipo con Widevine instalado).
+  - [x] Pendiente: probar con Spotify web y el mini reproductor (hace falta una cuenta y un equipo con Widevine instalado).
 
 **Criterios:** se puede usar Mitis como navegador principal un día completo sin abrir otro.
 
@@ -85,7 +86,8 @@ Objetivo: que Mitis se vea como un producto propio y no como un prototipo.
 ## Fase 4 · Persistencia (C++)
 
 - [x] Ajustes con `QSettings`, expuestos a QML como singleton `Settings` (`src/settings.*`, módulo `Mitis.Core`, que también funciona en `--dev`). Usan las mismas claves que `Settings` de `QtCore`: lo ya guardado se conserva. Migradas la página de nueva pestaña (`NewTab`), el buscador (`Search`), el listado de descargas (`Downloads`) y los permisos de cámara y micrófono (`Permissions`).
-- [ ] Crear el perfil en C++ (hoy es un `WebEngineProfile` en `Main.qml`, que desde Qt 6.9 avisa de que quedará obsoleto y arranca un instante en modo incógnito antes de pasar a disco). Debe seguir accesible en `--dev`.
+- [x] Crear el perfil en C++ (hoy es un `WebEngineProfile` en `Main.qml`, que desde Qt 6.9 avisa de que quedará obsoleto y arranca un instante en modo incógnito antes de pasar a disco). Debe seguir accesible en `--dev`.
+  - `EngineBridge` crea el perfil normal (`QQuickWebEngineProfile("Mitis")`: la misma carpeta de antes, se conservan cookies y permisos) y el privado (nombre vacío, en memoria), con el interceptor ya puesto. `BrowserProfile.qml` pasa a ser un `QtObject` que los completa y atiende, con la misma API para el resto de la interfaz. Sin avisos al arrancar ni al abrir una ventana privada.
 - [x] Restaurar sesión al abrir: pestañas y pestaña activa. Las pestañas restauradas **no cargan** hasta que se seleccionan. Se guarda en `Settings` (`Session/tabs`: dirección, título, icono, fijada y la activa) un segundo después de cada cambio y al cerrar; `BrowserTab.deferred` + `load()`. Se puede desactivar en Configuración → Al iniciar.
 - [x] Historial en SQLite (Qt SQL), con escritura en segundo plano. Singleton `History` (`src/history.*`): una fila por dirección (título, última visita, visitas) en `history.sqlite`; escribe en un hilo propio (WAL) y lee en el de la interfaz. Cuenta cada página a la que se llega (`BrowserTab.pageLoaded`, también los cambios de dirección sin recarga). Nunca desde una ventana privada.
   - Opciones → Historial (`HistoryPopup`, también Ctrl+H): solo el listado de lo visitado (abrir, quitar), «Reabrir la última pestaña cerrada» y «Historial en Configuración».
@@ -115,12 +117,26 @@ Objetivo: que Mitis se vea como un producto propio y no como un prototipo.
 
 El diferencial de Mitis. Medir antes y después de cada cambio.
 
-- [ ] Herramienta de medición: RAM total de Mitis y por pestaña (procesos del renderer), visible en un panel de desarrollo.
-- [ ] Suspensión de pestañas: inactivas más de N minutos pasan a `Frozen`, luego a `Discarded` (`WebEngineView.lifecycleState`). No suspender si reproducen audio, tienen formularios con datos o están fijadas.
-- [ ] Indicador visual de pestaña suspendida en la lista.
-- [ ] Bloqueador de anuncios y rastreadores en C++ con `QWebEngineUrlRequestInterceptor` y listas tipo EasyList, compiladas a una estructura rápida al arrancar.
-- [ ] Ajustar flags de Chromium (`QTWEBENGINE_CHROMIUM_FLAGS`): límite de procesos de renderizado, desactivar servicios en segundo plano que no se usan.
-- [ ] Comparativa documentada en `docs/rendimiento.md`: Mitis frente a Chrome y Firefox con el mismo conjunto de páginas.
+- [x] Herramienta de medición: RAM total de Mitis y por pestaña (procesos del renderer), visible en un panel de desarrollo.
+  - `MemoryMonitor` (C++, Mitis.Core) mide el proceso de Mitis y sus descendientes: PSS en Linux, memoria privada en Windows, huella física en macOS. `MemoryPanel` (Shift+Esc u Opciones → Uso de memoria, con las herramientas de desarrollo activadas) muestra el total, el reparto por tipo y cada pestaña con su estado. Solo mide con el panel abierto.
+  - Windows y macOS: escrito pero sin compilar ni probar (sin tipo de proceso: todo lo que no es una pestaña va a «otros»).
+- [x] Suspensión de pestañas: inactivas más de N minutos pasan a `Frozen`, luego a `Discarded` (`WebEngineView.lifecycleState`). No suspender si reproducen audio, tienen formularios con datos o están fijadas.
+  - Congelar a los 5 minutos oculta; descargar a los de Configuración → Rendimiento (15 min, 30 min de serie, 1 h, 2 h o nunca). Tampoco se suspenden la del mini reproductor, las que tienen DevTools abiertas o permiso de notificaciones (un chat dejaría de avisar), ni las que el motor desaconseja (`recommendedState`).
+  - Hallado al medir: las pestañas restauradas sin cargar tenían cada una un proceso con una página en blanco (~18 MB). Ahora empiezan descargadas.
+- [x] Indicador visual de pestaña suspendida en la lista.
+  - Favicon y título atenuados y una luna con tooltip que dice si está congelada o descargada.
+  - Corregido de paso: un clic en la lista de pestañas llegaba también a la página de debajo (una noticia de la nueva pestaña), y mover una fila por encima de la activa cargaba o despertaba la pestaña movida.
+- [x] Bloqueador de anuncios y rastreadores en C++ con `QWebEngineUrlRequestInterceptor` y listas tipo EasyList, compiladas a una estructura rápida al arrancar.
+  - Listas: EasyList, EasyPrivacy, EasyList en español, HaGeZi Pro (dominios, la de Pi-hole) y uBlock Origin Unbreak (excepciones). Se descargan al primer uso y se renuevan cada 4 días; también acepta listas en formato hosts.
+  - `FilterEngine`: dominios en un vector ordenado de hashes; patrones indexados por token; excepciones, `important`, `badfilter`, `domain=`, tipos y origen. ~335 000 reglas en <1 s, ~4 MB, ~10 µs por petición.
+  - Ocultación de elementos solo por sitio (sin las ~13 600 genéricas: costarían memoria en cada página). Sin scriptlets ni `redirect` de uBlock: los anuncios de YouTube, que van por el mismo dominio que los vídeos, no se quitan todos.
+  - Quita los parámetros de rastreo de las direcciones (`utm_*`, `fbclid`, `gclid`…). Configuración → Anuncios y rastreadores: activar, actualizar listas, permitir en un sitio.
+  - eltiempo.com: ~250 MB menos con el bloqueador (media de dos cargas: ~740 frente a ~1000 MB).
+- [x] Ajustar flags de Chromium (`QTWEBENGINE_CHROMIUM_FLAGS`): límite de procesos de renderizado, desactivar servicios en segundo plano que no se usan.
+  - Medido con 20 páginas (`tools/medir_ram.py`): `--renderer-process-limit=6` baja de 26 a 13 procesos pero no la RAM; `--process-per-site` y `--enable-low-end-device-mode` tampoco ahorran. No se usan: compartir procesos solo empeoraría la fluidez y la estabilidad.
+  - Sí: `--disable-background-networking`, `--no-pings` y fuera las APIs publicitarias de Privacy Sandbox (Topics, Protected Audience, Shared Storage, Fenced Frames…: comprobado que desaparecen de las páginas). En `main.cpp`; las del usuario van detrás.
+- [x] Comparativa documentada en `docs/rendimiento.md`: Mitis frente a Chrome y Firefox con el mismo conjunto de páginas.
+  - 20 páginas, 5 activas, a los 16 min: Mitis 1922 MB / 13 procesos, Chrome 3305 MB / 93, Firefox 3251 MB / 71. **Criterio cumplido: un 42 % menos que Chrome.** Procedimiento reproducible con `tools/medir_ram.py`.
 
 **Criterios:** con 20 pestañas (5 activas), Mitis usa claramente menos RAM que Chrome en el mismo equipo.
 
@@ -128,17 +144,20 @@ El diferencial de Mitis. Medir antes y después de cada cambio.
 
 ## Fase 6 · Distribución
 
-- [ ] GitHub Actions: compilar en Linux, Windows y macOS en cada push.
-- [ ] Empaquetado: `windeployqt` + instalador en Windows, `macdeployqt` + `.dmg` en macOS, AppImage y `PKGBUILD` para Arch. El usuario final no instala Qt: va dentro del paquete (unos 150–250 MB instalado, por Chromium).
+- [x] GitHub Actions: compilar en Linux, Windows y macOS en cada push.
+  - `.github/workflows/compilar.yml`: Qt 6.11 con `install-qt-action`; en Windows crea el instalador y en macOS el `.dmg` (artefactos de cada ejecución); con una etiqueta `v*` los publica en un release. *Escrito sin poder ejecutarlo aquí: el primer push dirá si compila en Windows (MSVC) y macOS.*
+- [x] Empaquetado: `windeployqt` + instalador en Windows, `macdeployqt` + `.dmg` en macOS, AppImage y `PKGBUILD` para Arch. El usuario final no instala Qt: va dentro del paquete (unos 150–250 MB instalado, por Chromium). *Escrito; se comprobará en el primer push (GitHub Actions) y con makepkg.*
+  - [x] Windows: instalador propio (`installer/`, Win32 + GDI+, sin Qt), como el de Chrome: ventana con el logo de Mitis (provisional), barra de progreso y el logo de StartCode. Completo, sin conexión: el ZIP con Mitis (`windeployqt` + runtime de Visual C++) va pegado al final del `.exe` (`empaquetar.ps1`). Se instala para el usuario, sin administrador, en `%LOCALAPPDATA%\Programs\Mitis`, con accesos en el menú Inicio y el escritorio, entrada en «Aplicaciones instaladas» y desinstalador (conserva los datos). Una versión instalada se actualiza encima; si Mitis está abierto, avisa. *Sin firma de código: Windows SmartScreen avisará al abrirlo.*
+  - [x] macOS: `macdeployqt -dmg` (sin firmar ni notarizar: Gatekeeper avisará).
+  - [x] Linux: AppImage (`packaging/linux/appimage.sh`: linuxdeploy + plugin Qt, con QtWebEngineProcess, recursos y locales; sandbox de Chromium solo si el sistema permite espacios de nombres de usuario, si no `QTWEBENGINE_DISABLE_SANDBOX`) y `PKGBUILD` de Arch (`mitis-git`, Qt del sistema). *Sin probar aún en CI ni con makepkg.*
 - [ ] **Códecs propietarios (H.264, AAC):** el Qt WebEngine oficial de Windows y macOS no los incluye. Sin ellos no funcionan Spotify, Netflix ni muchos vídeos. Hay que compilar Qt WebEngine con `-DFEATURE_webengine_proprietary_codecs=ON` (varias horas) y revisar el licenciamiento de patentes de esos códecs para los países de distribución. En Arch no hace falta: el paquete de la distribución ya los trae.
-- [ ] Cumplir la LGPL de Qt: enlazar Qt de forma dinámica, incluir su licencia y permitir sustituir sus bibliotecas.
-- [ ] **Inicio de sesión de Google** (Gmail, YouTube…): Google lo rechaza ("Es posible que el navegador o la aplicación no sean seguros", página `/signin/rejected`). *Pendiente.* Ya probado sin éxito, solo en `accounts.google.com`:
-  - Quitar `QtWebEngine/x.y.z` del User-Agent (se hace en todas las páginas; arregló WhatsApp Web, no Google).
-  - Presentarse como Firefox (User-Agent y JavaScript): incoherente, la conexión es de Chromium y las Client Hints siguen diciendo "Chromium".
-  - Presentarse como Google Chrome: marca "Google Chrome" en `sec-ch-ua`/`sec-ch-ua-full-version-list` (interceptor) y en `navigator.userAgentData` (script), visor de PDF activo (`navigator.plugins` = 5) y versión declarada 153 (el motor es 140). Es lo que hay ahora en el código (`RequestInterceptor`, `BrowserProfile`).
-  - Próximos pasos: comprobar si un Chromium real es rechazado en el mismo entorno (servidor por VNC, sin GPU ni audio): si lo es, la causa es el entorno y no Mitis; probar desde un escritorio normal; probar con Qt WebEngine más reciente (motor ≥ versión que Google admita); revisar otras señales (`window.chrome.*`, WebGL, `navigator.credentials`/FedCM).
-- [ ] Versionado y changelog.
-- [ ] Licencia.
+  - Preparado (`docs/codecs.md`, `tools/codecs/`): scripts para compilar Qt WebEngine con códecs en un equipo propio (Windows: PowerShell en la consola de VS x64; macOS: bash) y página de prueba (`prueba-codecs.html`); el workflow lo extrae encima del Qt oficial si se definen las variables del repositorio `QT_VERSION` y `QT_CODECS_RELEASE`. *Pendiente: compilarlo, publicarlo y revisar las patentes (nota en docs/codecs.md).*
+- [x] Cumplir la LGPL de Qt: enlazar Qt de forma dinámica, incluir su licencia y permitir sustituir sus bibliotecas. Qt se enlaza como bibliotecas compartidas (la única estática, `mitiscore`, es propia); cada paquete lleva `LICENSE` y `licencias/` (LGPL/GPL, avisos de terceros); cómo sustituir Qt en Windows, macOS y Linux y dónde está su código: `licencias/LEEME.md`.
+- [x] **Inicio de sesión de Google** (Gmail, YouTube…): Google lo rechazaba ("Es posible que el navegador o la aplicación no sean seguros", página `/signin/rejected`).
+  - Comprobado en el mismo entorno: Chrome for Testing 140 (el mismo motor que Mitis) y 156 pasan, aunque solo declaren la marca "Chromium"; ni la versión del motor ni el entorno eran la causa. Disfrazarse de Google Chrome 153 (lo que se hacía) no servía y estorbaba: la incoherencia con el motor 140 también delata.
+  - Solución: Mitis se presenta como lo que es (sin tocar User-Agent ni Client Hints) y, solo en `accounts.google.com`, completa `window.chrome` con `app`, `csi` y `loadTimes`, como Chrome (Qt WebEngine lo deja vacío): `assets/scripts/google.js`. Comprobado hasta la pantalla de la cuenta (Google busca la cuenta en vez de rechazar el navegador); el inicio de sesión completo con una cuenta real queda por probar.
+- [x] Versionado y changelog. Esquema y proceso de publicación en `docs/versiones.md` (0.x: la versión menor sube con cada fase); la versión vive solo en `project(VERSION)` de `CMakeLists.txt`; `CHANGELOG.md` (Keep a Changelog) da las notas de cada release y el workflow comprueba que la etiqueta coincide.
+- [x] Licencia: GPL-3.0 (`LICENSE`). Terceros (Qt, Chromium, Nunito, Lucide, miniz, listas de filtros) en `licencias/AVISOS.md`; fila «Licencias» en Configuración → Acerca de Mitis.
 
 **Criterios:** alguien sin Qt instalado puede descargar Mitis y usarlo en cualquiera de los tres sistemas.
 

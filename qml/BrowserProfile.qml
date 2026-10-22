@@ -7,21 +7,25 @@ import Mitis.Core
 import "urls.js" as Urls
 
 // Perfil de navegación de Mitis: el único sitio, junto con BrowserTab.qml,
-// que conoce el motor (Qt WebEngine). Cookies, sesiones y caché persisten
-// entre sesiones. Las ventanas privadas usan otro perfil, solo en memoria
-// (privateProfile), que se descarta al cerrar la última.
-WebEngineProfile {
+// que conoce el motor (Qt WebEngine). El perfil lo crea C++ (EngineBridge:
+// en disco, con el interceptor de peticiones); aquí se completa (scripts,
+// carpeta de descargas, idiomas) y se atiende lo que pide (descargas,
+// permisos). Cookies, sesiones y caché persisten entre sesiones. Las ventanas
+// privadas usan otro perfil, solo en memoria (privateProfile), que se
+// descarta al cerrar la última.
+QtObject {
     id: root
 
-    storageName: "Mitis"
-    offTheRecord: false
-    httpCacheType: WebEngineProfile.DiskHttpCache
-    persistentCookiesPolicy: WebEngineProfile.AllowPersistentCookies
+    // Perfil de las ventanas normales. Vive toda la app: en --dev no se
+    // vuelve a crear en cada recarga (_setup se puede repetir sin duplicar).
     // Permisos concedidos o bloqueados (ubicación, notificaciones…): los guarda
-    // el propio motor en el disco del perfil, por sitio, y no vuelve a
-    // preguntar. Sin código ni archivo propio de Mitis. Cámara y micrófono
+    // el propio motor en el disco del perfil, por sitio. Cámara y micrófono
     // son la excepción: ver mediaPermission().
-    persistentPermissionsPolicy: WebEngineProfile.PersistentPermissionsPolicy.StoreOnDisk
+    // qmllint disable unqualified
+    readonly property WebEngineProfile profile: MitisEngine.profile
+    // qmllint enable unqualified
+    // Carpeta donde van las descargas (Configuración → Descargas)
+    readonly property string downloadPath: profile.downloadPath
 
     // Descargas en curso: id de Downloads → objeto del motor. Guardarlas aquí
     // evita que el recolector de JS las destruya antes de terminar
@@ -39,10 +43,33 @@ WebEngineProfile {
 
     // Versión principal de Chromium del motor, para «Acerca de Mitis» (el
     // User-Agent solo trae la principal: "Chrome/140.0.0.0")
-    readonly property string chromiumVersion: (/Chrome\/(\d+)/.exec(httpUserAgent) ?? [])[1] ?? ""
+    readonly property string chromiumVersion: (/Chrome\/(\d+)/.exec(profile.httpUserAgent) ?? [])[1] ?? ""
+
+    // Carpeta de licencias del paquete ("" en una compilación sin instalar)
+    // qmllint disable unqualified
+    readonly property string licensesPath: MitisEngine.licensesPath
+    // qmllint enable unqualified
 
     // El motor tiene Widevine (contenido protegido). Lo decide C++ al arrancar.
     property bool widevineAvailable: false
+
+    // ── Bloqueador de anuncios y rastreadores (C++: ContentBlocker) ──
+    // Estado para Configuración; las preferencias se enlazan al arrancar
+    // qmllint disable unqualified
+    readonly property int adBlockRules: MitisEngine.adBlockRules
+    // Fecha de las listas (inválida si nunca se descargaron)
+    readonly property date adBlockUpdated: MitisEngine.adBlockUpdated
+    readonly property bool adBlockUpdating: MitisEngine.adBlockUpdating
+    // Peticiones bloqueadas desde que se abrió Mitis
+    readonly property real adBlockBlocked: MitisEngine.adBlockBlocked
+    function updateFilterLists() {
+        MitisEngine.updateFilterLists()
+    }
+    // Sitio de una dirección para permitir anuncios ("https://www.a.com/x" → "a.com")
+    function siteOf(address) {
+        return MitisEngine.siteOf(address)
+    }
+    // qmllint enable unqualified
 
     // Cámara y micrófono: el motor no guarda la respuesta (para él valen solo
     // mientras dura la página) y preguntaría en cada visita. Mitis la guarda
@@ -59,7 +86,12 @@ WebEngineProfile {
         Settings.setValue("Permissions/media", JSON.stringify(_mediaPermissions))
     }
 
-    onDownloadRequested: download => root._requestDownload(download, false)
+    readonly property Connections _profileConnection: Connections {
+        target: root.profile
+        function onDownloadRequested(download) {
+            root._requestDownload(download, false)
+        }
+    }
 
     // Con «Preguntar dónde guardar» (Configuración → Descargas), antes de
     // empezar cada descarga. `request`: { fileName, folder (ruta local),
@@ -79,8 +111,11 @@ WebEngineProfile {
     function retainPrivate() {
         _privateWindows++
         if (!privateProfile) {
-            const created = privateComponent.createObject(root) as WebEngineProfile
+            // qmllint disable unqualified
+            const created = MitisEngine.createPrivateProfile()
+            // qmllint enable unqualified
             _setup(created)
+            created.downloadRequested.connect(download => root._requestDownload(download, true))
             privateProfile = created
         }
     }
@@ -90,33 +125,25 @@ WebEngineProfile {
         Qt.callLater(() => {
             if (_privateWindows > 0 || !privateProfile)
                 return
-            privateProfile.destroy()
+            // qmllint disable unqualified
+            MitisEngine.destroyPrivateProfile(privateProfile)
+            // qmllint enable unqualified
             privateProfile = null
         })
-    }
-
-    readonly property Component privateComponent: Component {
-        WebEngineProfile {
-            offTheRecord: true
-            httpCacheType: WebEngineProfile.MemoryHttpCache
-            persistentCookiesPolicy: WebEngineProfile.NoPersistentCookies
-            persistentPermissionsPolicy: WebEngineProfile.PersistentPermissionsPolicy.StoreInMemory
-            onDownloadRequested: download => root._requestDownload(download, true)
-        }
     }
 
     // ── Borrar datos de navegación (Configuración) ───────────────────
     function clearCookies() {
         // qmllint disable unqualified
-        MitisEngine.clearCookies(root)
+        MitisEngine.clearCookies(root.profile)
         // qmllint enable unqualified
     }
     function clearCache() {
-        root.clearHttpCache()
+        root.profile.clearHttpCache()
     }
     // Lo decidido para cada sitio: lo que guarda el motor y cámara y micrófono
     function clearPermissions() {
-        for (const permission of root.listAllPermissions())
+        for (const permission of root.profile.listAllPermissions())
             permission.reset()
         _mediaPermissions = {}
         Settings.setValue("Permissions/media", "{}")
@@ -133,7 +160,7 @@ WebEngineProfile {
     })
     function sitePermissions() {
         const list = []
-        for (const permission of root.listAllPermissions()) {
+        for (const permission of root.profile.listAllPermissions()) {
             const kind = _permissionKinds[permission.permissionType]
             if (kind === undefined || permission.state === WebEnginePermission.State.Ask)
                 continue
@@ -154,7 +181,7 @@ WebEngineProfile {
             Settings.setValue("Permissions/media", JSON.stringify(_mediaPermissions))
             return
         }
-        for (const permission of root.listAllPermissions()) {
+        for (const permission of root.profile.listAllPermissions()) {
             if (permission.origin.toString() === origin && _permissionKinds[permission.permissionType] === kind)
                 permission.reset()
         }
@@ -168,10 +195,9 @@ WebEngineProfile {
 
     Component.onCompleted: {
         // Las descargas van a la carpeta elegida en Configuración o, si no hay,
-        // a la de descargas del sistema (el perfil ya la trae de serie; esto
-        // solo cubre el caso raro de que venga vacía)
-        root.systemDownloadPath = root.downloadPath
-            || Urls.localPath(Core.StandardPaths.writableLocation(Core.StandardPaths.DownloadLocation))
+        // a la de descargas del sistema (no la del perfil: en --dev ya puede
+        // tener la de Configuración de antes de recargar)
+        root.systemDownloadPath = Urls.localPath(Core.StandardPaths.writableLocation(Core.StandardPaths.DownloadLocation))
 
         // Preferencias que aplica C++ petición a petición (interceptor y
         // filtro de cookies), para los dos perfiles
@@ -181,17 +207,29 @@ WebEngineProfile {
         engine.blockThirdPartyCookies = Qt.binding(() => Settings.blockThirdPartyCookies)
         engine.doNotTrack = Qt.binding(() => Settings.doNotTrack)
         engine.httpsUpgrade = Qt.binding(() => Settings.httpsUpgrade)
+        engine.adBlockAllowedSites = Qt.binding(() => Settings.adBlockAllowedSites)
+        engine.stripTrackingParams = Qt.binding(() => Settings.stripTrackingParams)
+        // El último: al activarse carga las listas (y las descarga si faltan)
+        engine.adBlock = Qt.binding(() => Settings.blockAds)
         // «Borrar cookies y caché al cerrar»: se borran al cerrar la ventana
         // (Main) y, por si el cierre no llegó a terminar, también al abrir
         if (Settings.clearOnExit) {
             clearCookies()
             clearCache()
         }
-        _setup(root)
+        _setup(root.profile)
     }
 
-    // Lo común a los dos perfiles: User-Agent, carpeta de descargas, scripts
-    // inyectados e interceptor de peticiones
+    // Pone un script en todas las páginas del perfil; si ya estaba (otra
+    // recarga de --dev), lo sustituye
+    function _insertScript(profile, script) {
+        for (const old of profile.userScripts.find(script.name))
+            profile.userScripts.remove(old)
+        profile.userScripts.insert(script)
+    }
+
+    // Lo común a los dos perfiles: User-Agent, carpeta de descargas, idiomas y
+    // scripts inyectados (el interceptor lo pone C++ al crearlos)
     function _setup(profile) {
         // Mitis se presenta como un Chrome normal: el User-Agent de serie incluye
         // "QtWebEngine/x.y.z", que algunos sitios (WhatsApp Web) no reconocen y
@@ -206,17 +244,11 @@ WebEngineProfile {
         script.sourceUrl = "qrc:/scripts/media.js"
         script.injectionPoint = WebEngineScript.DocumentCreation
         script.worldId = WebEngineScript.MainWorld
-        profile.userScripts.insert(script)
+        root._insertScript(profile, script)
 
-        // Inicio de sesión de Google: Google no admite navegadores con motor
-        // embebido ni versiones de Chrome antiguas. En accounts.google.com Mitis
-        // se presenta como el Google Chrome vigente: el interceptor (C++) ajusta
-        // User-Agent y Client Hints, y este script lo que ve el JavaScript
-        // (navigator.userAgent y navigator.userAgentData). Solo ese dominio.
         // qmllint disable unqualified
         const engine = MitisEngine
         // qmllint enable unqualified
-        engine.installInterceptor(profile)
 
         // Contenido protegido: sin Widevine, detectar las páginas que lo piden
         // para explicar cómo instalarlo (assets/scripts/drm.js). Con él, nada.
@@ -228,45 +260,17 @@ WebEngineProfile {
             drm.injectionPoint = WebEngineScript.DocumentCreation
             drm.worldId = WebEngineScript.MainWorld
             drm.runsOnSubFrames = true
-            profile.userScripts.insert(drm)
+            root._insertScript(profile, drm)
         }
-        const version = engine.googleChromeVersion
-        const major = version.split(".")[0]
+        // Inicio de sesión de Google: completa window.chrome como en Chrome
+        // (assets/scripts/google.js); solo en accounts.google.com
         const google = WebEngine.script()
         google.name = "mitis-google-signin"
-        google.sourceCode = "// ==UserScript==\n"
-            + "// @match https://accounts.google.com/*\n"
-            + "// ==/UserScript==\n"
-            + "(function () {\n"
-            + "  const full = " + JSON.stringify(version) + ", major = " + JSON.stringify(major) + ";\n"
-            + "  const nav = Navigator.prototype;\n"
-            + "  const ua = navigator.userAgent.replace(/Chrome\\/[\\d.]+/, 'Chrome/' + major + '.0.0.0');\n"
-            + "  Object.defineProperty(nav, 'userAgent', { get: () => ua, configurable: true });\n"
-            + "  Object.defineProperty(nav, 'appVersion', { get: () => ua.slice(8), configurable: true });\n"
-            + "  const real = navigator.userAgentData;\n"
-            + "  if (!real) return;\n"
-            + "  const grease = real.brands.filter(b => b.brand !== 'Chromium');\n"
-            + "  const brands = grease.concat([{ brand: 'Chromium', version: major }, { brand: 'Google Chrome', version: major }]);\n"
-            + "  const data = {\n"
-            + "    brands: brands, mobile: real.mobile, platform: real.platform,\n"
-            + "    getHighEntropyValues: hints => real.getHighEntropyValues(hints).then(values => {\n"
-            + "      values.brands = brands;\n"
-            + "      if (values.fullVersionList) {\n"
-            + "        values.fullVersionList = values.fullVersionList.filter(b => b.brand !== 'Chromium')\n"
-            + "          .concat([{ brand: 'Chromium', version: full }, { brand: 'Google Chrome', version: full }]);\n"
-            + "      }\n"
-            + "      if (values.uaFullVersion) values.uaFullVersion = full;\n"
-            + "      return values;\n"
-            + "    }),\n"
-            + "    toJSON: () => ({ brands: brands, mobile: real.mobile, platform: real.platform })\n"
-            + "  };\n"
-            + "  Object.setPrototypeOf(data, Object.getPrototypeOf(real));\n"
-            + "  Object.defineProperty(nav, 'userAgentData', { get: () => data, configurable: true });\n"
-            + "})();\n"
+        google.sourceUrl = "qrc:/scripts/google.js"
         google.injectionPoint = WebEngineScript.DocumentCreation
         google.worldId = WebEngineScript.MainWorld
         google.runsOnSubFrames = true
-        profile.userScripts.insert(google)
+        root._insertScript(profile, google)
     }
 
     // Antes de empezar: si hay que preguntar la carpeta, espera la respuesta

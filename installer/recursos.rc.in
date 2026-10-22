@@ -1,0 +1,8 @@
+// Recursos del instalador (CMake rellena las rutas)
+#include <windows.h>
+
+1 RT_MANIFEST "@MITIS_MANIFIESTO@"
+
+// Ver RecursoFuente y RecursoStartCode en src/main.cpp
+101 RCDATA "@MITIS_FUENTE@"
+102 RCDATA "@MITIS_STARTCODE@"

@@ -25,7 +25,12 @@ const QString ImagesKey = QStringLiteral("Content/images");
 const QString BlockPopupsKey = QStringLiteral("Content/blockPopups");
 const QString AutoplayKey = QStringLiteral("Content/autoplay");
 const QString BlockedPermissionsKey = QStringLiteral("Permissions/blocked");
+const QString ThemeKey = QStringLiteral("Appearance/theme");
+const QString BlockAdsKey = QStringLiteral("Blocker/enabled");
+const QString StripTrackingParamsKey = QStringLiteral("Blocker/stripParams");
+const QString AdBlockAllowedSitesKey = QStringLiteral("Blocker/allowedSites");
 const QString AskDownloadFolderKey = QStringLiteral("Downloads/askFolder");
+const QString SuspendAfterKey = QStringLiteral("Performance/suspendAfter");
 
 const QStringList DefaultLanguages = { QStringLiteral("es"), QStringLiteral("en") };
 }
@@ -310,6 +315,52 @@ void Settings::setBlockedPermissions(const QStringList &value)
     emit blockedPermissionsChanged();
 }
 
+QString Settings::theme() const
+{
+    return m_settings.value(ThemeKey, QStringLiteral("nocturno")).toString();
+}
+
+void Settings::setTheme(const QString &value)
+{
+    if (store(ThemeKey, value))
+        emit themeChanged();
+}
+
+bool Settings::blockAds() const
+{
+    return flag(BlockAdsKey, true);
+}
+
+void Settings::setBlockAds(bool value)
+{
+    if (storeBool(BlockAdsKey, value, true))
+        emit blockAdsChanged();
+}
+
+bool Settings::stripTrackingParams() const
+{
+    return flag(StripTrackingParamsKey, true);
+}
+
+void Settings::setStripTrackingParams(bool value)
+{
+    if (storeBool(StripTrackingParamsKey, value, true))
+        emit stripTrackingParamsChanged();
+}
+
+QStringList Settings::adBlockAllowedSites() const
+{
+    return m_settings.value(AdBlockAllowedSitesKey).toStringList();
+}
+
+void Settings::setAdBlockAllowedSites(const QStringList &value)
+{
+    if (adBlockAllowedSites() == value)
+        return;
+    m_settings.setValue(AdBlockAllowedSitesKey, value);
+    emit adBlockAllowedSitesChanged();
+}
+
 bool Settings::askDownloadFolder() const
 {
     return flag(AskDownloadFolderKey, false);
@@ -319,6 +370,23 @@ void Settings::setAskDownloadFolder(bool value)
 {
     if (storeBool(AskDownloadFolderKey, value, false))
         emit askDownloadFolderChanged();
+    emit suspendAfterChanged();
+    emit blockAdsChanged();
+    emit stripTrackingParamsChanged();
+    emit themeChanged();
+}
+
+int Settings::suspendAfter() const
+{
+    return m_settings.value(SuspendAfterKey, 30).toInt();
+}
+
+void Settings::setSuspendAfter(int value)
+{
+    if (suspendAfter() == value)
+        return;
+    m_settings.setValue(SuspendAfterKey, value);
+    emit suspendAfterChanged();
 }
 
 QVariant Settings::value(const QString &key, const QVariant &defaultValue) const
@@ -338,6 +406,7 @@ void Settings::resetPreferences()
         StartupModeKey, StartupUrlKey, DefaultZoomKey, DarkPagesKey, LanguagesKey,
         BlockThirdPartyCookiesKey, ClearOnExitKey, DoNotTrackKey, HideLocalIpKey, HttpsUpgradeKey,
         JavascriptKey, ImagesKey, BlockPopupsKey, AutoplayKey, BlockedPermissionsKey, AskDownloadFolderKey,
+        SuspendAfterKey, BlockAdsKey, StripTrackingParamsKey, ThemeKey,
     };
     for (const QString &key : keys)
         m_settings.remove(key);

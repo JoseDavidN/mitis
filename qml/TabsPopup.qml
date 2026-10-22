@@ -3,13 +3,14 @@ import QtQuick
 import QtQuick.Controls.Basic
 
 // Lista desplegable de pestañas abiertas: favicon, título y botones de fijar,
-// sonido y cerrar. Las fijadas van arriba, separadas del resto.
+// sonido y cerrar. Las suspendidas (para ahorrar memoria) salen atenuadas y
+// con una luna. Las fijadas van arriba, separadas del resto.
 // Las filas se reordenan arrastrándolas, cada una dentro de su grupo.
 // Arriba, un campo filtra las pestañas por título o dirección.
 Popup {
     id: root
 
-    // Modelo con los roles: title, icon, url, audible, muted, pinned
+    // Modelo con los roles: title, icon, url, audible, muted, pinned, lifecycle
     required property var tabs
     property int currentIndex: 0
     // Pestañas cerradas que se pueden reabrir
@@ -415,7 +416,10 @@ Popup {
                 required property bool audible
                 required property bool muted
                 required property bool pinned
+                required property string lifecycle
 
+                // Congelada o descargada (ver BrowserTab.lifecycle)
+                readonly property bool suspended: lifecycle !== "active"
                 readonly property bool current: index === root.currentIndex
                 // Primera no fijada tras las fijadas: lleva el separador encima
                 readonly property bool groupStart: list.showSeparator && !pinned && index === root.pinnedCount
@@ -493,6 +497,7 @@ Popup {
                         sourceSize: Qt.size(Theme.faviconSize, Theme.faviconSize)
                         source: row.icon
                         visible: status === Image.Ready
+                        opacity: row.suspended ? Theme.suspendedOpacity : 1
                     }
 
                     Text {
@@ -502,17 +507,37 @@ Popup {
                         anchors.rightMargin: Theme.spacing
                         anchors.verticalCenter: parent.verticalCenter
                         text: row.title || row.url.toString() || "Nueva pestaña"
-                        color: row.current ? Theme.ink : Theme.inkSecondary
+                        color: row.current ? Theme.ink : row.suspended ? Theme.inkMuted : Theme.inkSecondary
                         font.pixelSize: Theme.fontSize
                         elide: Text.ElideRight
                     }
 
                     // Botones de la fila, de izquierda a derecha: fijar, sonido, cerrar
+                    // (delante, la luna de las suspendidas, que no es un botón)
                     Row {
                         id: buttons
                         anchors.right: parent.right
                         anchors.rightMargin: Theme.spacing / 2
                         anchors.verticalCenter: parent.verticalCenter
+
+                        Item {
+                            visible: row.suspended
+                            width: Theme.buttonSizeSmall
+                            height: Theme.buttonSizeSmall
+
+                            Icon {
+                                anchors.centerIn: parent
+                                name: "suspended"
+                                size: Theme.iconSizeSmall
+                                color: Theme.inkMuted
+                            }
+                            HoverHandler { id: suspendedHover }
+                            Tooltip {
+                                text: row.lifecycle === "frozen" ? "Congelada para ahorrar memoria"
+                                                                 : "Descargada para ahorrar memoria: se recargará al abrirla"
+                                visible: suspendedHover.hovered
+                            }
+                        }
 
                         // En las fijadas se ve siempre: indica que lo está
                         IconButton {
@@ -577,6 +602,9 @@ Popup {
                     }
 
                     TapHandler {
+                        // Agarre exclusivo al pulsar: si no, la página de debajo
+                        // (p. ej. una noticia de la nueva pestaña) recibe también el clic
+                        gesturePolicy: TapHandler.ReleaseWithinBounds
                         onTapped: {
                             root.tabSelected(row.index)
                             root.close()

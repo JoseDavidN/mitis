@@ -1,0 +1,68 @@
+# Mitis para Arch Linux, compilado desde la rama principal del repositorio.
+# Usa el Qt del sistema (enlazado dinámico): Arch ya trae Qt WebEngine con los
+# códecs propietarios (H.264, AAC), así que aquí no hace falta compilarlo.
+#
+# Uso: copiar este archivo (y nada más) a una carpeta vacía y ejecutar
+#   makepkg -si
+# Los archivos de packaging/linux/ (.desktop, icono) se toman del propio repositorio.
+
+pkgname=mitis-git
+pkgver=0.1.0.r0.g0000000
+pkgrel=1
+pkgdesc='Navegador web ligero, multiplataforma y con interfaz propia'
+arch=('x86_64' 'aarch64')
+url='https://github.com/JoseDavidN/mitis'
+license=('GPL-3.0-only')
+# Módulos de Qt que enlaza CMakeLists.txt (Quick, Network, Sql, WebEngine, Svg).
+# QtQuick.Controls, Dialogs y Shapes van en qt6-declarative; el driver de SQLite, en qt6-base.
+depends=(
+  'qt6-base'
+  'qt6-declarative'
+  'qt6-webengine'
+  'qt6-svg'
+  'hicolor-icon-theme'
+)
+makedepends=('git' 'cmake' 'ninja')
+optdepends=(
+  'qt6-translations: textos de Qt en español (diálogos del sistema, menús de edición)'
+  'qt6-wayland: ventana nativa en Wayland (sin él, Mitis va por XWayland)'
+  'chromium-widevine: contenido protegido (Netflix, Spotify…)'
+)
+provides=('mitis')
+conflicts=('mitis')
+source=('mitis::git+https://github.com/JoseDavidN/mitis.git')
+sha256sums=('SKIP')
+
+# Con etiquetas «v*»: 0.2.0.r3.gabc1234 (commits desde la etiqueta). Mientras no
+# haya ninguna: la versión de CMakeLists.txt y los commits desde el inicio.
+pkgver() {
+  cd mitis
+  if git describe --long --tags --abbrev=7 --match 'v*' >/dev/null 2>&1; then
+    git describe --long --tags --abbrev=7 --match 'v*' | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+  else
+    printf '%s.r%s.g%s' \
+      "$(sed -n 's/^    VERSION \([0-9.]*\)$/\1/p' CMakeLists.txt | head -1)" \
+      "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+  fi
+}
+
+build() {
+  # CMAKE_BUILD_TYPE=None: los CFLAGS/CXXFLAGS de makepkg.conf mandan
+  cmake -S mitis -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=None \
+    -DCMAKE_INSTALL_PREFIX=/usr
+  cmake --build build
+}
+
+package() {
+  # Instalación a mano: CMake genera «Mitis» y en Linux el comando va en minúsculas
+  install -Dm755 build/bin/Mitis "$pkgdir/usr/bin/mitis"
+  install -Dm644 mitis/packaging/linux/mitis.desktop "$pkgdir/usr/share/applications/mitis.desktop"
+  install -Dm644 mitis/packaging/linux/mitis.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/mitis.svg"
+  # Licencias de terceros que van dentro del ejecutable (iconos Lucide, fuente Nunito)
+  install -Dm644 mitis/assets/icons/LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE-Lucide"
+  install -Dm644 mitis/assets/fonts/OFL.txt "$pkgdir/usr/share/licenses/$pkgname/OFL-Nunito.txt"
+  if [[ -f mitis/LICENSE ]]; then
+    install -Dm644 mitis/LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  fi
+}
