@@ -20,7 +20,8 @@ namespace {
 
 // Final del instalador: [stub][ZIP][desplazamiento del ZIP: 8 bytes][marca: 8 bytes]
 constexpr char Marca[8] = { 'M', 'I', 'T', 'I', 'S', 'P', 'A', 'Q' };
-constexpr int Pie = 16;
+// Bytes del pie (no «Pie»: así se llama una función de wingdi.h)
+constexpr int TamanoPie = 16;
 
 const wchar_t *const ClaveDesinstalar = L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Mitis";
 const wchar_t *const Ejecutable = L"Mitis.exe";
@@ -226,16 +227,16 @@ std::wstring instalar(const std::wstring &instalador, const Avance &avance)
         return L"No se pudo leer el instalador.";
 
     // El pie: dónde empieza el paquete
-    char pie[Pie] = {};
-    _fseeki64(exe, -Pie, SEEK_END);
-    const int64_t tamanoExe = _ftelli64(exe) + Pie;
+    char pie[TamanoPie] = {};
+    _fseeki64(exe, -TamanoPie, SEEK_END);
+    const int64_t tamanoExe = _ftelli64(exe) + TamanoPie;
     uint64_t inicio = 0;
-    if (fread(pie, 1, Pie, exe) != Pie || std::memcmp(pie + 8, Marca, 8) != 0) {
+    if (fread(pie, 1, TamanoPie, exe) != TamanoPie || std::memcmp(pie + 8, Marca, 8) != 0) {
         fclose(exe);
         return L"El instalador está dañado: descárgalo de nuevo.";
     }
     std::memcpy(&inicio, pie, 8);
-    if (inicio == 0 || int64_t(inicio) >= tamanoExe - Pie) {
+    if (inicio == 0 || int64_t(inicio) >= tamanoExe - TamanoPie) {
         fclose(exe);
         return L"El instalador está dañado: descárgalo de nuevo.";
     }
@@ -243,7 +244,7 @@ std::wstring instalar(const std::wstring &instalador, const Avance &avance)
     mz_zip_archive zip;
     mz_zip_zero_struct(&zip);
     _fseeki64(exe, int64_t(inicio), SEEK_SET);
-    if (!mz_zip_reader_init_cfile(&zip, exe, uint64_t(tamanoExe - Pie) - inicio, 0)) {
+    if (!mz_zip_reader_init_cfile(&zip, exe, uint64_t(tamanoExe - TamanoPie) - inicio, 0)) {
         fclose(exe);
         return L"El instalador está dañado: descárgalo de nuevo.";
     }

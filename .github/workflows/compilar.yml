@@ -153,7 +153,8 @@ jobs:
 
       - name: Compilar el instalador
         run: |
-          cmake -S installer -B build-instalador -G Ninja -DCMAKE_BUILD_TYPE=Release -DMITIS_VERSION=${{ steps.version.outputs.valor }}
+          # Entre comillas: PowerShell parte «-DX=0.5.0-beta» por el punto
+          cmake -S installer -B build-instalador -G Ninja -DCMAKE_BUILD_TYPE=Release "-DMITIS_VERSION=${{ steps.version.outputs.valor }}"
           cmake --build build-instalador
 
       - name: Empaquetar

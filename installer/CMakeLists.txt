@@ -44,6 +44,8 @@ add_executable(MitisInstalador WIN32
 )
 target_compile_definitions(MitisInstalador PRIVATE
     UNICODE _UNICODE NOMINMAX
+    # _wfopen y compañía: se usan con rutas propias, sin riesgo
+    _CRT_SECURE_NO_WARNINGS
     MITIS_VERSION="${MITIS_VERSION}"
 )
 target_link_libraries(MitisInstalador PRIVATE
