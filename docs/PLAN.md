@@ -22,12 +22,6 @@ Al terminar una tarea, quitarla de aquí y apuntar el cambio en `CHANGELOG.md`
 
 - [ ] **Transparencia con desenfoque: probarla en Windows y macOS** (Configuración → Apariencia, experimental; ya en todos los controles, con velo gris). La fila de la opción dice si se dibuja con la GPU y con qué API. En el servidor de desarrollo Qt no puede copiar lo que pinta Chromium (sin GPU) y los controles se ven grises. Si con GPU real se ve la página difuminada, se queda como está: **opción que se activa a mano, nunca encendida por defecto**, con el velo gris (oscuro en Nocturno y Oscuro, claro en el Claro); el aspecto normal y sus colores no cambian. Si sale transparente sin difuminar o gris: arreglarlo o quitar la opción. Medir también el gasto de GPU con un vídeo detrás.
 
-- [ ] **Captura de pantalla** de la página, desde el panel del sitio (candado del campo de dirección), como en Zen: la parte visible o la página entera, y guardarla (carpeta de descargas) o copiarla al portapapeles. Una acción más en `SiteInfoPopup`, bajo «Copiar enlace»; la imagen la da el motor (`WebEngineView.grabToImage` para lo visible; para la página entera, por partes desplazando o con el protocolo de DevTools).
-
-## Identidad visual
-
-- [ ] Icono de macOS: el workflow de macOS ya genera `mitis.icns` y lo sube como artefacto «icono-macos»; descargarlo y guardarlo en `assets/branding/mitis.icns` (CMake lo usa si está).
-- [ ] Versión simplificada del icono para 16–32 px (barra de tareas, pestañas): a ese tamaño las ondas se empastan y la gota casi no se ve.
 
 ## Motor web
 

@@ -224,6 +224,23 @@ QtObject {
     // tema). Oscuro en los temas oscuros, tonos claros en el Claro
     readonly property color glassTintDark: Qt.rgba(0.12, 0.12, 0.13, 0.35)
     readonly property color glassTint: dark ? glassTintDark : Qt.rgba(0.96, 0.96, 0.97, 0.4)
+    // Captura de pantalla (ScreenshotOverlay): velo sobre lo que no entra,
+    // relleno de la sección bajo el ratón, tiradores de la selección, franja
+    // del borde que desplaza la página al estirar, paso de ese desplazamiento
+    // (px CSS cada `screenshotScrollInterval` ms), espera a que la página se
+    // pinte tras desplazarla, alto máximo (px CSS: una imagen mayor sería
+    // enorme) y cuánto se ve el aviso al terminar
+    readonly property color screenshotDim: Qt.rgba(0, 0, 0, 0.45)
+    readonly property color screenshotHoverFill: Qt.rgba(1, 1, 1, 0.06)
+    readonly property int screenshotBorder: 2
+    readonly property int screenshotHandle: 10
+    readonly property int screenshotMinSize: 16
+    readonly property int screenshotEdgeZone: 36
+    readonly property int screenshotScrollStep: 40
+    readonly property int screenshotScrollInterval: 30
+    readonly property int screenshotSliceDelay: 220
+    readonly property int screenshotMaxHeight: 16000
+    readonly property int screenshotNoticeHold: 1400
     // Panel del sitio: cuánto dura «Enlace copiado» (ms)
     readonly property int siteInfoCopiedHold: 1500
     readonly property int optionsWidth: 270

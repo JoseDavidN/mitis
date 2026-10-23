@@ -451,6 +451,15 @@ Window {
 
     // Abre `target` en una pestaña nueva a la derecha de `opener`; en segundo
     // plano continúa la serie de enlaces. Devuelve la pestaña nueva.
+    // Captura de pantalla de la pestaña activa (ScreenshotOverlay): solo de
+    // páginas web, no de la nueva pestaña ni con Configuración abierta
+    function startScreenshot() {
+        if (!currentView || showingNewTabPage || settingsOpen || pageFullScreen)
+            return
+        siteInfoPopup.close()
+        screenshotOverlay.open(currentView)
+    }
+
     function openFromTab(opener, openerIndex, target, background) {
         const created = newTab(target, !background, linkTabPosition(opener, openerIndex))
         created.openerTab = opener
@@ -1262,6 +1271,7 @@ Window {
         security: bottomBar.security
         onReloadRequested: if (win.currentView) win.currentView.reload()
         onSettingsRequested: section => win.openSettings(section)
+        onScreenshotRequested: win.startScreenshot()
     }
 
     // Historial: reabrir la última cerrada, lo visitado y el acceso a Configuración
@@ -1422,6 +1432,15 @@ Window {
         HoverHandler { id: revealHover }
     }
 
+    // Captura de pantalla: sobre la página y los controles de abajo, bajo la
+    // barra de título. Copia la capa de las páginas (sin la interfaz)
+    ScreenshotOverlay {
+        id: screenshotOverlay
+        z: 1.5
+        anchors.fill: parent
+        source: pages
+    }
+
     FullscreenHint {
         id: fullscreenHint
         z: 2
@@ -1526,6 +1545,12 @@ Window {
             win.closeSettings()
             tabsPopup.opened ? tabsPopup.close() : tabsPopup.open()
         }
+    }
+    Shortcut {
+        sequence: "Ctrl+Shift+S"
+        context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
+        onActivated: win.startScreenshot()
     }
     Shortcut {
         sequence: "Ctrl+F"

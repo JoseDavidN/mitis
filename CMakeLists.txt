@@ -84,6 +84,8 @@ qt_add_qml_module(mitiscore
         src/links.cpp
         src/captureindicator.h
         src/captureindicator.cpp
+        src/screenshot.h
+        src/screenshot.cpp
 )
 # El registro de tipos generado incluye "settings.h" sin ruta
 target_include_directories(mitiscore PRIVATE src)
@@ -139,6 +141,7 @@ set(MITIS_QML_FILES
     qml/AddressBar.qml
     qml/SiteInfoPopup.qml
     qml/Glass.qml
+    qml/ScreenshotOverlay.qml
     qml/TabsPopup.qml
     qml/OptionsPopup.qml
     qml/PopupBackground.qml
@@ -227,9 +230,9 @@ set_target_properties(mitis PROPERTIES
     MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/packaging/macos/Info.plist.in"
 )
 
-# Icono de macOS (.icns, en Mitis.app/Contents/Resources): el de
-# assets/branding/mitis.icns si está en el repositorio, o el que genera el
-# workflow desde mitis-icon.svg (-DMITIS_MACOS_ICNS=ruta/mitis.icns)
+# Icono de macOS (.icns, en Mitis.app/Contents/Resources):
+# assets/branding/mitis.icns (generado con iconutil desde mitis-icon.svg), u
+# otro con -DMITIS_MACOS_ICNS=ruta/mitis.icns
 if(APPLE)
     if(NOT MITIS_MACOS_ICNS AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/assets/branding/mitis.icns")
         set(MITIS_MACOS_ICNS "${CMAKE_CURRENT_SOURCE_DIR}/assets/branding/mitis.icns")

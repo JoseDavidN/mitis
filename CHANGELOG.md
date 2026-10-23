@@ -7,6 +7,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ### Añadido
 
+- **Captura de pantalla**, como en Zen: Ctrl+Mayús+S o «Hacer captura de pantalla» en el panel del sitio. Al pasar el ratón, Mitis resalta la sección de la página que hay debajo y con un clic la eliges; también puedes arrastrar para marcar un área, o elegir la página visible o la página completa. La selección se ajusta con sus tiradores y, llevando el borde al de la ventana, crece hacia abajo (o hacia arriba) más allá de lo que se ve. Se copia al portapapeles o se guarda en la carpeta de descargas (y aparece en la lista de descargas).
 - Versión para macOS en cada compilación: un `.dmg` universal que funciona en los Mac con Apple Silicon y en los Intel. Al abrirlo, una ventana con el estilo del instalador de Windows indica arrastrar Mitis a Aplicaciones; Mitis tiene su icono en el Dock.
 - En macOS, los botones de la ventana son los del sistema: los tres círculos de cerrar, minimizar y zoom, a la izquierda.
 

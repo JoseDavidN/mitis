@@ -43,6 +43,7 @@ src/            C++ (main.cpp, devreloader.*, iconprovider.*: iconos SVG colorea
                 filterengine.*: motor de filtros de anuncios (sintaxis EasyList/uBlock y hosts de Pi-hole), sin dependencias del motor web,
                 contentblocker.*: bloqueador: descarga, guarda, renueva y compila las listas; lo consulta RequestInterceptor,
                 notifier.*: notificaciones de las páginas como notificaciones del sistema (D-Bus en Linux, Shell_NotifyIcon en Windows, notifier_mac.mm en macOS); lo crea EngineBridge,
+                screenshot.*: junta, guarda y copia las capturas de pantalla (singleton `Screenshot`; los trozos los da ScreenshotOverlay),
                 captureindicator.*: aviso de micrófono/cámara en el icono de la ventana (singleton `CaptureIndicator`; cada BrowserTab informa con report()),
                 links.*: enlaces que el sistema pide abrir (navegador predeterminado) y un solo Mitis por perfil (singleton `Links`))
 qml/            Interfaz. Todos los archivos planos en esta carpeta.
@@ -54,6 +55,7 @@ qml/            Interfaz. Todos los archivos planos en esta carpeta.
   BottomBar.qml       Controles inferiores flotantes: navegación, dirección, pestañas, marcadores, opciones
   AddressBar.qml      Campo de dirección/búsqueda, con sugerencias de marcadores e historial y el botón del sitio (candado)
   Glass.qml           Vidrio esmerilado (experimental, Settings.glassEffect): la página de detrás (capa objectName "mitisBackdrop") difuminada con velo gris bajo un control (ShaderEffectSource + MultiEffect). Hijo z:-1 del fondo del control, que deja su relleno transparente con `glass.active`. Se apaga sin GPU, dentro de las páginas y dentro de algo con `glassOpaque: true` (Configuración)
+  ScreenshotOverlay.qml Captura de pantalla (Ctrl+Shift+S): secciones de la página, área libre, ampliar desplazando; copia la capa de las páginas (grabToImage) por trozos
   SiteInfoPopup.qml   Panel del sitio (candado): conexión y certificado, rastreadores del sitio, marcadores, copiar/enviar enlace, permisos
   TabsPopup.qml       Lista desplegable de pestañas
   OptionsPopup.qml    Menú de opciones (ventana privada, historial, descargas, perfil, configuración)
@@ -107,10 +109,10 @@ tools/codecs/   Compilar Qt WebEngine con códecs propietarios (H.264, AAC) para
 tools/          medir_ram.py: mide la RAM de Mitis, Chrome o Firefox con las páginas de paginas.txt
 installer/      Instalador de Windows (proyecto CMake aparte, Win32 + GDI+, sin Qt): src/main.cpp (ventana),
                 src/instalacion.* (extraer, accesos, registro, desinstalar), empaquetar.ps1 (pega el ZIP al .exe)
-assets/branding/ Icono de Mitis (mitis-icon.svg → mitis.png, mitis.ico; mitis.rc lo pone en Mitis.exe), logo completo (mitis-logo-dark/light.svg → .png, Configuración), solo el nombre (mitis-wordmark-dark/light.svg → .png, barra de título) y logo de StartCode (startcode.png; startcode-light.png para el tema Claro)
+assets/branding/ Icono de Mitis (mitis-icon.svg → mitis.png, mitis.ico, mitis.icns; mitis.rc lo pone en Mitis.exe; el .icns, en Mitis.app), logo completo (mitis-logo-dark/light.svg → .png, Configuración), solo el nombre (mitis-wordmark-dark/light.svg → .png, barra de título) y logo de StartCode (startcode.png; startcode-light.png para el tema Claro)
 packaging/macos/ Info.plist.in (abre http/https y HTML: navegador predeterminado)
 packaging/linux/ PKGBUILD (Arch, mitis-git), appimage.sh (+ apprun-sandbox.sh), mitis.desktop, mitis.svg (copia de mitis-icon.svg)
-.github/workflows/compilar.yml  En cada push, Windows (instalador) y macOS (.dmg universal arm64 + x86_64, firma ad hoc, ventana con fondo assets/branding/dmg-fondo.svg vía create-dmg, icono .icns generado con iconutil y subido como artefacto); Linux a mano («todos»); release con etiqueta v* (instalador y .dmg)
+.github/workflows/compilar.yml  En cada push, Windows (instalador) y macOS (.dmg universal arm64 + x86_64, firma ad hoc, ventana con fondo assets/branding/dmg-fondo.svg vía create-dmg, icono assets/branding/mitis.icns); Linux a mano («todos»); release con etiqueta v* (instalador y .dmg)
 ```
 
 ## Diseño de la interfaz

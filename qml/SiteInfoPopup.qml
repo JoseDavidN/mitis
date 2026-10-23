@@ -23,6 +23,7 @@ Popup {
     // Cambió la protección del sitio: hay que recargar para aplicarla
     signal reloadRequested()
     signal settingsRequested(string section)
+    signal screenshotRequested()
 
     readonly property string host: Urls.host(pageUrl)
     readonly property string site: /^https?:/.test(pageUrl) ? BrowserProfile.siteOf(pageUrl) : ""
@@ -264,6 +265,16 @@ Popup {
                 clipboardHelper.copy()
                 root.copied = true
                 copiedReset.restart()
+            }
+        }
+        PopupAction {
+            width: parent.width
+            icon: "screenshot"
+            text: "Hacer captura de pantalla"
+            shortcut: "Ctrl+Shift+S"
+            onTriggered: {
+                root.close()
+                root.screenshotRequested()
             }
         }
         PopupAction {

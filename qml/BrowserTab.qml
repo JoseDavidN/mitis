@@ -333,6 +333,72 @@ Item {
         }
     }
 
+    // ── Captura de pantalla (ScreenshotOverlay) ──────────────────────
+    // Todo en píxeles CSS del documento: la interfaz los pasa a los suyos con
+    // `zoom`. En un mundo aparte: la página no puede interferir.
+    // `done(m)`: { scrollX, scrollY, width, height (lo visible), pageHeight }
+    readonly property string _pageMetricsScript: "({ scrollX: window.scrollX, scrollY: window.scrollY,"
+        + " width: document.documentElement.clientWidth, height: window.innerHeight,"
+        + " pageHeight: Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0) })"
+    function pageMetrics(done) {
+        view.runJavaScript(root._pageMetricsScript, WebEngineScript.ApplicationWorld, result => done(result ?? null))
+    }
+    // Desplaza la página (y luego mide)
+    function scrollPageTo(y, done) {
+        view.runJavaScript("window.scrollTo(window.scrollX, " + Math.max(0, Math.round(y)) + "); "
+                           + root._pageMetricsScript, WebEngineScript.ApplicationWorld, result => done(result ?? null))
+    }
+    function scrollPageBy(dy, done) {
+        view.runJavaScript("window.scrollBy(0, " + Math.round(dy) + "); " + root._pageMetricsScript,
+                           WebEngineScript.ApplicationWorld, result => done(result ?? null))
+    }
+    // Sección de la página bajo el punto (x, y de lo visible): el primer
+    // bloque, subiendo desde el elemento del punto, con un tamaño razonable y
+    // que no sea la página entera. `done(r)`: { x, y, w, h } del documento o null
+    function sectionAt(x, y, done) {
+        view.runJavaScript("(function (x, y) {"
+            + " let el = document.elementFromPoint(x, y);"
+            + " const vw = document.documentElement.clientWidth, vh = window.innerHeight;"
+            + " while (el && el !== document.documentElement && el !== document.body) {"
+            + "  const r = el.getBoundingClientRect();"
+            + "  const inline = getComputedStyle(el).display === 'inline';"
+            + "  if (r.width >= vw * 0.98 && r.height >= vh * 0.98) return null;"
+            + "  if (!inline && r.width >= 120 && r.height >= 48) {"
+            + "   const left = Math.max(0, r.left), right = Math.min(vw, r.right);"
+            + "   return { x: left + window.scrollX, y: r.top + window.scrollY, w: right - left, h: r.height };"
+            + "  }"
+            + "  el = el.parentElement;"
+            + " }"
+            + " return null;"
+            + "})(" + Math.round(x) + ", " + Math.round(y) + ")", WebEngineScript.ApplicationWorld, result => done(result ?? null))
+    }
+    // Oculta (o vuelve a mostrar) lo que la página fija en pantalla (cabeceras,
+    // avisos): al juntar varios trozos de una captura saldría repetido
+    function setFloatingHidden(hidden, done) {
+        view.runJavaScript("(function (hide) {"
+            + " const mark = 'data-mitis-captura';"
+            + " if (hide) {"
+            + "  for (const el of document.querySelectorAll('body *')) {"
+            + "   const position = getComputedStyle(el).position;"
+            + "   if ((position === 'fixed' || position === 'sticky') && !el.hasAttribute(mark)) {"
+            + "    el.setAttribute(mark, el.style.getPropertyValue('visibility'));"
+            + "    el.style.setProperty('visibility', 'hidden', 'important');"
+            + "   }"
+            + "  }"
+            + " } else {"
+            + "  for (const el of document.querySelectorAll('[' + mark + ']')) {"
+            + "   const before = el.getAttribute(mark);"
+            + "   el.removeAttribute(mark);"
+            + "   if (before) el.style.setProperty('visibility', before); else el.style.removeProperty('visibility');"
+            + "  }"
+            + " }"
+            + " return true;"
+            + "})(" + (hidden ? "true" : "false") + ")", WebEngineScript.ApplicationWorld, () => {
+                if (done)
+                    done()
+            })
+    }
+
     // ── Certificados inválidos ───────────────────────────────────────
     // Motivo en español por tipo de error (nunca el texto en inglés del motor)
     readonly property var _certificateReasons: ({
