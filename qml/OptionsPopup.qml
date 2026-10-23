@@ -7,8 +7,8 @@ import Mitis.Core
 Popup {
     id: root
 
-    // Herramientas de desarrollo activadas: añade «Uso de memoria»
-    property bool developer: false
+    // Monitor de rendimiento activado (Configuración → Desarrollo): añade su opción
+    property bool performanceMonitor: false
 
     // Cada opción: { key, label, icon, available, shortcut (opcional) }
     readonly property var options: [
@@ -17,9 +17,9 @@ Popup {
         { key: "private", label: "Nueva ventana privada", icon: "private", available: true, shortcut: "Ctrl+Shift+N" },
         { key: "history", label: "Historial", icon: "history", available: true },
         { key: "downloads", label: "Descargas", icon: "downloads", available: true },
-        { key: "memory", label: "Uso de memoria", icon: "memory", available: true, shortcut: "Shift+Esc" },
+        { key: "performance", label: "Monitor de rendimiento", icon: "memory", available: true, shortcut: "Shift+Esc" },
         { key: "settings", label: "Configuración", icon: "settings", available: true }
-    ].filter(option => developer || option.key !== "memory")
+    ].filter(option => performanceMonitor || option.key !== "performance")
 
     signal optionSelected(string key)
 

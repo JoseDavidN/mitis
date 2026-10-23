@@ -8,12 +8,14 @@ const QString NewTabBackgroundKey = QStringLiteral("NewTab/background");
 const QString QuickLinksKey = QStringLiteral("NewTab/quickLinks");
 const QString DownloadFolderKey = QStringLiteral("Downloads/folder");
 const QString DevToolsKey = QStringLiteral("Developer/tools");
+const QString PerformanceMonitorKey = QStringLiteral("Developer/performanceMonitor");
 // De versiones anteriores: solo se lee, para el valor de serie de StartupModeKey
 const QString RestoreSessionKey = QStringLiteral("Session/restore");
 const QString StartupModeKey = QStringLiteral("Startup/mode");
 const QString StartupUrlKey = QStringLiteral("Startup/url");
 const QString DefaultZoomKey = QStringLiteral("Pages/zoom");
 const QString DarkPagesKey = QStringLiteral("Pages/dark");
+const QString HideScrollbarsKey = QStringLiteral("Pages/hideScrollbars");
 const QString LanguagesKey = QStringLiteral("Pages/languages");
 const QString BlockThirdPartyCookiesKey = QStringLiteral("Privacy/blockThirdPartyCookies");
 const QString ClearOnExitKey = QStringLiteral("Privacy/clearOnExit");
@@ -139,6 +141,17 @@ void Settings::setDevTools(bool value)
         emit devToolsChanged();
 }
 
+bool Settings::performanceMonitor() const
+{
+    return flag(PerformanceMonitorKey, false);
+}
+
+void Settings::setPerformanceMonitor(bool value)
+{
+    if (storeBool(PerformanceMonitorKey, value, false))
+        emit performanceMonitorChanged();
+}
+
 bool Settings::flag(const QString &key, bool defaultValue) const
 {
     return m_settings.value(key, defaultValue).toBool();
@@ -190,6 +203,17 @@ void Settings::setDarkPages(bool value)
 {
     if (storeBool(DarkPagesKey, value, false))
         emit darkPagesChanged();
+}
+
+bool Settings::hideScrollbars() const
+{
+    return flag(HideScrollbarsKey, false);
+}
+
+void Settings::setHideScrollbars(bool value)
+{
+    if (storeBool(HideScrollbarsKey, value, false))
+        emit hideScrollbarsChanged();
 }
 
 QStringList Settings::languages() const
@@ -438,8 +462,8 @@ void Settings::setValue(const QString &key, const QVariant &value)
 void Settings::resetPreferences()
 {
     const QStringList keys = {
-        SearchEngineKey, NewTabBackgroundKey, DownloadFolderKey, DevToolsKey, RestoreSessionKey,
-        StartupModeKey, StartupUrlKey, DefaultZoomKey, DarkPagesKey, LanguagesKey,
+        SearchEngineKey, NewTabBackgroundKey, DownloadFolderKey, DevToolsKey, PerformanceMonitorKey, RestoreSessionKey,
+        StartupModeKey, StartupUrlKey, DefaultZoomKey, DarkPagesKey, HideScrollbarsKey, LanguagesKey,
         BlockThirdPartyCookiesKey, ClearOnExitKey, DoNotTrackKey, HideLocalIpKey, HttpsUpgradeKey,
         JavascriptKey, ImagesKey, BlockPopupsKey, AutoplayKey, BlockedPermissionsKey, AskDownloadFolderKey,
         SuspendAfterKey, BlockAdsKey, StripTrackingParamsKey, ThemeKey,
@@ -451,10 +475,12 @@ void Settings::resetPreferences()
     emit newTabBackgroundChanged();
     emit downloadFolderChanged();
     emit devToolsChanged();
+    emit performanceMonitorChanged();
     emit startupModeChanged();
     emit startupUrlChanged();
     emit defaultZoomChanged();
     emit darkPagesChanged();
+    emit hideScrollbarsChanged();
     emit languagesChanged();
     emit blockThirdPartyCookiesChanged();
     emit clearOnExitChanged();

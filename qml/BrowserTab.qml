@@ -35,6 +35,10 @@ Item {
     // Suena ahora (o hace un momento)
     readonly property alias audible: view.recentlyAudible
     property alias muted: view.audioMuted
+    // Micrófono y cámara: 0 sin uso, 1 abierto pero silenciado, 2 en uso
+    // (assets/scripts/media.js). Lo junta todo CaptureIndicator (icono de Mitis)
+    readonly property int microphone: captureState.microphone
+    readonly property int camera: captureState.camera
 
     // Buscar en la página: coincidencias de la última búsqueda y cuál está
     // seleccionada (1..findMatches; 0 si no hay)
@@ -144,7 +148,8 @@ Item {
     // notificaciones (un chat dejaría de avisar) o un formulario a medio
     // rellenar. Quién y cuándo la suspende lo decide la interfaz (fijadas no).
     function suspend(discard) {
-        if (root.deferred || root.visible || root.audible || devTools.item)
+        if (root.deferred || root.visible || root.audible || root.microphone || root.camera
+                || devTools.item)
             return
         const State = WebEngineView.LifecycleState
         let target = discard ? State.Discarded : State.Frozen
@@ -285,6 +290,25 @@ Item {
                            result => done(result ?? null))
     }
 
+    QtObject {
+        id: captureState
+        property int microphone: 0
+        property int camera: 0
+
+        function set(microphone, camera) {
+            captureState.microphone = Math.max(0, Math.min(2, microphone || 0))
+            captureState.camera = Math.max(0, Math.min(2, camera || 0))
+            CaptureIndicator.report(root, captureState.microphone, captureState.camera)
+        }
+        // Lo pregunta a la página (al terminar una carga: el documento nuevo
+        // empieza sin nada y una navegación dentro de la misma página no
+        // cambia lo que tenga abierto)
+        function sync() {
+            view.runJavaScript("window.__mitisMedia ? window.__mitisMedia.capture() : null",
+                               result => captureState.set(result ? result[0] : 0, result ? result[1] : 0))
+        }
+    }
+
     // ── Certificados inválidos ───────────────────────────────────────
     // Motivo en español por tipo de error (nunca el texto en inglés del motor)
     readonly property var _certificateReasons: ({
@@ -345,7 +369,10 @@ Item {
         property bool backAfterError: false
     }
 
-    Component.onDestruction: root._cancelCertificateError()
+    Component.onDestruction: {
+        root._cancelCertificateError()
+        CaptureIndicator.report(root, 0, 0)
+    }
 
     QtObject {
         id: devTools
@@ -417,6 +444,50 @@ Item {
             + "  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];"
             + "})(" + JSON.stringify(css) + ")"
         scripts.insert(script)
+    }
+
+    // ── Ocultar la barra de desplazamiento (Settings.hideScrollbars) ──
+    // Una hoja de estilo adoptada, desde un mundo aparte (no la quita la página
+    // ni la frena su CSP). scrollbar-width: none oculta la barra sin quitar el
+    // desplazamiento, también en los elementos con overflow propio; la regla
+    // ::-webkit-scrollbar cubre las páginas que la estilan con display propio.
+    // __mitisScrollbars(oculta) permite cambiarlo en vivo sin recargar.
+    readonly property string _scrollbarScript: "(function () {"
+        + "  if (!window.__mitisScrollbars) {"
+        + "    const sheet = new CSSStyleSheet();"
+        + "    sheet.replaceSync('*{scrollbar-width:none!important}*::-webkit-scrollbar{display:none!important}');"
+        + "    window.__mitisScrollbars = function (hidden) {"
+        + "      const others = document.adoptedStyleSheets.filter(s => s !== sheet);"
+        + "      document.adoptedStyleSheets = hidden ? [...others, sheet] : others;"
+        + "    };"
+        + "  }"
+        + "  window.__mitisScrollbars(true);"
+        + "})()"
+
+    // El script queda en la vista (vale para las próximas cargas) solo con la
+    // opción activa; live = aplicarlo también a la página ya abierta
+    function _applyScrollbars(live) {
+        const hidden = Settings.hideScrollbars
+        const scripts = view.userScripts
+        for (const old of scripts.find("mitis-scrollbars"))
+            scripts.remove(old)
+        if (hidden) {
+            const script = WebEngine.script()
+            script.name = "mitis-scrollbars"
+            script.injectionPoint = WebEngineScript.DocumentCreation
+            script.worldId = WebEngineScript.ApplicationWorld
+            script.runsOnSubFrames = true
+            script.sourceCode = root._scrollbarScript
+            scripts.insert(script)
+        }
+        if (live)
+            view.runJavaScript(hidden ? root._scrollbarScript
+                                      : "window.__mitisScrollbars && window.__mitisScrollbars(false)",
+                               WebEngineScript.ApplicationWorld)
+    }
+    Connections {
+        target: Settings
+        function onHideScrollbarsChanged() { root._applyScrollbars(true) }
     }
 
     // ── Suspensión ───────────────────────────────────────────────────
@@ -586,6 +657,8 @@ Item {
                 return
             }
             // qmllint enable unqualified
+            if (loadingInfo.status !== WebEngineView.LoadStartedStatus)
+                captureState.sync()
             if (loadingInfo.status === WebEngineView.LoadSucceededStatus
                     && view.url.toString() !== visitState.url) {
                 visitState.url = view.url.toString()
@@ -677,10 +750,16 @@ Item {
             root.certificateErrorRequested(request)
         }
         // Pantalla completa: se acepta siempre; la ventana la decide Main.qml
-        // Aviso de assets/scripts/drm.js
+        // Si el proceso de la página muere, con él se cierran micrófono y cámara
+        onRenderProcessTerminated: captureState.set(0, 0)
+        // Avisos de assets/scripts/drm.js y media.js
         onJavaScriptConsoleMessage: (level, message) => {
-            if (message === "mitis:widevine-unavailable")
+            if (message === "mitis:widevine-unavailable") {
                 root.protectedContentUnavailable()
+            } else if (message.startsWith("mitis:capture ")) {
+                const parts = message.slice(14).split(" ")
+                captureState.set(Number(parts[0]), Number(parts[1]))
+            }
         }
         onFullScreenRequested: request => {
             request.accept()
@@ -858,6 +937,7 @@ Item {
         if (!visible)
             suspendState.hiddenSince = Date.now()
         view.zoomFactor = zoomState.level
+        _applyScrollbars(false)
         if (initialUrl !== "" && !deferred)
             view.url = initialUrl
     }

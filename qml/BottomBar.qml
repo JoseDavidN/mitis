@@ -124,7 +124,22 @@ Item {
             loadProgress: root.loadProgress
             onNavigate: target => root.navigateRequested(target)
 
+            // Se anima solo al empezar o dejar de escribir. Su ancho depende
+            // también del de la ventana: animarlo al redimensionar lo hacía ir
+            // siempre por detrás, buscando acomodarse.
+            property bool animateWidth: false
+            onEditingChanged: {
+                animateWidth = true
+                widthAnimationEnd.restart()
+            }
+            Timer {
+                id: widthAnimationEnd
+                interval: Theme.durationBase
+                onTriggered: address.animateWidth = false
+            }
+
             Behavior on width {
+                enabled: address.animateWidth
                 NumberAnimation {
                     duration: Theme.durationBase
                     easing.type: Easing.BezierSpline

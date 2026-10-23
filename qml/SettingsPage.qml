@@ -346,83 +346,139 @@ FocusScope {
     }
 
     // ── Índice ───────────────────────────────────────────────────────
-    Column {
+    // Lista con su propio desplazamiento: como mucho, `settingsNavHeightRatio`
+    // del alto. Sigue a la sección a la vista (la mantiene en su tercio
+    // central) y sus bordes se funden con el fondo (EdgeFade).
+    ListView {
         id: nav
-        // Encima de la lista, que ocupa todo el ancho para desplazarse con la
-        // rueda desde cualquier punto
+        // Encima de la lista de ajustes, que ocupa todo el ancho para
+        // desplazarse con la rueda desde cualquier punto
         z: 1
         visible: root.wide
         anchors.top: header.bottom
         anchors.topMargin: Theme.margin
         x: root.layoutX
         width: Theme.settingsNavWidth
+        // Deja sitio debajo al logo de Mitis, que siempre se ve
+        height: Math.min(contentHeight, (root.height - header.height - Theme.margin) * Theme.settingsNavHeightRatio,
+                         Math.max(0, mitisLogo.y - y - Theme.margin))
+        clip: true
         spacing: Theme.spacing / 2
+        boundsBehavior: Flickable.StopAtBounds
+        model: root.sections
+        currentIndex: root.sections.findIndex(section => section.key === root.currentSection)
+        highlight: Item {}
+        highlightRangeMode: ListView.ApplyRange
+        preferredHighlightBegin: height / 3
+        preferredHighlightEnd: height * 2 / 3
+        highlightMoveDuration: Theme.durationSlow
 
-        Repeater {
-            model: root.sections
+        delegate: Item {
+            id: navRow
 
-            delegate: Item {
-                id: navRow
+            required property var modelData
+            readonly property bool selected: root.currentSection === modelData.key
 
-                required property var modelData
-                readonly property bool selected: root.currentSection === modelData.key
+            width: nav.width
+            height: Theme.popupRowHeight
 
-                width: nav.width
-                height: Theme.popupRowHeight
+            Rectangle {
+                anchors.fill: parent
+                radius: Theme.radiusSmall
+                color: navRow.selected ? Theme.tintActive : (navHover.hovered ? Theme.tintHover : "transparent")
+                Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+            }
 
-                Rectangle {
-                    anchors.fill: parent
-                    radius: Theme.radiusSmall
-                    color: navRow.selected ? Theme.tintActive : (navHover.hovered ? Theme.tintHover : "transparent")
-                    Behavior on color { ColorAnimation { duration: Theme.durationFast } }
-                }
-
-                // Marca de la sección a la vista
-                Rectangle {
-                    visible: navRow.selected
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: Theme.markerWidth
-                    height: parent.height - Theme.spacing * 2
-                    radius: width / 2
-                    gradient: Gradient {
-                        GradientStop { position: 0.0; color: Theme.brand1 }
-                        GradientStop { position: 1.0; color: Theme.brand2 }
-                    }
-                }
-
-                Icon {
-                    id: navIcon
-                    anchors.left: parent.left
-                    anchors.leftMargin: Theme.margin
-                    anchors.verticalCenter: parent.verticalCenter
-                    name: navRow.modelData.icon
-                    color: navRow.selected ? Theme.brandLight1 : Theme.inkMuted
-                }
-
-                Text {
-                    anchors.left: navIcon.right
-                    anchors.leftMargin: Theme.spacing + Theme.spacing / 2
-                    anchors.right: parent.right
-                    anchors.rightMargin: Theme.spacing
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: navRow.modelData.title
-                    color: navRow.selected ? Theme.ink : Theme.inkSecondary
-                    font.pixelSize: Theme.fontSize
-                    font.weight: navRow.selected ? Font.Bold : Font.DemiBold
-                    elide: Text.ElideRight
-                }
-
-                HoverHandler {
-                    id: navHover
-                    cursorShape: Qt.PointingHandCursor
-                }
-                TapHandler {
-                    gesturePolicy: TapHandler.ReleaseWithinBounds
-                    onTapped: root.scrollTo(navRow.modelData.key)
+            // Marca de la sección a la vista
+            Rectangle {
+                visible: navRow.selected
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: Theme.markerWidth
+                height: parent.height - Theme.spacing * 2
+                radius: width / 2
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: Theme.brand1 }
+                    GradientStop { position: 1.0; color: Theme.brand2 }
                 }
             }
+
+            Icon {
+                id: navIcon
+                anchors.left: parent.left
+                anchors.leftMargin: Theme.margin
+                anchors.verticalCenter: parent.verticalCenter
+                name: navRow.modelData.icon
+                color: navRow.selected ? Theme.brandLight1 : Theme.inkMuted
+            }
+
+            Text {
+                anchors.left: navIcon.right
+                anchors.leftMargin: Theme.spacing + Theme.spacing / 2
+                anchors.right: parent.right
+                anchors.rightMargin: Theme.spacing
+                anchors.verticalCenter: parent.verticalCenter
+                text: navRow.modelData.title
+                color: navRow.selected ? Theme.ink : Theme.inkSecondary
+                font.pixelSize: Theme.fontSize
+                font.weight: navRow.selected ? Font.Bold : Font.DemiBold
+                elide: Text.ElideRight
+            }
+
+            HoverHandler {
+                id: navHover
+                cursorShape: Qt.PointingHandCursor
+            }
+            TapHandler {
+                gesturePolicy: TapHandler.ReleaseWithinBounds
+                onTapped: root.scrollTo(navRow.modelData.key)
+            }
         }
+    }
+
+    // Logo completo de Mitis (el de temas oscuros o claros), centrado en la
+    // columna del índice y al pie de la ventana. Siempre visible: el índice
+    // se acorta (y se desplaza) para dejarle sitio
+    Image {
+        id: mitisLogo
+        visible: nav.visible
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Theme.settingsSectionSpacing
+        x: nav.x + (nav.width - width) / 2
+        width: Theme.settingsMitisLogoWidth
+        height: width * implicitHeight / Math.max(1, implicitWidth)
+        source: Theme.dark ? "qrc:/branding/mitis-logo-dark.png" : "qrc:/branding/mitis-logo-light.png"
+        fillMode: Image.PreserveAspectFit
+        smooth: true
+        mipmap: true
+    }
+
+    // Bordes que se funden con el fondo: en el índice y en la columna de ajustes
+    EdgeFade {
+        visible: nav.visible && !nav.atYBeginning
+        x: nav.x
+        y: nav.y
+        width: nav.width
+    }
+    EdgeFade {
+        visible: nav.visible && !nav.atYEnd
+        atTop: false
+        x: nav.x
+        y: nav.y + nav.height - height
+        width: nav.width
+    }
+    EdgeFade {
+        visible: !flick.atYBeginning
+        x: content.x - Theme.margin
+        y: flick.y
+        width: root.contentWidth + 2 * Theme.margin
+    }
+    EdgeFade {
+        visible: !flick.atYEnd
+        atTop: false
+        x: content.x - Theme.margin
+        y: flick.y + flick.height - height
+        width: root.contentWidth + 2 * Theme.margin
     }
 
     // ── Secciones ────────────────────────────────────────────────────
@@ -596,6 +652,15 @@ FocusScope {
                     Toggle {
                         checked: Settings.darkPages
                         onToggled: Settings.darkPages = checked
+                    }
+                }
+                SettingRow {
+                    title: "Ocultar la barra de desplazamiento"
+                    description: "Las páginas no la muestran, pero se siguen desplazando con la rueda, el teclado o el dedo."
+
+                    Toggle {
+                        checked: Settings.hideScrollbars
+                        onToggled: Settings.hideScrollbars = checked
                     }
                 }
                 ChoiceRow {
@@ -1145,11 +1210,20 @@ FocusScope {
                 SettingRow {
                     divider: false
                     title: "Herramientas de desarrollo"
-                    description: "Muestra «Inspeccionar» en el menú contextual y abre el panel con F12. Añade «Uso de memoria» al menú de opciones (Shift+Esc)."
+                    description: "Muestra «Inspeccionar» en el menú contextual y abre el panel con F12."
 
                     Toggle {
                         checked: Settings.devTools
                         onToggled: Settings.devTools = checked
+                    }
+                }
+                SettingRow {
+                    title: "Monitor de rendimiento"
+                    description: "Muestra un panel con la memoria, la CPU y la GPU que usan Mitis y cada pestaña. Se abre y se cierra con Shift+Esc o desde el menú de opciones."
+
+                    Toggle {
+                        checked: Settings.performanceMonitor
+                        onToggled: Settings.performanceMonitor = checked
                     }
                 }
             }
@@ -1216,10 +1290,83 @@ FocusScope {
                     }
                 }
             }
+            // «by StartCode», al final de los ajustes y más pequeño
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                spacing: Theme.spacing
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "by"
+                    color: Theme.inkMuted
+                    font.pixelSize: Theme.fontSizeSmall
+                }
+                // Versión clara (temas oscuros) u oscura (tema Claro), sin fondo
+                Item {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Theme.settingsLogoWidth
+                    height: width / 2
+
+                    Image {
+                        anchors.fill: parent
+                        source: Theme.dark ? "qrc:/branding/startcode.png" : "qrc:/branding/startcode-light.png"
+                        sourceSize: Qt.size(2 * width, 2 * height)
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+                        mipmap: true
+                        opacity: startcodeHover.hovered ? 1 : 0.7
+                        Behavior on opacity { NumberAnimation { duration: Theme.durationFast } }
+                    }
+                    HoverHandler { id: startcodeHover }
+                    Tooltip {
+                        text: "StartCode"
+                        visible: startcodeHover.hovered
+                    }
+                }
+            }
         }
     }
 
     // ── Piezas de la página ──────────────────────────────────────────
+
+    // Franja que funde un borde con el fondo del tema: escalones del propio
+    // fondo (ThemeBackground, colocado donde está el de la página) con opacidad
+    // creciente hacia el borde. Debe ser hija directa de la página: x e y son
+    // también las de la página. Sin shaders, así funciona también sin GPU.
+    component EdgeFade: Item {
+        id: fade
+
+        // Borde de arriba (opaco arriba) o de abajo (opaco abajo)
+        property bool atTop: true
+        readonly property real step: height / Theme.settingsFadeSteps
+
+        z: 2
+        height: Theme.settingsFadeHeight
+
+        Repeater {
+            model: Theme.settingsFadeSteps
+
+            delegate: Item {
+                id: slice
+
+                required property int index
+
+                y: index * fade.step
+                width: fade.width
+                height: Math.ceil(fade.step)
+                clip: true
+                opacity: fade.atTop ? 1 - index / Theme.settingsFadeSteps
+                                    : (index + 1) / Theme.settingsFadeSteps
+
+                ThemeBackground {
+                    x: -fade.x
+                    y: -(fade.y + slice.y)
+                    width: fade.parent ? fade.parent.width : 0
+                    height: fade.parent ? fade.parent.height : 0
+                }
+            }
+        }
+    }
 
     // Título de sección y su tarjeta; las filas van dentro de la tarjeta
     component SettingsSection: Column {

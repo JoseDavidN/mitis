@@ -10,12 +10,13 @@ import "urls.js" as Urls
 // pestaña es un BrowserTab (ver BrowserTab.qml).
 Window {
     id: win
-    // Tamaño inicial ajustado a la pantalla, para que la barra inferior
-    // nunca quede fuera en pantallas pequeñas
-    width: Math.min(1280, Screen.desktopAvailableWidth)
-    height: Math.min(800, Screen.desktopAvailableHeight)
-    x: (Screen.desktopAvailableWidth - width) / 2
-    y: (Screen.desktopAvailableHeight - height) / 2
+    // Tamaño y posición de la última vez (ver «Tamaño de la ventana») o, la
+    // primera vez, el 75 % de la pantalla, centrada
+    readonly property var initialGeometry: savedGeometry()
+    width: initialGeometry.width
+    height: initialGeometry.height
+    x: initialGeometry.x
+    y: initialGeometry.y
     minimumWidth: 640
     minimumHeight: 360
     visible: true
@@ -52,6 +53,7 @@ Window {
             return
         }
         saveSession()
+        rememberGeometry()
         if (Settings.clearOnExit) {
             BrowserProfile.clearCookies()
             BrowserProfile.clearCache()
@@ -63,7 +65,67 @@ Window {
             tabs.clear()
     }
 
+    // ── Tamaño de la ventana ─────────────────────────────────────────
+    // Se recuerda entre sesiones (Settings, "Window/geometry"): el tamaño y la
+    // posición sin maximizar y si estaba maximizada. Las privadas no guardan
+    // nada: se abren como la principal la primera vez.
+    function defaultGeometry() {
+        const width = Math.round(Screen.width * Theme.windowDefaultRatio)
+        const height = Math.round(Screen.height * Theme.windowDefaultRatio)
+        return { x: Screen.virtualX + Math.round((Screen.width - width) / 2),
+                 y: Screen.virtualY + Math.round((Screen.height - height) / 2),
+                 width: width, height: height, maximized: false }
+    }
+    function savedGeometry() {
+        if (privateMode)
+            return defaultGeometry()
+        let saved = null
+        try {
+            saved = JSON.parse(Settings.value("Window/geometry", "null"))
+        } catch (error) {
+            saved = null
+        }
+        if (!saved || !(saved.width > 0) || !(saved.height > 0))
+            return defaultGeometry()
+        // El centro debe caer en alguna pantalla: si se quitó un monitor o
+        // cambió la resolución, vuelve a lo de serie
+        const centerX = saved.x + saved.width / 2
+        const centerY = saved.y + saved.height / 2
+        const visible = Application.screens.some(screen =>
+            centerX >= screen.virtualX && centerX < screen.virtualX + screen.width
+            && centerY >= screen.virtualY && centerY < screen.virtualY + screen.height)
+        return visible ? saved : defaultGeometry()
+    }
+    // Último tamaño sin maximizar (lo que se guarda aunque se cierre maximizada)
+    property var normalGeometry: ({ x: initialGeometry.x, y: initialGeometry.y,
+                                    width: initialGeometry.width, height: initialGeometry.height })
+    function rememberGeometry() {
+        if (privateMode)
+            return
+        if (visibility === Window.Windowed)
+            normalGeometry = { x: x, y: y, width: width, height: height }
+        // En pantalla completa cuenta cómo estaba antes de entrar
+        const maximized = visibility === Window.Maximized
+            || (visibility === Window.FullScreen && visibilityBeforeFullScreen === Window.Maximized)
+        if (visibility === Window.Minimized || visibility === Window.Hidden)
+            return
+        Settings.setValue("Window/geometry", JSON.stringify(Object.assign({ maximized: maximized }, normalGeometry)))
+    }
+    Timer {
+        id: geometrySaver
+        interval: 1000
+        onTriggered: win.rememberGeometry()
+    }
+    onXChanged: geometrySaver.restart()
+    onYChanged: geometrySaver.restart()
+    onWidthChanged: geometrySaver.restart()
+    onHeightChanged: geometrySaver.restart()
+    onVisibilityChanged: geometrySaver.restart()
+
     Component.onCompleted: {
+        // Si se cerró maximizada, se abre maximizada
+        if (initialGeometry.maximized)
+            Qt.callLater(win.showMaximized)
         // Enlaces con los que se abrió Mitis (navegador predeterminado): con
         // ellos no hace falta la página de inicio ni la de nueva pestaña
         const links = privateMode ? [] : Links.takePending()
@@ -99,6 +161,42 @@ Window {
         enabled: !win.privateMode
         function onReceived() {
             win.openLinks(Links.takePending())
+            if (win.visibility === Window.Minimized)
+                win.showNormal()
+            win.raise()
+            win.requestActivate()
+        }
+    }
+    // Pulsaron una notificación del sistema (src/notifier.*): al frente la
+    // ventana con una pestaña de ese sitio (la activa si es de él)
+    Connections {
+        // qmllint disable unqualified
+        target: MitisEngine
+        // qmllint enable unqualified
+        function onNotificationActivated(origin) {
+            const prefix = origin.toString()
+            const fromSite = i => {
+                const url = tabs.get(i).url
+                return url === prefix || url.startsWith(prefix + "/")
+            }
+            // Solo una página cargada manda notificaciones: primero la activa,
+            // luego una cargada del sitio y, si no, cualquiera del sitio
+            const loaded = i => {
+                const tab = views.itemAt(i)
+                return tab && !tab.deferred && tab.lifecycle !== "discarded"
+            }
+            let found = fromSite(win.currentIndex) ? win.currentIndex : -1
+            for (let i = 0; i < tabs.count && found < 0; i++) {
+                if (fromSite(i) && loaded(i))
+                    found = i
+            }
+            for (let i = 0; i < tabs.count && found < 0; i++) {
+                if (fromSite(i))
+                    found = i
+            }
+            if (found < 0)
+                return
+            win.selectTab(found)
             if (win.visibility === Window.Minimized)
                 win.showNormal()
             win.raise()
@@ -159,7 +257,7 @@ Window {
             const url = typeof tab.url === "string" ? tab.url : ""
             const pinned = tab.pinned === true
             tabs.append({ initialUrl: url, url: url, title: tab.title ?? "", icon: tab.icon ?? "",
-                          audible: false, muted: false, pinned: pinned, lifecycle: "active",
+                          audible: false, muted: false, microphone: 0, camera: 0, pinned: pinned, lifecycle: "active",
                           deferred: (deferAll === true || i !== currentIndex) && url !== "" })
             if (pinned)
                 pinnedCount++
@@ -218,11 +316,11 @@ Window {
         onTriggered: win.suspendIdleTabs()
     }
 
-    // ── Memoria (panel de desarrollo) ────────────────────────────────
+    // ── Monitor de rendimiento ───────────────────────────────────────
     // Lo que mide MemoryMonitor, repartido: el proceso de cada pestaña de
     // esta ventana (contado una vez aunque lo compartan varias) y el resto
-    // por tipo. Los de otras ventanas van en «otros».
-    function measureMemory() {
+    // por tipo. Los de otras ventanas van en «otros». CPU y GPU: -1 = sin dato.
+    function measurePerformance() {
         const measured = MemoryMonitor.measure()
         const byPid = {}
         for (const process of measured.processes)
@@ -236,7 +334,12 @@ Window {
         const states = { active: "Activa", frozen: "Congelada", discarded: "Descargada" }
         const list = []
         const counted = {}
-        let pages = 0
+        const pages = { label: "Páginas de esta ventana", bytes: 0, cpu: -1 }
+        // Suma de CPU que deja -1 solo si no hay ningún dato
+        const addCpu = (group, cpu) => {
+            if (cpu >= 0)
+                group.cpu = Math.max(group.cpu, 0) + cpu
+        }
         for (let i = 0; i < tabs.count; i++) {
             const tab = views.itemAt(i) as BrowserTab
             const process = byPid[tab.renderProcessPid]
@@ -247,37 +350,43 @@ Window {
                 detail += " · proceso compartido con " + (sharing[process.pid] - 1)
                           + (sharing[process.pid] === 2 ? " pestaña" : " pestañas")
             list.push({ url: tab.url.toString(), title: tabs.get(i).title,
-                        bytes: process ? process.bytes : 0, detail: detail })
+                        bytes: process ? process.bytes : 0, cpu: process ? process.cpu : -1,
+                        detail: detail })
             if (process && !counted[process.pid]) {
                 counted[process.pid] = true
-                pages += process.bytes
+                pages.bytes += process.bytes
+                addCpu(pages, process.cpu)
             }
         }
-        let browser = 0, gpu = 0, other = 0
+        const browser = { label: "Proceso principal (interfaz y motor)", bytes: 0, cpu: -1 }
+        const gpu = { label: "Proceso de la GPU", bytes: 0, cpu: -1 }
+        const other = { label: "Otros procesos del motor", bytes: 0, cpu: -1 }
         for (const process of measured.processes) {
             if (counted[process.pid])
                 continue
-            if (process.kind === "browser")
-                browser += process.bytes
-            else if (process.kind === "gpu")
-                gpu += process.bytes
-            else
-                other += process.bytes
+            const group = process.kind === "browser" ? browser : process.kind === "gpu" ? gpu : other
+            group.bytes += process.bytes
+            addCpu(group, process.cpu)
         }
-        const groups = [
-            { label: "Proceso principal (interfaz y motor)", bytes: browser },
-            { label: "Páginas de esta ventana", bytes: pages }
-        ]
-        if (gpu > 0)
-            groups.push({ label: "GPU", bytes: gpu })
-        groups.push({ label: "Otros procesos del motor", bytes: other })
-        memoryPanel.sample = { total: measured.total, processCount: measured.processes.length,
-                               groups: groups, tabs: list }
+        const groups = [browser, pages]
+        if (gpu.bytes > 0)
+            groups.push(gpu)
+        groups.push(other)
+        performancePanel.sample = { total: measured.total, cpu: measured.cpu, gpu: measured.gpu,
+                                    processCount: measured.processes.length,
+                                    groups: groups, tabs: list }
     }
-    function toggleMemoryPanel() {
-        memoryPanel.shown = !memoryPanel.shown
-        if (!memoryPanel.shown)
-            memoryPanel.sample = null
+    // Abierto por quien lo usa (Shift+Esc, menú, al activar la opción); se
+    // ve si además la opción sigue activa y no está Configuración delante
+    property bool performancePanelOpen: Settings.performanceMonitor
+    function togglePerformancePanel() {
+        performancePanelOpen = !performancePanelOpen
+    }
+    Connections {
+        target: Settings
+        function onPerformanceMonitorChanged() {
+            win.performancePanelOpen = Settings.performanceMonitor
+        }
     }
 
 
@@ -297,7 +406,7 @@ Window {
             closeSettings()
         const address = target ? target.toString() : ""
         tabs.insert(at, { initialUrl: address, url: address, title: "", icon: "",
-                          audible: false, muted: false, pinned: false, lifecycle: "active",
+                          audible: false, muted: false, microphone: 0, camera: 0, pinned: false, lifecycle: "active",
                           deferred: false })
         if (activate !== false)
             currentIndex = at
@@ -619,16 +728,38 @@ Window {
     readonly property bool immersive: pageFullScreen || windowFullScreen
     property int visibilityBeforeFullScreen: Window.Windowed
 
-    // Controles inferiores visibles. En F11 solo mientras el ratón está en
-    // el borde inferior o sobre ellos, se escribe en la dirección o hay una
-    // lista suya abierta. `revealControls` los fuerza (p. ej. Ctrl+L).
+    // Controles inferiores visibles. Se ocultan solos `controlsHold` después
+    // de dejar de usarlos, para no tapar lo que las páginas tienen abajo
+    // (avisos de cookies, reproductores…): no vuelven al pasar por el borde
+    // ni al desplazar la página, solo con la pestaña del borde inferior
+    // (ControlsTab). Los mantiene a la vista tener el ratón encima, escribir
+    // en la dirección o una lista suya abierta; `revealControls` los fuerza
+    // (p. ej. Ctrl+L). En F11, como antes: el borde inferior los muestra.
     property bool revealControls: false
-    readonly property bool controlsShown: !settingsOpen && (!immersive
-        || (!pageFullScreen && (revealControls || revealHover.hovered || barHover.hovered
-                                || playerHover.hovered || bottomBar.editing
-                                || tabsPopup.opened || bookmarksPopup.opened || optionsPopup.opened
-                                || historyPopup.opened
-                                || downloadsPopup.opened || downloadPanel.opened)))
+    readonly property bool controlsInUse: revealControls || barHover.hovered || playerHover.hovered
+        || controlsTab.hovered || bottomBar.editing
+        || tabsPopup.opened || bookmarksPopup.opened || optionsPopup.opened
+        || historyPopup.opened || downloadsPopup.opened || downloadPanel.opened
+    // A la vista fuera de F11; al abrir Mitis también (para saber dónde están)
+    property bool controlsAwake: true
+    onControlsInUseChanged: {
+        if (controlsInUse) {
+            controlsAwake = true
+            controlsHold.stop()
+        } else {
+            controlsHold.restart()
+        }
+    }
+    Timer {
+        id: controlsHold
+        interval: Theme.controlsHold
+        running: true
+        onTriggered: if (!win.controlsInUse) win.controlsAwake = false
+    }
+    // En la nueva pestaña no se ocultan: no hay página que tapar
+    readonly property bool controlsShown: !settingsOpen && (immersive
+        ? !pageFullScreen && (controlsInUse || revealHover.hovered)
+        : controlsAwake || showingNewTabPage)
 
     onImmersiveChanged: {
         if (immersive) {
@@ -753,24 +884,65 @@ Window {
         onTriggered: win.pollMedia()
     }
 
-    // Roles: initialUrl (solo al crear), url, title, icon, audible, muted, pinned,
+    // Roles: initialUrl (solo al crear), url, title, icon, audible, muted, microphone, camera, pinned,
     // lifecycle ("active", "frozen" o "discarded": BrowserTab.lifecycle)
     ListModel {
         id: tabs
     }
 
+    // ── Barra de título que se oculta sola ───────────────────────────
+    // Flota sobre la página (no la empuja) y está oculta desde que se abre
+    // Mitis: aparece al pasar el ratón por el borde superior y se queda
+    // `titleBarHold` tras quitarlo. Con Configuración abierta, siempre (no
+    // hay página que tapar). Sube y baja moviendo su `y`: lo anclado a su
+    // borde inferior (buscar, zoom, panel de memoria) la acompaña.
+    property bool titleBarShown: false
+    readonly property bool titleBarPinned: settingsOpen || titleBarHover.hovered || titleRevealHover.hovered
+    onTitleBarPinnedChanged: {
+        if (titleBarPinned) {
+            titleBarShown = true
+            titleBarHold.stop()
+        } else {
+            titleBarHold.restart()
+        }
+    }
+    Timer {
+        id: titleBarHold
+        interval: Theme.titleBarHold
+        onTriggered: if (!win.titleBarPinned) win.titleBarShown = false
+    }
+
     TitleBar {
         id: titleBar
+        z: 2
         window: win
         privateMode: win.privateMode
         onProfileRequested: win.openSettings("profile")
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.top: parent.top
-        // En pantalla completa desaparece y la página (y lo anclado a la
-        // barra, como la búsqueda) sube hasta el borde superior
+        y: win.titleBarShown ? 0 : -height
+        Behavior on y {
+            NumberAnimation { duration: Theme.durationBase; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeOut }
+        }
+        // En pantalla completa desaparece y lo anclado a la barra (como la
+        // búsqueda) sube hasta el borde superior
         height: win.immersive ? 0 : implicitHeight
+        visible: !win.immersive && y > -height
+        HoverHandler { id: titleBarHover }
+    }
+
+    // Franja del borde superior que muestra la barra. No bloquea el ratón:
+    // la página sigue recibiendo el hover y los clics. Sin maximizar, justo
+    // debajo del borde de redimensionar, con algo de tolerancia.
+    Item {
+        z: 2
+        readonly property bool windowed: win.visibility === Window.Windowed
+        anchors.left: parent.left
+        anchors.right: parent.right
+        y: windowed ? Theme.resizeGrip : 0
+        height: windowed ? Theme.titleBarRevealTolerance : Theme.fullscreenRevealEdge
         visible: !win.immersive
+        HoverHandler { id: titleRevealHover }
     }
 
     // Flota sobre la página: se dibuja encima de ella
@@ -825,7 +997,8 @@ Window {
 
     Item {
         id: pages
-        anchors.top: titleBar.bottom
+        // Desde el borde superior: la barra de título flota encima
+        anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
@@ -868,12 +1041,20 @@ Window {
                 }
                 onIconChanged: tabs.setProperty(index, "icon", icon.toString())
                 onMutedChanged: tabs.setProperty(index, "muted", tab.muted)
+                onMicrophoneChanged: tabs.setProperty(index, "microphone", tab.microphone)
+                onCameraChanged: tabs.setProperty(index, "camera", tab.camera)
                 onLifecycleChanged: tabs.setProperty(index, "lifecycle", tab.lifecycle)
                 onAudibleChanged: {
                     tabs.setProperty(index, "audible", tab.audible)
-                    if (tab.audible) {
-                        win.mediaView = tab
-                        win.pollMedia()
+                    // Solo si tiene algo que reproducir: una llamada (Meet,
+                    // Zoom…) suena pero no se lleva el mini reproductor
+                    if (tab.audible && tab !== win.mediaView) {
+                        tab.mediaState(state => {
+                            if (state && tab.audible) {
+                                win.mediaView = tab
+                                win.media = state
+                            }
+                        })
                     }
                 }
 
@@ -1043,7 +1224,7 @@ Window {
     OptionsPopup {
         id: optionsPopup
         parent: bottomBar.optionsButton
-        developer: Settings.devTools
+        performanceMonitor: Settings.performanceMonitor
         x: parent.width - width
         y: -height - Theme.floatingMargin
         onOptionSelected: key => {
@@ -1057,8 +1238,8 @@ Window {
                 win.openSettings()
             else if (key === "profile")
                 win.openSettings("profile")
-            else if (key === "memory")
-                win.toggleMemoryPanel()
+            else if (key === "performance")
+                win.togglePerformancePanel()
         }
     }
 
@@ -1106,15 +1287,17 @@ Window {
     }
 
     MemoryPanel {
-        id: memoryPanel
+        id: performancePanel
         z: 1
         anchors.top: titleBar.bottom
         anchors.topMargin: Theme.floatingMargin
         anchors.left: parent.left
         anchors.leftMargin: Theme.margin
-        onRefreshRequested: win.measureMemory()
+        // Configuración lo tapa: se oculta (y deja de medir) mientras está abierta
+        shown: Settings.performanceMonitor && win.performancePanelOpen && !win.settingsOpen
+        onRefreshRequested: win.measurePerformance()
         onTabSelected: index => win.selectTab(index)
-        onCloseRequested: win.toggleMemoryPanel()
+        onCloseRequested: win.togglePerformancePanel()
     }
 
     ZoomIndicator {
@@ -1131,6 +1314,19 @@ Window {
         onResetRequested: win.zoomBy(0)
     }
 
+    // Con los controles ocultos: pestaña con el título de la página que los
+    // vuelve a mostrar (no en pantalla completa ni con Configuración)
+    ControlsTab {
+        id: controlsTab
+        z: 1
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        title: bottomBar.pageTitle
+        visible: opacity > 0
+        opacity: !win.controlsShown && !win.immersive && !win.settingsOpen ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: Theme.durationBase } }
+    }
+
     MiniPlayer {
         z: 1
         anchors.horizontalCenter: parent.horizontalCenter
@@ -1138,8 +1334,11 @@ Window {
         anchors.bottom: bottomBar.top
         anchors.bottomMargin: Theme.spacing - Theme.floatingMargin
         visible: opacity > 0
-        // Va con los controles inferiores: en pantalla completa se oculta con ellos
-        opacity: win.media && win.controlsShown ? 1 : 0
+        // Va con los controles inferiores: en pantalla completa se oculta con
+        // ellos. En la pestaña que suena no hace falta (está su propio
+        // reproductor), salvo con Configuración abierta encima
+        opacity: win.media && win.controlsShown
+                 && (win.mediaView !== win.currentView || win.settingsOpen) ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: Theme.durationBase } }
         HoverHandler { id: playerHover }
 
@@ -1198,13 +1397,13 @@ Window {
         onActivated: win.toggleDevTools(win.currentView)
         onActivatedAmbiguously: win.toggleDevTools(win.currentView)
     }
-    // Panel de memoria (como el administrador de tareas de Chrome)
+    // Monitor de rendimiento (como el administrador de tareas de Chrome)
     Shortcut {
         sequence: "Shift+Esc"
         context: Qt.ApplicationShortcut
-        enabled: win.ownsShortcuts && (Settings.devTools || memoryPanel.shown)
-        onActivated: win.toggleMemoryPanel()
-        onActivatedAmbiguously: win.toggleMemoryPanel()
+        enabled: win.ownsShortcuts && Settings.performanceMonitor
+        onActivated: win.togglePerformancePanel()
+        onActivatedAmbiguously: win.togglePerformancePanel()
     }
     Shortcut {
         sequence: "F11"

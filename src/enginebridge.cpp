@@ -9,6 +9,7 @@
 #include <QtDebug>
 
 #include "contentblocker.h"
+#include "notifier.h"
 #include "requestinterceptor.h"
 
 namespace {
@@ -48,12 +49,19 @@ EngineBridge::EngineBridge(const QString &widevinePath, QObject *parent)
     // guarda el motor, por sitio. Cámara y micrófono: BrowserProfile.qml.
     m_profile->setPersistentPermissionsPolicy(QQuickWebEngineProfile::PersistentPermissionsPolicy::StoreOnDisk);
     installInterceptor(m_profile);
+
+    // Notificaciones de las páginas: del sistema, no dentro de Mitis
+    m_notifier = new SystemNotifier(this);
+    connect(m_notifier, &SystemNotifier::activated, this, &EngineBridge::notificationActivated);
+    m_notifier->attach(m_profile);
 }
 
 // Los perfiles se destruyen antes que la aplicación (main.cpp): después,
 // Qt WebEngine se queda bloqueado al cerrar
 EngineBridge::~EngineBridge()
 {
+    // Las notificaciones abiertas son del motor: se sueltan antes que el perfil
+    delete m_notifier;
     delete m_profile;
 }
 
@@ -66,6 +74,7 @@ QQuickWebEngineProfile *EngineBridge::createPrivateProfile()
     profile->setPersistentCookiesPolicy(QQuickWebEngineProfile::NoPersistentCookies);
     profile->setPersistentPermissionsPolicy(QQuickWebEngineProfile::PersistentPermissionsPolicy::StoreInMemory);
     installInterceptor(profile);
+    m_notifier->attach(profile);
     // Es de C++: QML no debe recogerlo como basura
     QQmlEngine::setObjectOwnership(profile, QQmlEngine::CppOwnership);
     return profile;

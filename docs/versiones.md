@@ -5,9 +5,9 @@
 [Semantic Versioning](https://semver.org/lang/es/) (`MAYOR.MENOR.PARCHE`), adaptado a la etapa del proyecto:
 
 - **Mientras sea 0.x**, la interfaz y los datos aún pueden cambiar sin aviso.
-  - **MENOR** sube con cada fase cerrada del [plan](PLAN.md) o con un conjunto de funciones nuevas que merezca publicarse. Al cerrar una fase, la versión menor coincide con su número: Fase 5 → `0.5.0`.
+  - **MENOR** sube con cada conjunto de funciones nuevas que merezca publicarse (tareas del [plan](PLAN.md)). Hasta la 0.5.0 coincidió con las fases del plan original (Fase 5 → `0.5.0`).
   - **PARCHE** sube con versiones que solo corrigen errores (o cambios menores sin funciones nuevas): `0.5.1`, `0.5.2`…
-- **1.0.0** llegará cuando se cumplan los criterios de la Fase 6: alguien sin Qt instalado puede descargar Mitis y usarlo en Linux, Windows y macOS.
+- **1.0.0** llegará cuando alguien sin Qt instalado pueda descargar Mitis y usarlo de verdad en Linux, Windows y macOS: con los paquetes de los tres probados, firmados y con contenido protegido funcionando (ver el [plan](PLAN.md)).
 - **A partir de 1.0**, SemVer normal: MAYOR si se pierden datos o ajustes al actualizar o desaparece algo que se usaba, MENOR con funciones nuevas, PARCHE con correcciones.
 
 Historial con este esquema (ver [CHANGELOG.md](../CHANGELOG.md)):

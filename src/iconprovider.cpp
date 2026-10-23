@@ -4,6 +4,7 @@
 #include <QDir>
 #include <QFile>
 #include <QImage>
+#include <QLinearGradient>
 #include <QPainter>
 #include <QSvgRenderer>
 #include <QtDebug>
@@ -21,12 +22,18 @@ IconProvider::IconProvider(const QString &iconDir)
 
 QImage IconProvider::requestImage(const QString &id, QSize *size, const QSize &requestedSize)
 {
-    // id = "<nombre>?color=<aarrggbb>"
+    // id = "<nombre>?color=<aarrggbb>[&end=<aarrggbb>]"; con `end`, el icono
+    // se rellena con un degradado diagonal de `color` a `end`
     const QString name = id.section(QLatin1Char('?'), 0, 0);
-    const QString query = id.section(QLatin1Char('?'), 1);
+    const QStringList params = id.section(QLatin1Char('?'), 1).split(QLatin1Char('&'));
     QColor color(Qt::white);
-    if (query.startsWith(QLatin1String("color=")))
-        color = QColor(QLatin1Char('#') + query.mid(6));
+    QColor end;
+    for (const QString &param : params) {
+        if (param.startsWith(QLatin1String("color=")))
+            color = QColor(QLatin1Char('#') + param.mid(6));
+        else if (param.startsWith(QLatin1String("end=")))
+            end = QColor(QLatin1Char('#') + param.mid(4));
+    }
 
     const QSize target(requestedSize.width() > 0 ? requestedSize.width() : DefaultSize,
                        requestedSize.height() > 0 ? requestedSize.height() : DefaultSize);
@@ -57,6 +64,16 @@ QImage IconProvider::requestImage(const QString &id, QSize *size, const QSize &r
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setOpacity(color.alphaF());
     renderer.render(&painter);
+
+    // Degradado: la forma del icono (dibujada arriba) recorta el degradado
+    if (end.isValid()) {
+        QLinearGradient gradient(0, 0, target.width(), target.height());
+        gradient.setColorAt(0, color);
+        gradient.setColorAt(1, end);
+        painter.setOpacity(1);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        painter.fillRect(image.rect(), gradient);
+    }
 
     return image;
 }

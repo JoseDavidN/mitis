@@ -60,31 +60,22 @@ Rectangle {
         onDoubleTapped: root.toggleMaximized()
     }
 
-    // Marca. El cuadrado con degradado ocupa el lugar del icono hasta tenerlo
+    // Marca: el nombre de Mitis (el del logo, sin el icono), en su versión
+    // para temas oscuros o para el Claro
     Row {
         anchors.left: parent.left
         anchors.leftMargin: Theme.margin + Theme.spacing / 2
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.spacing
 
-        Rectangle {
-            width: Theme.logoSize
-            height: Theme.logoSize
-            radius: Theme.radiusSmall
+        Image {
+            height: Theme.titleBarLogoHeight
+            width: height * implicitWidth / Math.max(1, implicitHeight)
             anchors.verticalCenter: parent.verticalCenter
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: Theme.brand1 }
-                GradientStop { position: 1.0; color: Theme.brand2 }
-            }
-        }
-
-        Text {
-            text: "Mitis"
-            color: Theme.inkSoft
-            font.pixelSize: Theme.fontSizeTitle
-            font.weight: Font.DemiBold
-            anchors.verticalCenter: parent.verticalCenter
+            source: Theme.dark ? "qrc:/branding/mitis-wordmark-dark.png" : "qrc:/branding/mitis-wordmark-light.png"
+            fillMode: Image.PreserveAspectFit
+            smooth: true
+            mipmap: true
         }
         // «Beta» mientras la versión lo sea (CMakeLists.txt: MITIS_VERSION_SUFFIX)
         Rectangle {

@@ -174,6 +174,8 @@ QtObject {
 
     // ── Medidas ──────────────────────────────────────────────────────
     readonly property int titleBarHeight: 30
+    // Ventana la primera vez (sin tamaño guardado): esta parte de la pantalla
+    readonly property real windowDefaultRatio: 0.75
     readonly property int bottomBarMaxWidth: 1100
     readonly property int floatingMargin: 10
     readonly property int buttonSize: 32
@@ -181,6 +183,8 @@ QtObject {
     readonly property int buttonSizeSmall: 24
     readonly property int controlHeight: 34
     readonly property int logoSize: 18
+    // Nombre de Mitis (logo sin icono) en la barra de título: alto
+    readonly property int titleBarLogoHeight: 20
     readonly property int iconSize: 16
     readonly property int iconSizeSmall: 14
     readonly property int faviconSize: 16
@@ -215,6 +219,16 @@ QtObject {
     readonly property int settingsNavWidth: 220
     // Por debajo de este ancho de ventana el índice se oculta
     readonly property int settingsNavBreakpoint: 900
+    // El índice ocupa como mucho esta parte del alto disponible (se desplaza)
+    readonly property real settingsNavHeightRatio: 0.4
+    // Logo completo de Mitis al pie del índice y «by StartCode» al final de
+    // los ajustes (cada uno en su versión para temas oscuros o para el Claro)
+    readonly property int settingsMitisLogoWidth: 180
+    readonly property int settingsLogoWidth: 80
+    // Fundido de los bordes del índice y de la columna de ajustes: alto de la
+    // franja y escalones en que se reparte (sin shaders: funciona sin GPU)
+    readonly property int settingsFadeHeight: 40
+    readonly property int settingsFadeSteps: 10
     readonly property int settingsHeaderHeight: 64
     readonly property int settingsSectionSpacing: 32
     readonly property int settingsRowHeight: 60
@@ -246,11 +260,33 @@ QtObject {
     readonly property int findBarWidth: 440
     readonly property int zoomLabelWidth: 52
     readonly property int miniPlayerHeight: 34
+    // Mini reproductor: negro en todos los temas (como la paleta de DevTools).
+    // Botones sin fondo: solo el icono, relleno y redondeado, en blanco; al
+    // pasar el ratón se tiñe con el degradado de la marca y crece un poco.
+    // El degradado es fijo (no el del tema): el Oscuro tiene la marca de un
+    // solo color y el Claro, tonos pensados para fondo claro
+    readonly property color miniPlayerBg: "#000000"
+    readonly property color miniPlayerLine: Qt.rgba(1, 1, 1, 0.14)
+    readonly property color miniPlayerInk: "#ffffff"
+    readonly property color miniPlayerInkSoft: Qt.rgba(1, 1, 1, 0.72)
+    readonly property color miniPlayerHoverStart: "#c084fc"
+    readonly property color miniPlayerHoverEnd: "#f472b6"
+    readonly property int miniPlayerButtonSize: 26
+    readonly property int miniPlayerIconSize: 18
+    readonly property real miniPlayerHoverScale: 1.18
     // Descarga actual: panel, barra de progreso y anillo del botón
     readonly property int downloadPanelWidth: 340
     // Panel de memoria (desarrollo): ancho y cada cuánto vuelve a medir (ms)
     readonly property int memoryPanelWidth: 360
     readonly property int memoryPanelRefresh: 2000
+    // Gráficas del monitor: alto, muestras que guardan (60 × 2 s = 2 min),
+    // trazo, opacidad del relleno bajo la línea y color de cada serie
+    readonly property int performanceChartHeight: 36
+    readonly property int performanceHistoryLength: 60
+    readonly property real performanceChartLineWidth: 1.5
+    readonly property real performanceChartFillOpacity: 0.16
+    readonly property color performanceCpu: brandLight1
+    readonly property color performanceMemory: ok
     readonly property int downloadBarHeight: 4
     readonly property int progressRingWidth: 2
     // Sin total conocido: tramo que recorre la barra y arco que gira (fracción)
@@ -266,6 +302,13 @@ QtObject {
     readonly property int pageRowHeight: 48
     // Pantalla completa (F11): franja del borde inferior que muestra los controles
     readonly property int fullscreenRevealEdge: 4
+    // Barra de título que se oculta sola: con la ventana sin maximizar, la
+    // franja que la muestra va justo debajo del borde de redimensionar
+    // (resizeGrip), con este alto de tolerancia
+    readonly property int titleBarRevealTolerance: 10
+    // Pestaña del borde inferior con los controles ocultos (ControlsTab)
+    readonly property int controlsTabHeight: 22
+    readonly property int controlsTabMaxWidth: 280
 
     // ── Tipografía ───────────────────────────────────────────────────
     readonly property int fontSizeHeading: 24
@@ -308,6 +351,10 @@ QtObject {
     readonly property int downloadPanelHold: 10000
     // Aviso «Datos borrados» de Configuración
     readonly property int clearedNoticeHold: 3000
+    // La barra de título se queda este tiempo tras quitar el ratón
+    readonly property int titleBarHold: 5000
+    // Los controles inferiores se ocultan este tiempo después de dejar de usarlos
+    readonly property int controlsHold: 5000
     // Aviso «Pulsa Esc/F11 para salir de la pantalla completa»
     readonly property int fullscreenHintHold: 3000
     // Una vuelta del anillo de progreso sin total conocido

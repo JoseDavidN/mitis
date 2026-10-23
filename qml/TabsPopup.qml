@@ -10,7 +10,7 @@ import QtQuick.Controls.Basic
 Popup {
     id: root
 
-    // Modelo con los roles: title, icon, url, audible, muted, pinned, lifecycle
+    // Modelo con los roles: title, icon, url, audible, muted, microphone, camera, pinned, lifecycle
     required property var tabs
     property int currentIndex: 0
     // Pestañas cerradas que se pueden reabrir
@@ -415,6 +415,9 @@ Popup {
                 required property url url
                 required property bool audible
                 required property bool muted
+                // 0 sin uso, 1 silenciado, 2 en uso (BrowserTab.microphone/camera)
+                required property int microphone
+                required property int camera
                 required property bool pinned
                 required property string lifecycle
 
@@ -536,6 +539,34 @@ Popup {
                                 text: row.lifecycle === "frozen" ? "Congelada para ahorrar memoria"
                                                                  : "Descargada para ahorrar memoria: se recargará al abrirla"
                                 visible: suspendedHover.hovered
+                            }
+                        }
+
+                        // Micrófono o cámara en uso: rojo; abiertos pero silenciados: apagado
+                        Item {
+                            visible: row.microphone > 0 || row.camera > 0
+                            width: Theme.buttonSizeSmall
+                            height: Theme.buttonSizeSmall
+
+                            Icon {
+                                anchors.centerIn: parent
+                                name: row.microphone > 0 && row.camera > 0 ? "camera-microphone"
+                                    : row.camera > 0 ? "camera" : "microphone"
+                                size: Theme.iconSizeSmall
+                                color: row.microphone === 2 || row.camera === 2 ? Theme.dangerStrong : Theme.inkMuted
+                            }
+                            HoverHandler { id: captureHover }
+                            Tooltip {
+                                text: {
+                                    const parts = []
+                                    if (row.microphone > 0)
+                                        parts.push(row.microphone === 2 ? "Usando el micrófono" : "Micrófono silenciado")
+                                    if (row.camera > 0)
+                                        parts.push(row.camera === 2 ? "usando la cámara" : "cámara apagada")
+                                    const text = parts.join(" · ")
+                                    return text.charAt(0).toUpperCase() + text.slice(1)
+                                }
+                                visible: captureHover.hovered
                             }
                         }
 

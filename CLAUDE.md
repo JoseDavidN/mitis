@@ -3,7 +3,7 @@
 Mitis es un navegador web personal, ligero y multiplataforma (Linux, Windows, macOS).
 Chromium (vía Qt WebEngine) **solo renderiza páginas**. Toda la interfaz y sus funciones son propias.
 
-Plan de desarrollo por fases: `docs/PLAN.md`. Antes de empezar una tarea, revisa en qué fase va el proyecto y respeta el orden.
+Tareas pendientes, por área (interfaz, identidad visual, motor web, distribución): `docs/PLAN.md`. Lo ya hecho (Fases 0–6, versión 0.5.0) está en `CHANGELOG.md`. Al terminar una tarea, se quita del plan y se apunta en el CHANGELOG.
 Sistema de diseño (colores, tokens, componentes): `DESIGN.md`. Todo cambio visual debe seguirlo.
 
 ## Objetivos que guían toda decisión
@@ -39,16 +39,18 @@ src/            C++ (main.cpp, devreloader.*, iconprovider.*: iconos SVG colorea
                 settings.*: ajustes guardados con QSettings, singleton `Settings` del módulo Mitis.Core,
                 history.*: historial en SQLite, escritura en un hilo propio (singleton `History`),
                 bookmarks.*: marcadores en SQLite (singleton `Bookmarks`),
-                memorymonitor.*: memoria de Mitis y de sus procesos del motor (singleton `MemoryMonitor`),
+                memorymonitor.*: memoria, CPU y GPU de Mitis y de sus procesos del motor (singleton `MemoryMonitor`; GPU solo en Linux),
                 filterengine.*: motor de filtros de anuncios (sintaxis EasyList/uBlock y hosts de Pi-hole), sin dependencias del motor web,
                 contentblocker.*: bloqueador: descarga, guarda, renueva y compila las listas; lo consulta RequestInterceptor,
+                notifier.*: notificaciones de las páginas como notificaciones del sistema (D-Bus en Linux, Shell_NotifyIcon en Windows, notifier_mac.mm en macOS); lo crea EngineBridge,
+                captureindicator.*: aviso de micrófono/cámara en el icono de la ventana (singleton `CaptureIndicator`; cada BrowserTab informa con report()),
                 links.*: enlaces que el sistema pide abrir (navegador predeterminado) y un solo Mitis por perfil (singleton `Links`))
 qml/            Interfaz. Todos los archivos planos en esta carpeta.
-  Main.qml            Ventana, modelo de pestañas, navegación, atajos, sesión (no conoce el motor). La ventana privada es otra instancia (privateMode)
+  Main.qml            Ventana (tamaño recordado en Settings, «Window/geometry»), modelo de pestañas, navegación, atajos, sesión (no conoce el motor). La ventana privada es otra instancia (privateMode)
   BrowserTab.qml      Una pestaña: envuelve WebEngineView y ofrece solo lo que usa la interfaz
   BrowserProfile.qml  Singleton: completa y atiende el perfil que crea C++ (scripts inyectados, User-Agent, descargas, permisos) y el de las ventanas privadas
   Theme.qml           Singleton: colores (tres temas: Nocturno, Oscuro, Claro; Settings.theme), medidas, animaciones
-  TitleBar.qml        Barra superior: marca (icono + "Mitis") y controles de ventana
+  TitleBar.qml        Barra superior: nombre de Mitis (logo sin icono, según el tema) y controles de ventana
   BottomBar.qml       Controles inferiores flotantes: navegación, dirección, pestañas, marcadores, opciones
   AddressBar.qml      Campo de dirección/búsqueda, con sugerencias de marcadores e historial
   TabsPopup.qml       Lista desplegable de pestañas
@@ -75,11 +77,12 @@ qml/            Interfaz. Todos los archivos planos en esta carpeta.
   RadioMark.qml       Círculo de elección única (lo dibuja; el clic es de su fila)
   CheckMark.qml       Casilla de verificación (lo dibuja; el clic es de su fila)
   NewsCard.qml        Tarjeta de noticia
+  ControlsTab.qml     Pestaña del borde inferior con los controles ocultos (título de la página; al pasar el ratón, los muestra)
   MiniPlayer.qml      Mini reproductor sobre la barra de búsqueda
   FindBar.qml         Buscar en la página (Ctrl+F)
   ZoomIndicator.qml   Indicador de zoom (arriba a la derecha, se cierra solo)
   Avatar.qml          Avatar del perfil: foto recortada en círculo (Canvas) o inicial sobre su color
-  MemoryPanel.qml     Panel de memoria (desarrollo, Shift+Esc): total, por tipo de proceso y por pestaña
+  MemoryPanel.qml     Monitor de rendimiento (Settings.performanceMonitor, Shift+Esc): CPU y memoria con gráfica, GPU, por tipo de proceso y por pestaña
   News.qml            Singleton: noticias de tecnología (RSS), compartidas por todas las pestañas
   TextButton.qml      Botón con texto (primary = degradado de marca; danger = acción arriesgada)
   FormField.qml       Campo de texto de formulario
@@ -92,7 +95,7 @@ qml/            Interfaz. Todos los archivos planos en esta carpeta.
   FilePicker.qml      Selector de archivos de las páginas (<input type=file>): diálogo del sistema, uno por ventana
   qmldir              Solo para --dev: declara los singletons
 assets/         icons/ (SVG de Lucide, nombrados por uso), fonts/ (Nunito),
-                scripts/ (JS que Mitis inyecta: media.js, puente multimedia en las páginas;
+                scripts/ (JS que Mitis inyecta: media.js, puente multimedia en las páginas (ignora llamadas: cámara/micrófono o WebRTC con medios) y aviso de micrófono/cámara ("mitis:capture" por consola);
                 devtools.js, tema negro del panel de DevTools; drm.js, detecta páginas que
                 piden Widevine cuando falta)
 docs/           Documentación y plan (rendimiento.md: comparativa de memoria; versiones.md: esquema y cómo publicar)
@@ -102,16 +105,16 @@ tools/codecs/   Compilar Qt WebEngine con códecs propietarios (H.264, AAC) para
 tools/          medir_ram.py: mide la RAM de Mitis, Chrome o Firefox con las páginas de paginas.txt
 installer/      Instalador de Windows (proyecto CMake aparte, Win32 + GDI+, sin Qt): src/main.cpp (ventana),
                 src/instalacion.* (extraer, accesos, registro, desinstalar), empaquetar.ps1 (pega el ZIP al .exe)
-assets/branding/ Icono provisional de Mitis (mitis.svg → mitis.png, mitis.ico; mitis.rc lo pone en Mitis.exe) y logo de StartCode para el instalador
+assets/branding/ Icono de Mitis (mitis-icon.svg → mitis.png, mitis.ico; mitis.rc lo pone en Mitis.exe), logo completo (mitis-logo-dark/light.svg → .png, Configuración), solo el nombre (mitis-wordmark-dark/light.svg → .png, barra de título) y logo de StartCode (startcode.png; startcode-light.png para el tema Claro)
 packaging/macos/ Info.plist.in (abre http/https y HTML: navegador predeterminado)
-packaging/linux/ PKGBUILD (Arch, mitis-git), appimage.sh (+ apprun-sandbox.sh), mitis.desktop, mitis.svg (icono provisional)
+packaging/linux/ PKGBUILD (Arch, mitis-git), appimage.sh (+ apprun-sandbox.sh), mitis.desktop, mitis.svg (copia de mitis-icon.svg)
 .github/workflows/compilar.yml  En cada push, solo Windows (instalador); Linux y macOS a mano («todos»); release con etiqueta v*
 ```
 
 ## Diseño de la interfaz
 
-- **Arriba:** barra de título con el icono y el nombre "Mitis" a la izquierda, y a la derecha el avatar del perfil (abre Configuración → Perfil; no en ventanas privadas) y minimizar/maximizar/cerrar. Nada más. Se arrastra para mover y con doble clic maximiza.
-- **Abajo:** controles independientes que flotan sobre la página, **sin barra ni fondo**: atrás, adelante, recargar, campo de dirección, pestañas, marcadores y opciones. La página llega hasta el borde inferior de la ventana y cada control lleva su propio fondo y borde, sin sombra. El progreso de carga va dentro del campo de dirección.
+- **Arriba:** barra de título con el nombre de Mitis (el del logo, sin icono; versión clara u oscura según el tema) a la izquierda, y a la derecha el avatar del perfil (abre Configuración → Perfil; no en ventanas privadas) y minimizar/maximizar/cerrar. Nada más. Se arrastra para mover y con doble clic maximiza. **Se oculta sola** (oculta desde que se abre Mitis): flota sobre la página, aparece al pasar el ratón por el borde superior (sin maximizar, una franja de tolerancia bajo el borde de redimensionar) y se queda `titleBarHold` (5 s) tras quitarlo; con Configuración abierta, siempre visible.
+- **Abajo:** controles independientes que flotan sobre la página, **sin barra ni fondo**: atrás, adelante, recargar, campo de dirección, pestañas, marcadores y opciones. La página llega hasta el borde inferior de la ventana y cada control lleva su propio fondo y borde, sin sombra. El progreso de carga va dentro del campo de dirección. **Se ocultan solos** `controlsHold` (5 s) después de dejar de usarlos, para no tapar lo que las páginas fijan abajo; no vuelven al pasar por el borde ni al desplazar: solo con la pestaña del borde inferior (`ControlsTab`, con el título de la página). En la nueva pestaña no se ocultan.
 - Botones redondeados y flotantes (`IconButton`). Las listas desplegables de la barra inferior se abren hacia arriba.
 
 ## Reglas de código
@@ -132,6 +135,7 @@ packaging/linux/ PKGBUILD (Arch, mitis-git), appimage.sh (+ apprun-sandbox.sh), 
 - **Perfiles:** los crea `EngineBridge` en C++: el normal con su nombre de almacenamiento desde el constructor (creado en QML, Qt avisa de que quedará obsoleto y arranca un instante sin disco) y el privado con nombre vacío (`createPrivateProfile()`/`destroyPrivateProfile()`). Viven toda la app, también entre recargas de `--dev`: lo que `BrowserProfile` les pone (scripts, enlaces) debe poder repetirse sin duplicar. `main.cpp` crea el puente antes de la interfaz y lo destruye después de ella y antes de la aplicación.
 - **Navegador predeterminado:** los enlaces llegan como argumentos (`Mitis https://…`) o, en macOS, como evento FileOpen. `Links` (C++) deja un solo Mitis por perfil: el que arranca con otro abierto le pasa sus enlaces por `QLocalServer` (canal que depende de la carpeta de datos: un perfil de pruebas con otra carpeta XDG no se los manda al Mitis del usuario) y termina. `Main.qml` (solo la ventana principal) los abre en pestañas nuevas. Registro: `mitis.desktop` (Linux), `Info.plist.in` (macOS) y el instalador (Windows: ProgID `MitisHTML`, `RegisteredApplications`).
 - **Opciones de Chromium** (`setupChromiumFlags()` en `main.cpp`, antes de iniciar el motor): sin peticiones en segundo plano, sin `<a ping>`, sin las APIs publicitarias de Privacy Sandbox, y `prefers-color-scheme` según el tema guardado (solo al arrancar: Qt WebEngine no deja cambiarlo en marcha). Las de `QTWEBENGINE_CHROMIUM_FLAGS` van detrás y ganan; un `--disable-features` propio sustituye la lista entera. Límite de procesos, `--process-per-site` y `--enable-low-end-device-mode` se midieron y no ahorran memoria (docs/rendimiento.md).
+- **Notificaciones: siempre del sistema, nunca dentro de Mitis.** `SystemNotifier` (`src/notifier.*`) atiende `presentNotification` de los dos perfiles y las manda al sistema; al pulsarlas, `MitisEngine.notificationActivated(origin)` y `Main.qml` trae al frente la pestaña del sitio. Las notificaciones push (sitio cerrado, `pushManager.subscribe`) no existen en Qt WebEngine: no hay servicio push («push service not available»); no fingirlo. Para probar en Linux sin escritorio: un servidor `org.freedesktop.Notifications` falso en un bus de sesión propio (`dbus-daemon --session --fork --print-address`).
 - **Descargas:** motor → `BrowserProfile` (`onDownloadRequested`: acepta, registra con `Downloads.add()` y mantiene el modelo con `Downloads.update()` desde las señales del objeto, sin sondeo) → `Downloads.qml` (singleton sin motor: modelo `items`, acciones, y listado de terminadas guardado en `Settings`, categoría `Downloads`) → interfaz, que solo usa `Downloads`. El nombre repetido lo resuelve el propio motor (`archivo (1).ext`).
 
 ### Ajustes
@@ -140,7 +144,7 @@ packaging/linux/ PKGBUILD (Arch, mitis-git), appimage.sh (+ apprun-sandbox.sh), 
 - Una preferencia nueva que se elija en la interfaz: propiedad en `Settings`, fila en `SettingsPage.qml` y su clave en `resetPreferences()` (`settings.cpp`).
 - **Suspensión de pestañas** (Fase 5): `Main.qml` decide cuándo (temporizador: congelar a los 5 min oculta, descargar a los `Settings.suspendAfter`; nunca fijadas ni la del mini reproductor) y `BrowserTab.suspend()` aplica el estado del motor (`lifecycleState`) con sus excepciones (suena, DevTools, `recommendedState`, permiso de notificaciones, formulario con datos). Al volver a verse, la pestaña se reactiva sola.
 - **Bloqueador de anuncios** (Fase 5): `ContentBlocker` guarda las listas en la carpeta de datos (`filtros/`), las renueva cada 4 días y las compila en un hilo con `FilterEngine` (~335 000 reglas, <1 s, ~4 MB, ~10 µs por petición). Para no romper páginas: la página principal solo se bloquea con reglas `$document`; si el usuario visita un dominio de las listas, sus propios recursos no se bloquean; una regla con opciones que no se entienden (`redirect`, `csp`…) se descarta entera. La ocultación de elementos es solo por sitio: `BrowserTab` pone el CSS del sitio en un script de la vista al empezar cada carga (`MitisEngine.cosmeticCss`). Para probar el motor sin compilar Mitis, basta con compilar `filterengine.cpp` con un `main` que lo use (solo necesita Qt Core).
-- Dónde se aplica cada preferencia: las de la página (JavaScript, imágenes, emergentes, modo oscuro, zoom, permisos bloqueados) en `BrowserTab`; las del perfil (idiomas, carpeta, borrar al cerrar) en `BrowserProfile`; las que van petición a petición (cookies de terceros, No rastrear, conexiones seguras, bloqueador y parámetros de rastreo) en C++, en `EngineBridge`/`RequestInterceptor`, enlazadas desde `BrowserProfile`.
+- Dónde se aplica cada preferencia: las de la página (JavaScript, imágenes, emergentes, modo oscuro, ocultar la barra de desplazamiento, zoom, permisos bloqueados) en `BrowserTab`; las del perfil (idiomas, carpeta, borrar al cerrar) en `BrowserProfile`; las que van petición a petición (cookies de terceros, No rastrear, conexiones seguras, bloqueador y parámetros de rastreo) en C++, en `EngineBridge`/`RequestInterceptor`, enlazadas desde `BrowserProfile`.
 
 ### C++
 - Lógica pesada, persistencia y todo lo que toque el motor a bajo nivel va en C++, expuesto a QML con `QML_ELEMENT` / `QML_SINGLETON`.
@@ -151,6 +155,7 @@ packaging/linux/ PKGBUILD (Arch, mitis-git), appimage.sh (+ apprun-sandbox.sh), 
 ### Instalador de Windows (`installer/`)
 - No usa Qt (se ejecuta antes de que esté instalado): Win32, GDI+ y miniz (se descarga al configurar, con su hash). CRT estático.
 - Sus colores son los de Nocturno copiados en `src/main.cpp`: si cambia el tema, cambiarlos también allí. Medidas a 100 % de escala, multiplicadas por los DPI.
+- Si Mitis ya está instalado (clave de desinstalación o `Mitis.exe` en su carpeta), pregunta antes: desinstalar, reinstalar/actualizar o cancelar.
 - Formato: `[MitisInstalador.exe][ZIP][desplazamiento 8 bytes][«MITISPAQ»]`. El desinstalador es el mismo `.exe` sin el paquete, con `--desinstalar`.
 - Solo se compila en Windows (GitHub Actions); aquí no hay compilador para probarlo.
 

@@ -34,6 +34,8 @@ class Settings : public QObject
     Q_PROPERTY(QString downloadFolder READ downloadFolder WRITE setDownloadFolder NOTIFY downloadFolderChanged)
     // Herramientas de desarrollo: «Inspeccionar» y F12. Desactivadas de serie
     Q_PROPERTY(bool devTools READ devTools WRITE setDevTools NOTIFY devToolsChanged)
+    // Monitor de rendimiento: el panel de memoria, CPU y GPU. Desactivado de serie
+    Q_PROPERTY(bool performanceMonitor READ performanceMonitor WRITE setPerformanceMonitor NOTIFY performanceMonitorChanged)
     // Al abrir Mitis: "restore" (las pestañas de la última vez, de serie),
     // "newtab" (una página de nueva pestaña) o "page" (startupUrl)
     Q_PROPERTY(QString startupMode READ startupMode WRITE setStartupMode NOTIFY startupModeChanged)
@@ -44,6 +46,8 @@ class Settings : public QObject
     Q_PROPERTY(double defaultZoom READ defaultZoom WRITE setDefaultZoom NOTIFY defaultZoomChanged)
     // Oscurecer las páginas claras (lo hace el motor)
     Q_PROPERTY(bool darkPages READ darkPages WRITE setDarkPages NOTIFY darkPagesChanged)
+    // Ocultar las barras de desplazamiento de las páginas (se sigue desplazando)
+    Q_PROPERTY(bool hideScrollbars READ hideScrollbars WRITE setHideScrollbars NOTIFY hideScrollbarsChanged)
     // Idiomas preferidos de las páginas, en orden ("es", "en"…)
     Q_PROPERTY(QStringList languages READ languages WRITE setLanguages NOTIFY languagesChanged)
 
@@ -109,6 +113,8 @@ public:
     void setDownloadFolder(const QString &value);
     bool devTools() const;
     void setDevTools(bool value);
+    bool performanceMonitor() const;
+    void setPerformanceMonitor(bool value);
     QString startupMode() const;
     void setStartupMode(const QString &value);
     QString startupUrl() const;
@@ -117,6 +123,8 @@ public:
     void setDefaultZoom(double value);
     bool darkPages() const;
     void setDarkPages(bool value);
+    bool hideScrollbars() const;
+    void setHideScrollbars(bool value);
     QStringList languages() const;
     void setLanguages(const QStringList &value);
     bool blockThirdPartyCookies() const;
@@ -173,10 +181,12 @@ signals:
     void quickLinksChanged();
     void downloadFolderChanged();
     void devToolsChanged();
+    void performanceMonitorChanged();
     void startupModeChanged();
     void startupUrlChanged();
     void defaultZoomChanged();
     void darkPagesChanged();
+    void hideScrollbarsChanged();
     void languagesChanged();
     void blockThirdPartyCookiesChanged();
     void clearOnExitChanged();

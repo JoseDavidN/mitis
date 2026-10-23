@@ -10,6 +10,7 @@
 #include <atomic>
 
 class ContentBlocker;
+class SystemNotifier;
 class RequestInterceptor;
 
 // Lo que BrowserProfile.qml y BrowserTab.qml necesitan del motor y QML no
@@ -101,12 +102,16 @@ signals:
     void preferencesChanged();
     void adBlockStateChanged();
     void adBlockBlockedChanged();
+    // El usuario pulsó una notificación del sistema del sitio `origin`
+    // (src/notifier.*): Main.qml trae al frente su pestaña
+    void notificationActivated(const QUrl &origin);
 
 private:
     // Interceptor de peticiones y filtro de cookies
     void installInterceptor(QQuickWebEngineProfile *profile);
 
     ContentBlocker *m_blocker;
+    SystemNotifier *m_notifier;
     RequestInterceptor *m_interceptor;
     QStringList m_adBlockAllowedSites;
     QQuickWebEngineProfile *m_profile = nullptr;

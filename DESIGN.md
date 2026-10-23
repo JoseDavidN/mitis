@@ -24,7 +24,7 @@ Se eligen en Configuración → Apariencia e idioma (`Settings.theme`) y cambian
 
 - **Oscuro y morado de serie.** Nocturno: fondo casi negro (`#07050d`) con resplandor violeta; la marca es el degradado violeta → rosa (`#a855f7 → #ec4899`). Además hay un tema Oscuro neutro y uno Claro.
 - **El color nunca se escribe en un componente.** Todo sale de `qml/Theme.qml`. Un `"#hex"` o un `Qt.rgba(...)` fuera de `Theme.qml` es un error.
-- **La interfaz flota sobre la página.** Arriba, una barra de título fina; abajo, controles sueltos (botones y campo de dirección) sin barra de fondo. Cada control lleva su propia superficie y borde, sin sombra.
+- **La interfaz flota sobre la página.** Arriba, una barra de título fina que se oculta sola (aparece al llevar el ratón al borde superior); abajo, controles sueltos (botones y campo de dirección) sin barra de fondo. Cada control lleva su propia superficie y borde, sin sombra.
 - **Ligero.** Nada de desenfoque (`blur`) ni efectos que obliguen a re-renderizar la página: Mitis prioriza RAM y GPU. Las superficies imitan el "glass" con alfa alto en lugar de borronear lo de detrás.
 - **Un tema = un juego de tokens.** Los componentes no saben qué tema está activo; solo leen `Theme`.
 
@@ -137,7 +137,7 @@ Arrastre de filas: `dragOpacity` (0,85) opacidad de la fila levantada, `dropIndi
 Descargas: `downloadRowHeight` (52) fila de dos líneas del listado, `durationIndeterminate` (1,2 s) vuelta de la barra de progreso sin total conocido, `relativeTimeRefresh` (30 s) refresco de «hace 5 min» en el listado.
 
 Descarga actual: `downloadPanelWidth` (340) ancho del panel, `downloadBarHeight` (4) grosor de su barra, `progressRingWidth` (2) trazo del anillo del botón, `progressIndeterminateSpan` (0,3) fracción que ocupan el tramo de la barra y el arco del anillo sin total conocido, `durationSpin` (1 s) vuelta del anillo sin total, `downloadPanelHold` (10 s) lo que se quedan panel y botón al terminar.
-Panel de memoria: `memoryPanelWidth` (360) ancho, `memoryPanelRefresh` (2 s) cada cuánto vuelve a medir.
+Monitor de rendimiento: `memoryPanelWidth` (360) ancho, `memoryPanelRefresh` (2 s) cada cuánto vuelve a medir, `performanceChartHeight` (36) alto de cada gráfica, `performanceHistoryLength` (60 medidas, 2 min) lo que muestran, `performanceChartLineWidth` (1,5) trazo, `performanceChartFillOpacity` (0,16) relleno bajo la línea; colores `performanceCpu` (= `brandLight1`) y `performanceMemory` (= `ok`).
 
 Filas de página (marcadores, historial): `pageRowHeight` (48). `CheckMark`: `checkRadius` (5); «Datos borrados» se queda `clearedNoticeHold` (3 s).
 
@@ -195,7 +195,8 @@ Window (bgBase, sin marco)
 | `private` | `venetian-mask` | Ventana privada: menú de opciones y «Privada» en la barra de título |
 | `check` | `check` | `CheckMark` marcada y «Datos borrados» |
 | `background`, `background-reset`, `news` | `image`, `image-off`, `newspaper` | Página de nueva pestaña |
-| `music`, `play`, `pause`, `previous`, `next` | `music`, `play`, `pause`, `skip-back`, `skip-forward` | Mini reproductor |
+| `music`, `play`, `pause` | `music`, `play`, `pause` | Descargas (`play`, `pause`); `music` en el mini reproductor |
+| `media-play`, `media-pause`, `media-previous`, `media-next` | `play`, `pause`, `skip-back`, `skip-forward`, rellenos (trazo 3) | Botones del mini reproductor |
 | `sound`, `muted` | `volume-2`, `volume-x` | Pestaña que suena / silenciada |
 | `find-previous`, `find-next` | `chevron-up`, `chevron-down` | Buscar en la página |
 | `zoom-out`, `zoom-in` | `minus`, `plus` | Indicador de zoom |
@@ -208,7 +209,7 @@ Window (bgBase, sin marco)
 | `camera`, `microphone`, `camera-microphone`, `screen`, `location`, `notifications`, `clipboard`, `fonts` | `camera`, `mic`, `video`, `monitor`, `map-pin`, `bell`, `clipboard`, `type` | Diálogo de permisos: qué pide el sitio |
 | `protected-content` | `monitor-play` | Aviso de que falta Widevine (contenido protegido) |
 | `suspended` | `moon` | Lista de pestañas: pestaña suspendida |
-| `memory`, `performance` | `memory-stick`, `gauge` | Panel de memoria (y «Uso de memoria» del menú de opciones); sección «Rendimiento» de Configuración |
+| `memory`, `performance` | `memory-stick`, `gauge` | Monitor de rendimiento (y su entrada del menú de opciones); sección «Rendimiento» de Configuración |
 | `devtools`, `inspect` | `code-xml`, `scan-search` | Ventana de herramientas de desarrollo (etiqueta «DevTools») y sección «Desarrollo» de Configuración; «Inspeccionar» del menú contextual |
 
 ### `IconButton` — botón flotante
@@ -236,8 +237,9 @@ Window (bgBase, sin marco)
 ### Etiqueta «Beta» (barra de título)
 - Mientras la versión sea beta (`MITIS_VERSION_SUFFIX`), junto a «Mitis»: píldora de `logoSize` de alto, `tintActive`, borde `hairlineStrong` y «Beta» Bold `fontSizeSmall` `inkSecondary`. La ventana se titula «… Mitis Beta» y el instalador muestra «Mitis Beta».
 
-### Icono de la aplicación (provisional)
-- `assets/branding/mitis.svg`: círculo con el degradado `brand1 → brand2` y una M blanca de trazo redondeado. De él salen `mitis.png` (256, icono de ventana) y `mitis.ico` (16–256, ejecutable e instalador de Windows) con `rsvg-convert`. Se sustituye cuando esté el definitivo.
+### Icono y logo de Mitis
+- `assets/branding/mitis-icon.svg`: cuadrado redondeado con el degradado de la barra de título de Nocturno (`#2a1352 → #4a1438`, en diagonal), una gota con el degradado de la marca (`brand1 → brand2`, de arriba abajo) y tres ondas en la tinta de Nocturno (`#f4f1ff`, al 100, 60 y 30 %). De él salen, con `rsvg-convert`, `mitis.png` (256: ventana, barra de título, instalador y aviso de micrófono/cámara), `mitis.ico` (16–256, PNG dentro: ejecutable e instalador de Windows) y `packaging/linux/mitis.svg` (copia).
+- Logo completo (icono + «mitis»): `mitis-logo-dark.svg` para fondos oscuros (texto en la tinta de Nocturno, puntos de las «i» en `brandLight2` `#f472b6`, borde del icono blanco al 13 %) y `mitis-logo-light.svg` para fondos claros (texto en la tinta del Claro `#1d1631`, puntos en su `brand2` `#db2777`). De ellos, `mitis-logo-dark.png` y `mitis-logo-light.png` (600 px de ancho) para Configuración. Solo el nombre, sin icono: `mitis-wordmark-dark.svg` / `-light.svg` (el grupo del texto de los logos) → `.png` (88 px de alto), para la barra de título.
 
 ### `Avatar` — perfil
 - Círculo con la foto del perfil recortada al centro (sin deformar) o, sin foto, la inicial del nombre en Bold `onBrand` (45 % del tamaño) sobre su color (`Theme.avatarColors`: violeta, rosa, azul, verde, naranja, gris; iguales en todos los temas). Sin nombre ni foto, el icono `profile` en `onBrand`.
@@ -246,12 +248,13 @@ Window (bgBase, sin marco)
 - Menú de opciones: «Perfil» es la primera opción, con el avatar en lugar del icono y el nombre como texto.
 - Configuración → Perfil (primera sección): avatar grande con el campo «Nombre» (`FormField`, se guarda al terminar de escribir), fila «Foto» («Elegir foto…», «Quitar») y fila «Color» (círculos de `buttonSizeSmall` con anillo de `buttonSize`: `focusRing` el elegido, `hairlineHover` al pasar; tooltip con el nombre del color).
 
-### `MemoryPanel` — uso de memoria (desarrollo)
-- Solo con las herramientas de desarrollo activadas: Shift+Esc u Opciones → «Uso de memoria». Flota **arriba a la izquierda**, bajo la barra de título (a `floatingMargin` de ella y `margin` del borde), ancho `memoryPanelWidth`, fondo `PopupBackground`. Aparece con fundido y desplazamiento (`durationBase`). No se cierra al usar la página: con su ✕ o el mismo atajo.
-- Cabecera de `popupRowHeight`: icono `memory` en `brandLight1`, «Memoria» y el total Bold `ink`, ✕ plana. Debajo, el número de procesos en `fontSizeSmall` `inkMuted`.
-- Reparto por tipo (proceso principal, páginas de esta ventana, GPU, otros) en `fontSizeSmall` `inkSecondary`, la cifra DemiBold a la derecha. Separador `line`.
-- «Pestañas de esta ventana»: un `PageRow` por pestaña sin ✕ (`removable: false`), con la memoria de su proceso a la derecha (`value`, DemiBold `inkSecondary`; «—» si no tiene) y el estado de detalle: Activa, Congelada, Descargada o Sin cargar, y «proceso compartido con N» si lo comparte. Pulsar una fila va a la pestaña.
-- Cifras: «123 MB», o «1,2 GB» desde 1024 MB.
+### `MemoryPanel` — monitor de rendimiento
+- Con la opción «Monitor de rendimiento» (Configuración → Desarrollo; independiente de las herramientas de desarrollo): activarla lo muestra, y Shift+Esc u Opciones → «Monitor de rendimiento» lo muestran u ocultan. Flota **arriba a la izquierda**, bajo la barra de título (a `floatingMargin` de ella y `margin` del borde), ancho `memoryPanelWidth`, fondo `PopupBackground`. Aparece con fundido y desplazamiento (`durationBase`). No se cierra al usar la página: con su ✕ o el mismo atajo. Se oculta mientras Configuración está abierta y vuelve al salir. Solo mide mientras se ve (cada `memoryPanelRefresh`); al ocultarse, olvida lo medido.
+- Cabecera de `popupRowHeight`: icono `memory` en `brandLight1`, «Rendimiento» Bold `ink`, ✕ plana. Debajo, el número de procesos en `fontSizeSmall` `inkMuted`.
+- Dos gráficas lado a lado, CPU y Memoria: nombre en `fontSizeSmall` `inkSecondary`, cifra total Bold `ink` («…» hasta la segunda medición en la CPU) y, debajo, una línea de `performanceChartHeight` con las últimas `performanceHistoryLength` medidas (la más reciente a la derecha), trazo `performanceChartLineWidth`, relleno del mismo color a `performanceChartFillOpacity` y base `line`. Colores: `performanceCpu` (CPU) y `performanceMemory` (memoria). Escala: la CPU, hasta el máximo reciente con margen (mínimo 10 %, máximo 100 %); la memoria, hasta su máximo reciente con margen.
+- Reparto por tipo (proceso principal, páginas de esta ventana, proceso de la GPU, otros) y filas de la GPU en `fontSizeSmall` `inkSecondary`, la cifra DemiBold a la derecha. GPU: «GPU de Mitis» (uso y memoria) y, si el sistema lo publica, «GPU del sistema» (uso y «usada de total»); sin datos, una sola fila «GPU · No disponible». Separador `line`.
+- «Pestañas de esta ventana»: un `PageRow` por pestaña sin ✕ (`removable: false`), con la CPU y la memoria de su proceso a la derecha (`value`, DemiBold `inkSecondary`; «—» si no tiene) y el estado de detalle: Activa, Congelada, Descargada o Sin cargar, y «proceso compartido con N» si lo comparte. Pulsar una fila va a la pestaña.
+- Cifras: «123 MB», o «1,2 GB» desde 1024 MB; «3 % · 120 MB» (CPU y memoria); porcentajes con un decimal por debajo de 10 («0,4 %»). La CPU es del equipo entero (100 % = todos los núcleos).
 
 ### `ZoomIndicator` — zoom de la pestaña
 - Píldora de `controlHeight` **arriba a la derecha**, bajo la barra de título (a `floatingMargin` de ella y `margin` del borde), con el degradado de los controles y borde `hairline`.
@@ -259,12 +262,22 @@ Window (bgBase, sin marco)
 - Aparece (fundido y desplazamiento, `durationBase`) con cada cambio de zoom de la pestaña activa; se queda `zoomIndicatorHold` (2 s) desde el último cambio y se cierra solo. Con el ratón encima no se cierra; al salir vuelve a contar. Cambiar de pestaña no lo muestra.
 - Pasos de Chrome: 25, 33, 50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200, 250, 300, 400, 500 %. Atajos: Ctrl + `+` / `=` / `+` numérico, Ctrl + `-`, Ctrl + `0`. El zoom es de la pestaña y se mantiene al navegar dentro de ella.
 
-### `MiniPlayer` — mini reproductor
-- Aparece (fundido `durationBase`) centrado justo encima de la barra de búsqueda mientras una pestaña reproduce algo; desaparece si la página ya no tiene nada que reproducir.
-- **Tamaño fijo** (`miniPlayerWidth` × `miniPlayerHeight`: 270 × 34, el mismo alto que el campo de dirección): no crece con el título, que se acorta con "…". Píldora con el degradado `controlsStart → controlsEnd` y borde `hairline`, como los controles.
-- A la izquierda, el **favicon de la plataforma** que suena (YouTube, Spotify, Apple Music…: el de la pestaña, sin descargar nada), atenuado en pausa. Si no hay favicon, el icono `music` (`brandLight1` sonando, `inkMuted` en pausa). Título en `inkStrong` (`título · artista` si la página da artista) y tres `IconButton` planos: anterior, play/pausa, siguiente. "Siguiente" se desactiva si la página no lo ofrece; "anterior" vuelve al inicio si ya avanzó.
-- Clic en el título: ir a la pestaña que suena.
+### `ControlsTab` — controles inferiores ocultos
+- Los controles inferiores se ocultan solos `controlsHold` (5 s) después de dejar de usarlos (ratón encima, escribiendo en la dirección o con una lista suya abierta los mantiene), con el fundido y desplazamiento de la pantalla completa. Al abrir Mitis se ven y se ocultan a los 5 s. No vuelven al pasar por el borde inferior ni al desplazar la página. En la página de nueva pestaña no se ocultan (no hay página que tapar).
+- Ocultos, en el centro del borde inferior queda una pestaña de `controlsTabHeight` y como mucho `controlsTabMaxWidth`, redondeada solo arriba (`radiusSmall`), con el degradado de los controles y borde `hairline` (`hairlineHover` al pasar): el título de la página en `fontSizeSmall` `inkSecondary` (`ink` al pasar). Al pasar el ratón, los controles vuelven. No en pantalla completa ni con Configuración.
 
+### Aviso de micrófono y cámara (icono de la ventana)
+- Lo dibuja `CaptureIndicator` (C++), no QML: el icono de Mitis con un círculo rojo (`dangerStrong` de Nocturno, fijo en todos los temas) abajo a la derecha, del 62 % del icono, con el símbolo blanco `microphone`, `camera` o `camera-microphone` (desde 20 px; a 16 px solo el círculo).
+- En uso: alterna con el icono normal cada 700 ms. Abierto pero silenciado: la marca fija. Sin uso: el icono normal.
+- En la lista de pestañas, delante del de fijar: el mismo símbolo (`iconSizeSmall`) en `dangerStrong` si está en uso o `inkMuted` si está silenciado, con tooltip («Usando el micrófono · usando la cámara», «Micrófono silenciado»…).
+
+### `MiniPlayer` — mini reproductor
+- Solo para contenido para escuchar o ver (música, vídeos, streaming). Las llamadas y reuniones no lo usan: una página con cámara, micrófono o pantalla capturándose, o con una conexión WebRTC que recibe audio o vídeo, no informa de nada (`media.js`), y una pestaña que empieza a sonar solo se lleva el mini reproductor si tiene algo que reproducir.
+- Solo cuando suena **otra** pestaña: en la que reproduce no hace falta (está su propio reproductor), salvo con Configuración abierta encima.
+- **Tamaño fijo** (`miniPlayerWidth` × `miniPlayerHeight`: 270 × 34, el mismo alto que el campo de dirección): no crece con el título, que se acorta con "…".
+- **Negro en todos los temas** (como la paleta de DevTools): píldora `miniPlayerBg` con borde `miniPlayerLine`; título en `miniPlayerInkSoft` (`miniPlayerInk` al pasar por encima).
+- A la izquierda, el **favicon de la plataforma** que suena (YouTube, Spotify, Apple Music…), atenuado en pausa. Si no hay favicon, el icono `music` (`miniPlayerInk` sonando, `miniPlayerInkSoft` en pausa). Título `título · artista` si la página da artista; clic en él: ir a la pestaña que suena.
+- **Botones sin fondo ni borde** (anterior, reproducir/pausa, siguiente), de `miniPlayerButtonSize`: solo el icono, relleno y redondeado (`media-previous`, `media-play`, `media-pause`, `media-next`), de `miniPlayerIconSize` y blanco (`miniPlayerInk`). Al pasar el ratón, el icono se funde (`durationBase`) a un degradado diagonal `miniPlayerHoverStart → miniPlayerHoverEnd` (el de la marca, fijo en todos los temas) y crece suavemente a `miniPlayerHoverScale` (`durationBase`, `OutCubic`); al pulsar, `pressScale`. "Siguiente" se desactiva (35 % de opacidad) si la página no lo ofrece. El degradado lo pinta `IconProvider` (`Icon.colorEnd`), sin shaders.
 ### Pestaña con sonido
 - En la lista de pestañas, un `IconButton` plano `sound` junto a la ✕ mientras la pestaña suena; `muted` si está silenciada (se ve aunque no suene). Pulsarlo alterna el silencio.
 
@@ -324,7 +337,10 @@ Window (bgBase, sin marco)
 - Página propia (no una pestaña ni HTML): menú de opciones → «Configuración». Cubre la ventana bajo la barra de título, sobre las pestañas; los controles inferiores y el mini reproductor se ocultan mientras está abierta. Se cierra con Esc, con la ✕ (`IconButton`, arriba a la derecha) o al abrir o cambiar de pestaña. Aparece con un fundido (`durationBase`) y la cabecera baja `spacing` (`durationSlow`, `easeOut`).
 - **Fondo:** `ThemeBackground`, el de la nueva pestaña.
 - **Cabecera** de `settingsHeaderHeight`: círculo de `settingsIconBox` con el degradado de marca y el icono `settings` en `onBrand`, y «Configuración» en `fontSizeHeading` Bold `ink`.
-- **Índice** a la izquierda, de `settingsNavWidth`, solo si la página mide al menos `settingsNavBreakpoint`: una fila de `popupRowHeight` por sección (icono `inkMuted` y nombre DemiBold `inkSecondary`; hover `tintHover`). La sección a la vista: fondo `tintActive`, barra `markerWidth` con el degradado de marca, icono `brandLight1` y nombre Bold `ink`. Pulsar una fila desplaza hasta la sección (`durationSlow`, `easeOut`); al desplazarse, el índice sigue a la sección a la vista.
+- **Índice** a la izquierda, de `settingsNavWidth`, solo si la página mide al menos `settingsNavBreakpoint`. Es una lista con su propio desplazamiento que ocupa como mucho `settingsNavHeightRatio` (40 %) del alto; sigue a la sección a la vista y la mantiene en su tercio central (`durationSlow`). una fila de `popupRowHeight` por sección (icono `inkMuted` y nombre DemiBold `inkSecondary`; hover `tintHover`). La sección a la vista: fondo `tintActive`, barra `markerWidth` con el degradado de marca, icono `brandLight1` y nombre Bold `ink`. Pulsar una fila desplaza hasta la sección (`durationSlow`, `easeOut`); al desplazarse, el índice sigue a la sección a la vista.
+- **Logo completo de Mitis** al pie de la ventana, centrado en la columna del índice, de `settingsMitisLogoWidth` (180) de ancho y `settingsSectionSpacing` sobre el borde inferior: `mitis-logo-dark.png` en los temas oscuros y `mitis-logo-light.png` en el Claro. Siempre visible: en una ventana baja, el índice se acorta (y se desplaza) para dejarle sitio.
+- **«by StartCode»** al final de la columna de ajustes, centrado: «by» en `fontSizeSmall` `inkMuted` y el logo de StartCode de `settingsLogoWidth` (80) × la mitad, al 70 % de opacidad (100 % con el ratón encima, `durationFast`). Sin fondo: `startcode.png` (claro) en los temas oscuros y `startcode-light.png` (tinta del Claro `#1d1631` y su violeta `#7c3aed`, sacado de `startcode.png` cambiando sus dos colores) en el Claro.
+- **Bordes que se funden:** el índice y la columna de ajustes desvanecen lo que llega a su borde de arriba o de abajo (solo si hay más contenido por ese lado). Franjas de `settingsFadeHeight` hechas de `settingsFadeSteps` escalones del propio fondo del tema con opacidad creciente hacia el borde (`EdgeFade`), sin shaders.
 - **Columna** de hasta `settingsMaxWidth`; índice y columna van juntos y centrados. Entre secciones, `settingsSectionSpacing`. Cada sección: icono `brandLight1` y título `fontSizeLarge` Bold `ink`, una nota opcional en `fontSizeSmall` `inkSecondary` y una tarjeta (`surfaceFloat`, borde `hairline`, `radius`) con los ajustes.
 - **Fila de ajuste:** al menos `settingsRowHeight`; título `fontSize` DemiBold `ink` y descripción `fontSizeSmall` `inkMuted` a la izquierda (con icono opcional `inkSoft` delante), controles (`TextButton`, `Toggle`, `Chip`) a la derecha. Entre filas, separador `line` con margen `margin`. Estados en píldora: borde y texto Bold `ok` («Disponible») o `warn` («No disponible»), alto `buttonSizeSmall`.
 - **Elección única en filas** (`OptionRow`, «Al iniciar»): título y descripción con un `RadioMark` a la derecha; toda la fila se pulsa (hover `tintHover`), la elegida con fondo `tintActive` y título Bold.
@@ -345,7 +361,7 @@ Window (bgBase, sin marco)
   - Contenido: imágenes, reproducción automática.
   - Borrar datos de navegación; Descargas (carpeta y preguntar dónde guardar).
   - Rendimiento: suspender las pestañas que no usas (`ChoiceRow`: 15 min, 30 min, 1 hora, 2 horas, Nunca).
-  - Desarrollo (`Toggle` «Herramientas de desarrollo»: con él, «Inspeccionar», F12 y el panel de memoria; al apagarlo se cierran las ventanas de DevTools abiertas).
+  - Desarrollo: dos `Toggle` independientes. «Herramientas de desarrollo» («Inspeccionar» y F12; al apagarlo se cierran las ventanas de DevTools abiertas) y «Monitor de rendimiento» (muestra el panel; Shift+Esc lo oculta o lo vuelve a mostrar).
   - Acerca de Mitis (versión, Chromium, Widevine) y restablecer la configuración.
 
 ### Instalador de Windows (`installer/`)
@@ -355,6 +371,7 @@ Window (bgBase, sin marco)
 - Barra de progreso de 6 de alto, redondeada: pista `tintActive` y relleno con el degradado de la marca; sigue al avance real con suavidad.
 - Abajo, «un proyecto de» (11, `inkMuted`) y el logo de StartCode (112 de ancho).
 - No se cierra a medias. Al terminar abre Mitis y se cierra solo.
+- **Si Mitis ya está instalado**, antes de nada pregunta en la misma ventana: «Mitis ya está instalado», la versión instalada (y la del instalador si difiere) y que el historial, los marcadores y los ajustes se conservan. Botones: «Cancelar», «Reinstalar» (o «Actualizar» si la versión es otra; solo si el `.exe` lleva el paquete) y «Desinstalar» con el estilo de peligro (texto rojo, borde rojo al pasar). Esc cierra mientras no haya nada en marcha. Al desinstalar: «Desinstalando Mitis… N %» con la barra y, al acabar, «Mitis se ha desinstalado.» con «Cerrar».
 
 ### `CheckMark` — casilla
 - Cuadrado de `radioSize` con radio `checkRadius`. Sin marcar: borde `hairlineStrong` (`hairlineHover` al pasar por su fila). Marcada: degradado de marca con `check` en `onBrand` (`iconSizeSmall`). Solo dibuja: la fila atiende el clic.
@@ -478,7 +495,7 @@ Window (bgBase, sin marco)
 
 ### `TitleBar`
 - Fondo con el degradado oscuro `titleBarStart → titleBarEnd` (violeta profundo → rosa ciruela). Nada de colores de marca vivos como fondo.
-- Logo con el degradado de marca vivo y nombre en `inkSoft`.
+- A la izquierda, el nombre de Mitis tal como va en el logo, sin el icono, de `titleBarLogoHeight` (20) de alto: `mitis-wordmark-dark.png` en los temas oscuros y `mitis-wordmark-light.png` en el Claro. Detrás, las píldoras «Beta» y «Privada».
 - Los controles de ventana son `IconButton` con `flat: true`: solo iconos; el círculo aparece al pasar por encima.
 - Solo marca y controles de ventana. Toda la barra es zona de arrastre; doble clic maximiza. En pantalla completa no se arrastra ni maximiza (además, está oculta).
 

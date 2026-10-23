@@ -44,7 +44,24 @@ qt_add_executable(mitis
     src/enginebridge.cpp
     src/widevine.h
     src/widevine.cpp
+    src/notifier.h
+    src/notifier.cpp
 )
+
+# Notificaciones del sistema (src/notifier.*): D-Bus en Linux,
+# UserNotifications en macOS; en Windows, Shell_NotifyIcon (shell32)
+if(APPLE)
+    enable_language(OBJCXX)
+    target_sources(mitis PRIVATE src/notifier_mac.mm)
+    set_source_files_properties(src/notifier_mac.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+    target_link_libraries(mitis PRIVATE "-framework Foundation" "-framework UserNotifications")
+elseif(WIN32)
+    target_link_libraries(mitis PRIVATE shell32)
+else()
+    find_package(Qt6 REQUIRED COMPONENTS DBus)
+    target_link_libraries(mitis PRIVATE Qt6::DBus)
+    target_compile_definitions(mitis PRIVATE MITIS_DBUS_NOTIFICATIONS)
+endif()
 
 # Tipos de C++ para QML (Settings…), en un módulo propio, Mitis.Core: el modo
 # --dev carga los QML desde qml/ y no ve los tipos del módulo Mitis, pero sí
@@ -65,10 +82,12 @@ qt_add_qml_module(mitiscore
         src/memorymonitor.cpp
         src/links.h
         src/links.cpp
+        src/captureindicator.h
+        src/captureindicator.cpp
 )
 # El registro de tipos generado incluye "settings.h" sin ruta
 target_include_directories(mitiscore PRIVATE src)
-target_link_libraries(mitiscore PRIVATE Qt6::Sql Qt6::Network Qt6::Gui)
+target_link_libraries(mitiscore PRIVATE Qt6::Sql Qt6::Network Qt6::Gui Qt6::Svg)
 
 # Iconos SVG (Lucide, ISC: assets/icons/LICENSE), empaquetados en :/icons
 file(GLOB MITIS_ICON_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" CONFIGURE_DEPENDS assets/icons/*.svg)
@@ -79,12 +98,17 @@ qt_add_resources(mitis "icons"
 )
 
 # Scripts que Mitis inyecta en las páginas (puente multimedia), en :/scripts
-# Icono de la aplicación (provisional): ventana en todos los sistemas
-# (:/branding/mitis.png) y, en Windows, el del ejecutable
+# Icono de la aplicación: ventana en todos los sistemas (:/branding/mitis.png)
+# y, en Windows, el del ejecutable. Nombre de Mitis (sin icono) en la barra
+# de título; logo completo al pie del índice de Configuración (versiones para
+# temas oscuros y claros), y el de StartCode al final de sus ajustes
 qt_add_resources(mitis "branding"
     PREFIX "/branding"
     BASE assets/branding
-    FILES assets/branding/mitis.png
+    FILES assets/branding/mitis.png assets/branding/mitis-logo-dark.png
+          assets/branding/mitis-logo-light.png assets/branding/startcode.png
+          assets/branding/startcode-light.png assets/branding/mitis-wordmark-dark.png
+          assets/branding/mitis-wordmark-light.png
 )
 if(WIN32)
     target_sources(mitis PRIVATE assets/branding/mitis.rc)
@@ -144,6 +168,7 @@ set(MITIS_QML_FILES
     qml/PageRow.qml
     qml/MemoryPanel.qml
     qml/Avatar.qml
+    qml/ControlsTab.qml
     qml/BookmarksPopup.qml
     qml/HistoryPopup.qml
     qml/ResizeHandles.qml

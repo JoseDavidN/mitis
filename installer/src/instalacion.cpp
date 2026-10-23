@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <iterator>
 #include <vector>
 
 #include "miniz.h"
@@ -216,8 +217,55 @@ bool copiarDesinstalador(FILE *instalador, uint64_t tamano, const std::wstring &
 
 std::wstring carpetaInstalacion()
 {
-    // %LOCALAPPDATA%\Programs: programas por usuario, sin administrador
-    return carpetaConocida(FOLDERID_UserProgramFiles) + L"\\Mitis";
+    // %LOCALAPPDATA%\Programs: programas por usuario, sin administrador. Sin
+    // ella, "" (y no «\Mitis», que sería una carpeta en la raíz del disco)
+    const std::wstring programas = carpetaConocida(FOLDERID_UserProgramFiles);
+    return programas.empty() ? std::wstring() : programas + L"\\Mitis";
+}
+
+Instalada instalacionExistente()
+{
+    Instalada actual;
+    HKEY clave = nullptr;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, ClaveDesinstalar, 0, KEY_QUERY_VALUE, &clave) == ERROR_SUCCESS) {
+        actual.hay = true;
+        // Búfer a ceros y un carácter menos: el texto siempre acaba en nulo
+        wchar_t version[64] = {};
+        DWORD tipo = 0;
+        DWORD bytes = DWORD(sizeof(version) - sizeof(wchar_t));
+        if (RegQueryValueExW(clave, L"DisplayVersion", nullptr, &tipo, reinterpret_cast<BYTE *>(version), &bytes)
+                == ERROR_SUCCESS
+            && tipo == REG_SZ)
+            actual.version = version;
+        RegCloseKey(clave);
+    }
+    const std::wstring carpeta = carpetaInstalacion();
+    std::error_code error;
+    if (!carpeta.empty() && fs::exists(fs::path(carpeta) / Ejecutable, error))
+        actual.hay = true;
+    return actual;
+}
+
+bool tienePaquete(const std::wstring &ejecutable)
+{
+    FILE *exe = _wfopen(ejecutable.c_str(), L"rb");
+    if (!exe)
+        return false;
+    char pie[TamanoPie] = {};
+    const bool hay = _fseeki64(exe, -TamanoPie, SEEK_END) == 0 && fread(pie, 1, TamanoPie, exe) == TamanoPie
+        && std::memcmp(pie + 8, Marca, 8) == 0;
+    fclose(exe);
+    return hay;
+}
+
+bool dentroDeInstalacion(const std::wstring &ejecutable)
+{
+    const std::wstring carpeta = carpetaInstalacion();
+    if (carpeta.empty())
+        return false;
+    // equivalent() compara el archivo real: sin líos de mayúsculas ni rutas cortas
+    std::error_code error;
+    return fs::equivalent(fs::path(ejecutable).parent_path(), carpeta, error);
 }
 
 std::wstring instalar(const std::wstring &instalador, const Avance &avance)
@@ -249,6 +297,10 @@ std::wstring instalar(const std::wstring &instalador, const Avance &avance)
         return L"El instalador está dañado: descárgalo de nuevo.";
     }
 
+    if (carpetaInstalacion().empty()) {
+        fclose(exe);
+        return L"Windows no indica dónde instalar los programas del usuario.";
+    }
     const fs::path carpeta = carpetaInstalacion();
     const fs::path anterior = carpeta.wstring() + L".anterior";
     std::error_code error;
@@ -359,8 +411,16 @@ std::wstring instalar(const std::wstring &instalador, const Avance &avance)
 
 std::wstring desinstalar(const Avance &avance)
 {
+    if (carpetaInstalacion().empty())
+        return L"Windows no indica dónde están los programas del usuario.";
     const fs::path carpeta = carpetaInstalacion();
     std::error_code error;
+
+    // Desde el instalador (fuera de la carpeta) todo se borra ya; desde el
+    // desinstalador copiado dentro, este no puede borrarse mientras se ejecuta
+    wchar_t propio[MAX_PATH * 4] = {};
+    GetModuleFileNameW(nullptr, propio, DWORD(std::size(propio)));
+    const bool dentro = dentroDeInstalacion(propio);
 
     // Primero Mitis.exe: si está en uso, Mitis está abierto y no se toca nada
     const fs::path mitis = carpeta / Ejecutable;
@@ -374,15 +434,24 @@ std::wstring desinstalar(const Avance &avance)
     SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
     avance(0.05);
 
-    // El resto de archivos, menos este desinstalador (está en marcha)
+    // El resto de archivos, menos este desinstalador si está en marcha
     std::vector<fs::path> archivos;
     for (const auto &entrada : fs::recursive_directory_iterator(carpeta, error)) {
-        if (entrada.is_regular_file() && entrada.path().filename() != Desinstalador)
+        if (entrada.is_regular_file() && (!dentro || entrada.path().filename() != Desinstalador))
             archivos.push_back(entrada.path());
     }
     for (size_t i = 0; i < archivos.size(); ++i) {
         fs::remove(archivos[i], error);
         avance(0.05 + 0.95 * double(i + 1) / double(archivos.size()));
+    }
+
+    if (!dentro) {
+        // Las subcarpetas, ya vacías, y la propia carpeta
+        fs::remove_all(carpeta, error);
+        if (fs::exists(carpeta, error))
+            return L"No se pudo borrar del todo " + carpeta.wstring() + L". Bórrala a mano.";
+        avance(1.0);
+        return std::wstring();
     }
 
     // La carpeta y el desinstalador se borran en cuanto este termine

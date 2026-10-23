@@ -5,9 +5,28 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ## [Sin publicar]
 
+### Corregido
+
+- Las notificaciones de las páginas (WhatsApp Web, Gmail, chats…) no se mostraban. Ahora son notificaciones del sistema: en Windows, en Linux (cualquier escritorio) y en macOS. Al pulsarla, Mitis vuelve a la pestaña del sitio.
+- Al cambiar el tamaño de la ventana, el campo de dirección ya no se queda atrás buscando su nuevo ancho.
+
+### Cambiado
+
+- Los controles de abajo se ocultan solos a los pocos segundos de dejar de usarlos, para no tapar lo que las páginas tienen abajo (avisos de cookies, reproductores…). Queda una pestaña pequeña con el título de la página: al pasar el ratón por ella, vuelven.
+- La barra de título se oculta sola para dejar más espacio a la página: aparece al llevar el ratón al borde superior de la ventana y se queda unos segundos.
+- La ventana se abre la primera vez con el 75 % del tamaño de la pantalla, centrada, y desde entonces recuerda cómo la dejaste: maximizada, o con su tamaño y posición. Si esa posición ya no está en ninguna pantalla, vuelve a lo de serie.
+- Nuevo mini reproductor: negro, con botones que son solo el icono (relleno y redondeado); al pasar el ratón, el icono toma el degradado de Mitis y crece un poco. Ya no aparece si estás en la pestaña que está sonando, y las llamadas y reuniones (Meet, Zoom, Teams…) no lo usan: es solo para música, vídeos y plataformas de streaming.
+- En la página de nueva pestaña, los controles de abajo (con el campo de búsqueda) ya no se ocultan.
+- El instalador sabe si Mitis ya está instalado: entonces ofrece desinstalarlo (tu historial, marcadores y ajustes se conservan) o reinstalarlo/actualizarlo.
+- Configuración: el índice de secciones ya no se corta. Ocupa como mucho el 40 % del alto, se desplaza solo para mostrar la sección en la que estás, y tanto el índice como los ajustes se desvanecen suavemente en los bordes al desplazarse.
+
 ### Añadido
 
-- Icono propio de Mitis (provisional) en el ejecutable, el instalador y la ventana; «Beta» en la barra de título mientras sea una versión de prueba.
+- Icono y logo de Mitis: la gota con sus ondas, en los colores de Mitis. En el ejecutable, la ventana y el instalador; el nombre, en la barra de título, y el logo completo, siempre visible al pie del índice de Configuración (versión clara u oscura según el tema). «Beta» en la barra de título mientras sea una versión de prueba.
+- **Aviso de micrófono y cámara en el icono de Mitis** (barra de tareas en Windows y Linux, Dock en macOS): mientras una página usa el micrófono o la cámara, el icono lleva una marca roja que parpadea; si los silencias sin cerrarlos, la marca se queda fija, y al colgar desaparece. En la lista de pestañas, la que los usa lleva el mismo icono.
+- **Monitor de rendimiento** (Configuración → Desarrollo, independiente de las herramientas de desarrollo): panel con el uso de CPU y de memoria de Mitis, con gráfica de los últimos 2 minutos, por tipo de proceso y por pestaña, y el de la gráfica donde el sistema lo permite (por ahora, Linux). Se oculta mientras Configuración está abierta. Shift+Esc lo muestra u oculta.
+- Configuración → Apariencia: «Ocultar la barra de desplazamiento» de las páginas; se sigue pudiendo desplazar con la rueda, el teclado o el dedo.
+- «by StartCode» al final de Configuración.
 - **Perfil:** Opciones → Perfil (o tu avatar en la barra de título) abre Configuración → Perfil, donde pones tu nombre y una foto o un color. Tu avatar aparece en la barra de título y en el menú de opciones. Se guarda solo en tu equipo.
 
 ## [0.5.0] - 2026-10-22

@@ -13,8 +13,23 @@
 
 using Avance = std::function<void(double)>;
 
-// Carpeta donde se instala Mitis
+// Carpeta donde se instala Mitis ("" si Windows no da la de programas del usuario)
 std::wstring carpetaInstalacion();
+
+// Lo que hay instalado, según lo que deja instalar(): la entrada de
+// «Aplicaciones instaladas» en el registro o Mitis.exe en su carpeta
+struct Instalada {
+    bool hay = false;
+    std::wstring version; // DisplayVersion; "" si no se sabe
+};
+Instalada instalacionExistente();
+
+// Si el ejecutable lleva el paquete pegado (el instalador) o no (el
+// desinstalador que se copia en la carpeta de Mitis)
+bool tienePaquete(const std::wstring &ejecutable);
+
+// Si el ejecutable está dentro de la carpeta de instalación (el desinstalador)
+bool dentroDeInstalacion(const std::wstring &ejecutable);
 
 // Instala el paquete que lleva el propio ejecutable `instalador` (ver
 // empaquetar.ps1: el ZIP va pegado al final del .exe, con una marca)
@@ -22,6 +37,8 @@ std::wstring instalar(const std::wstring &instalador, const Avance &avance);
 
 // Quita Mitis: archivos, accesos directos y la entrada de Windows. Los datos
 // del usuario (historial, marcadores…, en %LOCALAPPDATA%\Mitis) se conservan.
+// Desde fuera de la carpeta (el instalador) la borra entera al momento; desde
+// dentro (desinstalar.exe), la carpeta se borra cuando el proceso termina.
 std::wstring desinstalar(const Avance &avance);
 
 // Abre el Mitis instalado
