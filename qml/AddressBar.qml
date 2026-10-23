@@ -23,8 +23,18 @@ TextField {
     // Relleno: tramo del degradado compartido de los controles (ver BottomBar)
     property color fillStart: Theme.surfaceFloat
     property color fillEnd: Theme.surfaceFloat
+    // Lo que hay detrás del campo (la página), para el vidrio esmerilado;
+    // sin él, o sin GPU, el relleno es el de siempre
+    property Item backdrop: null
+    readonly property bool glassy: glass.available
 
     readonly property bool editing: activeFocus
+
+    // Estado de la conexión de la página: "secure" (https), "insecure"
+    // (http), "overridden" (certificado no válido aceptado) o "" (páginas
+    // propias, archivos): sin botón del sitio
+    property string security: ""
+    readonly property bool siteButtonShown: !editing && security !== ""
 
     // Texto del modo reposo: título sin lo que va tras un guion separador
     // ("DuckDuckGo - Privacidad" → "DuckDuckGo"); si no hay, el dominio
@@ -35,11 +45,15 @@ TextField {
         return Urls.host(currentUrl.toString())
     }
 
-    // Ancho del modo reposo: el título más un margen a cada lado
+    // Ancho del modo reposo: el título más un margen a cada lado (y el botón
+    // del sitio, si lo hay)
     readonly property real compactWidth: Math.ceil(titleMetrics.advanceWidth)
                                          + 2 * (Theme.margin + Theme.spacing)
+                                         + (security !== "" ? Theme.buttonSizeSmall : 0)
 
     signal navigate(url target)
+    // Pulsaron el botón del sitio (candado): panel del sitio
+    signal siteInfoRequested()
 
     function focusAndSelect() {
         forceActiveFocus()
@@ -95,7 +109,53 @@ TextField {
     selectionColor: Theme.selection
     selectedTextColor: Theme.ink
     font.pixelSize: Theme.fontSize
+    font.weight: Theme.fontWeightInput
     selectByMouse: true
+
+    // Botón del sitio, a la izquierda en reposo: candado si la conexión es
+    // segura, aviso si no. Abre el panel del sitio (SiteInfoPopup). Es hijo
+    // del campo y no de su fondo: el fondo va detrás del campo (z -1) y el
+    // campo se quedaría con el clic para empezar a escribir
+    Item {
+        id: siteButton
+        anchors.left: parent.left
+        anchors.leftMargin: Theme.spacing / 2
+        anchors.verticalCenter: parent.verticalCenter
+        width: Theme.buttonSizeSmall
+        height: Theme.buttonSizeSmall
+        visible: opacity > 0
+        opacity: root.siteButtonShown ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: Theme.durationFast } }
+
+        Rectangle {
+            anchors.fill: parent
+            radius: width / 2
+            color: siteHover.hovered ? Theme.tintActive : "transparent"
+            Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+        }
+        Icon {
+            anchors.centerIn: parent
+            name: root.security === "secure" ? "site-secure" : "site-insecure"
+            size: Theme.iconSizeSmall
+            color: root.security === "secure" ? (siteHover.hovered ? Theme.ink : Theme.inkSoft)
+                 : root.security === "insecure" ? Theme.warn : Theme.danger
+        }
+        HoverHandler {
+            id: siteHover
+            cursorShape: Qt.PointingHandCursor
+        }
+        TapHandler {
+            enabled: root.siteButtonShown
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            onTapped: root.siteInfoRequested()
+        }
+        Tooltip {
+            text: root.security === "secure" ? "Conexión segura · Información del sitio"
+                : root.security === "insecure" ? "Conexión no segura · Información del sitio"
+                : "Certificado no válido · Información del sitio"
+            visible: siteHover.hovered && root.siteButtonShown
+        }
+    }
 
     TextMetrics {
         id: titleMetrics
@@ -103,72 +163,84 @@ TextField {
         text: root.shortTitle || "Buscar"
     }
 
-    background: Rectangle {
-        id: field
-        radius: height / 2
-        border.width: 1
-        border.color: root.editing ? Theme.focusRing
-                                   : (fieldHover.hovered ? Theme.hairlineHover : Theme.hairline)
-        gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: root.fillStart }
-            GradientStop { position: 1.0; color: root.fillEnd }
-        }
-
-        Behavior on border.color { ColorAnimation { duration: Theme.durationFast } }
-
-        // Realce al pasar por encima
-        Rectangle {
+    // Fondo: el vidrio (la página difuminada) y encima el relleno, que con
+    // vidrio es semitransparente
+    background: Item {
+        Glass {
+            id: glass
             anchors.fill: parent
-            radius: parent.radius
-            color: fieldHover.hovered && !root.editing ? Theme.tintHover : "transparent"
-            Behavior on color { ColorAnimation { duration: Theme.durationFast } }
-        }
-
-        // Icono de búsqueda: solo al escribir
-        Icon {
-            anchors.left: parent.left
-            anchors.leftMargin: Theme.margin
-            anchors.verticalCenter: parent.verticalCenter
-            name: "search"
-            size: Theme.iconSizeSmall
-            color: Theme.brandLight1
-            opacity: root.editing ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: Theme.durationFast } }
-        }
-
-        // Título corto de la página: solo en reposo
-        Text {
-            anchors.fill: parent
-            anchors.leftMargin: Theme.margin + Theme.spacing
-            anchors.rightMargin: Theme.margin + Theme.spacing
-            text: root.shortTitle || "Buscar"
-            color: root.shortTitle ? Theme.inkStrong : Theme.inkMuted
-            font: root.font
-            elide: Text.ElideRight
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            opacity: root.editing ? 0 : 1
-            Behavior on opacity { NumberAnimation { duration: Theme.durationFast } }
-        }
-
-        // Progreso de carga, a lo largo del borde inferior del campo
-        Rectangle {
-            anchors.left: parent.left
-            anchors.leftMargin: field.radius
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: Theme.progressHeight
-            height: Theme.progressHeight
+            backdrop: root.backdrop
             radius: height / 2
-            width: (parent.width - 2 * field.radius) * root.loadProgress / 100
-            opacity: root.loading ? 1 : 0
+        }
+
+        Rectangle {
+            id: field
+            anchors.fill: parent
+            radius: height / 2
+            border.width: 1
+            border.color: root.editing ? Theme.focusRing
+                                       : (fieldHover.hovered ? Theme.hairlineHover : Theme.hairline)
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: Theme.brand1 }
-                GradientStop { position: 1.0; color: Theme.brand2 }
+                GradientStop { position: 0.0; color: root.fillStart }
+                GradientStop { position: 1.0; color: root.fillEnd }
             }
-            Behavior on width { NumberAnimation { duration: Theme.durationBase } }
-            Behavior on opacity { NumberAnimation { duration: Theme.durationBase } }
+
+            Behavior on border.color { ColorAnimation { duration: Theme.durationFast } }
+
+            // Realce al pasar por encima
+            Rectangle {
+                anchors.fill: parent
+                radius: parent.radius
+                color: fieldHover.hovered && !root.editing ? Theme.tintHover : "transparent"
+                Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+            }
+
+            // Icono de búsqueda: solo al escribir
+            Icon {
+                anchors.left: parent.left
+                anchors.leftMargin: Theme.margin
+                anchors.verticalCenter: parent.verticalCenter
+                name: "search"
+                size: Theme.iconSizeSmall
+                color: Theme.brandLight1
+                opacity: root.editing ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: Theme.durationFast } }
+            }
+
+            // Título corto de la página: solo en reposo
+            Text {
+                anchors.fill: parent
+                anchors.leftMargin: Theme.margin + Theme.spacing + (root.security !== "" ? Theme.buttonSizeSmall : 0)
+                anchors.rightMargin: Theme.margin + Theme.spacing
+                text: root.shortTitle || "Buscar"
+                color: root.shortTitle ? Theme.inkStrong : Theme.inkMuted
+                font: root.font
+                elide: Text.ElideRight
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                opacity: root.editing ? 0 : 1
+                Behavior on opacity { NumberAnimation { duration: Theme.durationFast } }
+            }
+
+            // Progreso de carga, a lo largo del borde inferior del campo
+            Rectangle {
+                anchors.left: parent.left
+                anchors.leftMargin: field.radius
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: Theme.progressHeight
+                height: Theme.progressHeight
+                radius: height / 2
+                width: (parent.width - 2 * field.radius) * root.loadProgress / 100
+                opacity: root.loading ? 1 : 0
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0.0; color: Theme.brand1 }
+                    GradientStop { position: 1.0; color: Theme.brand2 }
+                }
+                Behavior on width { NumberAnimation { duration: Theme.durationBase } }
+                Behavior on opacity { NumberAnimation { duration: Theme.durationBase } }
+            }
         }
     }
 

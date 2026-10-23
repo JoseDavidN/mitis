@@ -69,6 +69,24 @@ QtObject {
     function siteOf(address) {
         return MitisEngine.siteOf(address)
     }
+
+    // ── Certificado de un sitio (panel del sitio) ────────────────────
+    // Lo consulta C++ con su propia conexión; la respuesta llega con
+    // certificateReady(host, datos) (ver EngineBridge::certificateReady)
+    signal certificateReady(string host, var certificate)
+    function requestCertificate(host) {
+        if (typeof MitisEngine.requestCertificate === "function")
+            MitisEngine.requestCertificate(host)
+        else
+            root.certificateReady(host, { error: "Para ver el certificado hay que recompilar Mitis." })
+    }
+    readonly property Connections _certificates: Connections {
+        target: MitisEngine
+        ignoreUnknownSignals: true
+        function onCertificateReady(host, certificate) {
+            root.certificateReady(host, certificate)
+        }
+    }
     // qmllint enable unqualified
 
     // Cámara y micrófono: el motor no guarda la respuesta (para él valen solo

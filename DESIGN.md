@@ -39,8 +39,8 @@ Se eligen en Configuración → Apariencia e idioma (`Settings.theme`) y cambian
 | `bgBase` | `#07050d` | Fondo de la ventana |
 | `bgMid` | `#150a2e` | Transición de fondos con degradado (reservado) |
 | `bgGlow` | `#2a1352` | Resplandor violeta de fondos (reservado) |
-| `titleBarStart` → `titleBarEnd` | `#2a1352 → #4a1438` | Barra de título: versión oscura del degradado de marca, violeta profundo → rosa ciruela, de izquierda a derecha |
-| `controlsStart` → `controlsEnd` | `#1d0d39 → #340e27` al 92 % | Controles inferiores: el mismo degradado, más oscuro y con un 8 % de transparencia, compartido por todos los controles |
+| `titleBarStart` → `titleBarEnd` | `#2a1352 → #150a2e` | Barra de título: los tonos del fondo de Configuración (`bgGlow → bgMid`), de izquierda a derecha. Barra, controles, botones sueltos y listas comparten estos tonos |
+| `controlsStart` → `controlsEnd` | `#2a1352 → #150a2e` al 94 % | Controles inferiores (y búsqueda en la página, zoom, aviso de pantalla completa, pestaña del borde): los tonos del fondo de Configuración (`bgGlow → bgMid`), con un 6 % de transparencia, compartidos por todos los controles. En Oscuro `#2d2e31 → #202124`; en Claro `#e4d7fc → #f1ebfd` |
 
 Los fondos de la interfaz usan siempre **tonos oscuros** de la marca. El degradado vivo `brand1 → brand2` se reserva para detalles pequeños (logo, progreso, marcas), nunca para superficies grandes.
 
@@ -49,8 +49,8 @@ Los fondos de la interfaz usan siempre **tonos oscuros** de la marca. El degrada
 | Token | Valor | Uso |
 |---|---|---|
 | `surfaceFloat` | `rgba(8,3,20,0.88)` | Todo lo que flota sobre la página: botones, campo de dirección, listas desplegables. Equivale a `glass-float` de StartCode, sin blur |
-| `surfacePopup` | `#080314` opaco | Listas desplegables. Opacas: sin blur, hasta un 3 % de transparencia deja ver el texto de la página de detrás |
-| `selectBg` | `#1a0f3d` | Fondo de selects y listas opacas (reservado) |
+| `surfacePopup` | `#150a2e` opaco (`bgMid`) | Listas desplegables y tooltips. Opacas: sin blur, hasta un 3 % de transparencia deja ver el texto de la página de detrás |
+| `selectBg` | `#2a1352` (`bgGlow`) | Fondo de selects y listas opacas (reservado): un escalón más claro que `surfacePopup` |
 
 ### Bordes y separadores
 
@@ -112,7 +112,7 @@ Los semánticos conservan su significado en todos los temas; no usarlos como ace
 - **Fuente:** [Nunito](https://github.com/googlefonts/nunito) (SIL OFL, `assets/fonts/OFL.txt`): sans redondeada, moderna y legible en tamaños pequeños. Un solo archivo variable (`assets/fonts/Nunito.ttf`) con todos los pesos.
 - Se registra en `src/main.cpp` y queda como fuente por defecto de la aplicación: todo `Text` y `TextField` la usa sin indicarlo. No escribir `font.family` en los componentes.
 - Solo afecta a la interfaz: las páginas web usan sus propias fuentes.
-- Tamaños desde `Theme`: `fontSizeHeading` (24) título de una página propia (Configuración), `fontSizeLarge` (16) buscador de la nueva pestaña y títulos de sección, `fontSizeTitle` (14) nombre de la app y títulos de diálogo, `fontSize` (13) texto general, `fontSizeSmall` (12) atajos y notas. Pesos: regular para texto, `Font.DemiBold` para el nombre de la app, títulos de diálogo y de cada ajuste, `Font.Bold` para el título de una página y de sus secciones y para lo elegido en una lista.
+- Tamaños desde `Theme`: `fontSizeHeading` (24) título de una página propia (Configuración), `fontSizeLarge` (16) buscador de la nueva pestaña y títulos de sección, `fontSizeTitle` (14) nombre de la app y títulos de diálogo, `fontSize` (13) texto general, `fontSizeSmall` (12) atajos y notas. Pesos: regular para texto, `fontWeightInput` (Medium) para lo que se escribe en los buscadores (dirección y nueva pestaña), `Font.DemiBold` para el nombre de la app, títulos de diálogo y de cada ajuste, `Font.Bold` para el título de una página y de sus secciones y para lo elegido en una lista.
 
 ### Medidas, tipografía y movimiento
 
@@ -141,7 +141,7 @@ Monitor de rendimiento: `memoryPanelWidth` (360) ancho, `memoryPanelRefresh` (2 
 
 Filas de página (marcadores, historial): `pageRowHeight` (48). `CheckMark`: `checkRadius` (5); «Datos borrados» se queda `clearedNoticeHold` (3 s).
 
-Configuración: `settingsMaxWidth` (680) ancho máximo de la columna, `settingsNavWidth` (220) índice de secciones, `settingsNavBreakpoint` (900) ancho por debajo del cual el índice se oculta, `settingsHeaderHeight` (64) cabecera, `settingsSectionSpacing` (32) entre secciones, `settingsRowHeight` (60) alto mínimo de una fila, `settingsIconBox` (36) círculo del icono de la cabecera y de los favicons. `Toggle`: `toggleWidth` × `toggleHeight` (38 × 22) y `toggleKnobInset` (3). `RadioMark`: `radioSize` (18) y `radioDotSize` (8).
+Configuración: `settingsMaxWidth` (680) ancho máximo de la columna, `settingsNavWidth` (220) índice de secciones, `settingsNavBreakpoint` (900) ancho por debajo del cual el índice se oculta, `settingsHeaderHeight` (64) cabecera, `settingsSectionSpacing` (32) entre secciones, `settingsRowHeight` (60) alto mínimo de una fila, `settingsIconBox` (36) círculo de los favicons, `settingsHeaderIconBox` (30) círculo del icono de la cabecera, con el icono de `settingsHeaderIconSize` (15). `Toggle`: `toggleWidth` × `toggleHeight` (38 × 22) y `toggleKnobInset` (3). `RadioMark`: `radioSize` (18) y `radioDotSize` (8).
 
 Aviso de certificado: `certificateDialogWidth` (440) ancho de la tarjeta, algo más que `dialogWidth` (360) porque explica más.
 
@@ -185,6 +185,7 @@ Window (bgBase, sin marco)
 | `close` | `x` | Cerrar ventana o pestaña, detener la carga |
 | `minimize`, `maximize`, `restore` | `minus`, `square`, `copy` | Controles de ventana |
 | `search` | `search` | Campo de dirección al escribir; sección «Búsqueda» de Configuración (también en lugar del favicon de un buscador que no carga) |
+| `site-secure`, `site-insecure`, `share-mail`, `expand` | `lock`, `lock-open`, `mail`, `chevron-down` | Panel del sitio: conexión segura / no segura (también en el campo de dirección), enviar por correo y desplegar el certificado |
 | `bookmarks`, `bookmark-add`, `bookmark` | `star`, `bookmark-plus`, `bookmark` | Botón y lista de marcadores (`bookmark`, también en las sugerencias de la barra de dirección) |
 | `options` | `ellipsis` | Botón de opciones |
 | `new-tab`, `reopen` | `plus`, `undo-2` | Lista de pestañas: nueva y reabrir cerrada (`reopen`, también en Historial y en «Al iniciar» de Configuración) |
@@ -213,7 +214,8 @@ Window (bgBase, sin marco)
 | `devtools`, `inspect` | `code-xml`, `scan-search` | Ventana de herramientas de desarrollo (etiqueta «DevTools») y sección «Desarrollo» de Configuración; «Inspeccionar» del menú contextual |
 
 ### `IconButton` — botón flotante
-- `icon` (nombre de `assets/icons/`, tamaño `iconSize`) o, si no, `glyph` (texto corto: el contador de pestañas).
+- Relleno por defecto: el degradado `controlsStart → controlsEnd` (los tonos de Configuración), también en los botones sueltos (cerrar Configuración, fondo de la nueva pestaña…). La barra inferior le pasa a cada uno su tramo del degradado compartido.
+- `icon` (nombre de `assets/icons/`, tamaño `iconSize`) o, si no, `glyph` (texto corto: el contador de pestañas) en `fontSizeIcon` (12) y `fontWeightIcon` (ExtraBold, redondeado en Nunito), centrado por la forma de los caracteres (`TextMetrics.tightBoundingRect`), no por su caja.
 - Círculo de `buttonSize`, relleno degradado `fillStart → fillEnd` (por defecto `surfaceFloat` plano), borde `hairline`.
 - Hover: tinte `tintHover`, borde `hairlineHover`, escala `hoverScale`, icono `ink`.
 - Pulsado: tinte `tintActive`, escala `pressScale`.
@@ -336,7 +338,7 @@ Window (bgBase, sin marco)
 ### `SettingsPage` — Configuración
 - Página propia (no una pestaña ni HTML): menú de opciones → «Configuración». Cubre la ventana bajo la barra de título, sobre las pestañas; los controles inferiores y el mini reproductor se ocultan mientras está abierta. Se cierra con Esc, con la ✕ (`IconButton`, arriba a la derecha) o al abrir o cambiar de pestaña. Aparece con un fundido (`durationBase`) y la cabecera baja `spacing` (`durationSlow`, `easeOut`).
 - **Fondo:** `ThemeBackground`, el de la nueva pestaña.
-- **Cabecera** de `settingsHeaderHeight`: círculo de `settingsIconBox` con el degradado de marca y el icono `settings` en `onBrand`, y «Configuración» en `fontSizeHeading` Bold `ink`.
+- **Cabecera** de `settingsHeaderHeight`: círculo de `settingsHeaderIconBox` con el degradado de marca y el icono `settings` de `settingsHeaderIconSize` en `onBrand`, y «Configuración» en `fontSizeHeading` Bold `ink`.
 - **Índice** a la izquierda, de `settingsNavWidth`, solo si la página mide al menos `settingsNavBreakpoint`. Es una lista con su propio desplazamiento que ocupa como mucho `settingsNavHeightRatio` (40 %) del alto; sigue a la sección a la vista y la mantiene en su tercio central (`durationSlow`). una fila de `popupRowHeight` por sección (icono `inkMuted` y nombre DemiBold `inkSecondary`; hover `tintHover`). La sección a la vista: fondo `tintActive`, barra `markerWidth` con el degradado de marca, icono `brandLight1` y nombre Bold `ink`. Pulsar una fila desplaza hasta la sección (`durationSlow`, `easeOut`); al desplazarse, el índice sigue a la sección a la vista.
 - **Logo completo de Mitis** al pie de la ventana, centrado en la columna del índice, de `settingsMitisLogoWidth` (180) de ancho y `settingsSectionSpacing` sobre el borde inferior: `mitis-logo-dark.png` en los temas oscuros y `mitis-logo-light.png` en el Claro. Siempre visible: en una ventana baja, el índice se acorta (y se desplaza) para dejarle sitio.
 - **«by StartCode»** al final de la columna de ajustes, centrado: «by» en `fontSizeSmall` `inkMuted` y el logo de StartCode de `settingsLogoWidth` (80) × la mitad, al 70 % de opacidad (100 % con el ratón encima, `durationFast`). Sin fondo: `startcode.png` (claro) en los temas oscuros y `startcode-light.png` (tinta del Claro `#1d1631` y su violeta `#7c3aed`, sacado de `startcode.png` cambiando sus dos colores) en el Claro.
@@ -426,14 +428,27 @@ Window (bgBase, sin marco)
 ### `AddressBar` — campo de dirección
 - Píldora de `controlHeight`, relleno degradado `fillStart → fillEnd`, borde `hairline`.
 - **Dos modos:**
-  - **Reposo** (sin foco, también tras Enter o Escape): muestra el **título corto** de la página en `inkStrong`, centrado, y el campo se encoge a ese texto más `margin + spacing` a cada lado (`compactWidth`). Sin icono. Hover: tinte `tintHover`, borde `hairlineHover` y cursor de mano.
+  - **Reposo** (sin foco, también tras Enter o Escape): muestra el **título corto** de la página en `inkStrong`, centrado, y el campo se encoge a ese texto más `margin + spacing` a cada lado (`compactWidth`). En páginas web, a la izquierda, el botón del sitio (ver «Botón y panel del sitio»). Hover: tinte `tintHover`, borde `hairlineHover` y cursor de mano.
   - **Escribiendo** (con foco): ocupa todo el hueco entre los grupos de botones, muestra la dirección seleccionada, el icono de búsqueda en `brandLight1` y el borde `focusRing`.
 - El cambio de ancho se anima con `durationBase` y `easeOut`. Los botones acompañan al campo: la separación entre ellos (`2 × spacing`) es la misma en ambos modos y todo el grupo queda centrado.
 - **Título corto:** se corta en el primer guion separado por espacios (` - `, ` – `, ` — `) y se descarta lo que sigue. Los guiones dentro de una palabra no cortan. Sin título, se muestra el dominio; sin dirección, "Buscar" en `inkMuted`. Si aun así no cabe, termina en "…".
 - Progreso de carga: línea de `progressHeight` con el degradado de marca en el borde inferior, dentro del radio.
 
+### `Glass` — vidrio esmerilado (experimental)
+- Lo enciende Configuración → Apariencia, «Transparencia con desenfoque (experimental)» (`Settings.glassEffect`, apagada por defecto; `Theme.glassEnabled`). Por ahora solo en el campo de dirección.
+- Copia el trozo de página que tapa el control (`ShaderEffectSource` con `sourceRect`, sin copiar la página entera), lo difumina (`MultiEffect`, `glassBlur` 48 px, `glassSaturation` 0,3) y lo recorta con la forma del control. Encima, el relleno de siempre al `glassFillOpacity` (55 %).
+- Sin GPU (backend software) no hay shaders: no se dibuja y el control queda opaco como siempre. En el servidor de desarrollo (Chromium sin GPU) la copia del contenido de la página sale vacía: falta confirmar que con una GPU real sí se copia (ver `docs/PLAN.md`).
+
+### Botón y panel del sitio (`SiteInfoPopup`)
+- **Botón** dentro del campo de dirección, a la izquierda, solo en reposo y en páginas web (no en la nueva pestaña ni en archivos): círculo de `buttonSizeSmall` (realce `tintActive` al pasar) con `site-secure` (`inkSoft`, `ink` al pasar) si la conexión es https, `site-insecure` en `warn` si es http y en `danger` si se aceptó un certificado no válido. Tooltip «Conexión segura · Información del sitio». Suma su ancho al del campo en reposo. Pulsarlo abre o cierra el panel.
+- **Panel**: lista desplegable (`PopupBackground`, `popupWidth`) que se abre hacia arriba desde el borde izquierdo del campo, con la entrada de las demás listas. De arriba abajo:
+  - Sitio: favicon, dominio en `fontSizeTitle` Bold `ink` y título de la página en `fontSizeSmall` `inkMuted`. Separador `line`.
+  - **Conexión**: fila con icono de color (`ok` segura, `warn` no segura, `danger` certificado aceptado), título DemiBold y explicación en `fontSizeSmall` `inkMuted`. Si es https, pulsarla despliega el certificado (icono `expand` girado 180°): «Verificado por» (organización y nombre del emisor), «Emitido para», «Válido» (del … al …) y «Protocolo», cada uno con etiqueta `inkMuted` y valor DemiBold `ink` en `fontSizeSmall`; los problemas, en `danger`. Mientras llega, «Comprobando el certificado…». Lo consulta C++ con su propia conexión TLS al sitio (solo al desplegar, se guarda durante la sesión).
+  - **Protección contra rastreadores**: icono `blocker` en `ok` (activa) o `inkMuted`, si está activada en este sitio («Activada en este sitio» / «Desactivada en este sitio»; sin contador) y un `Toggle` que la quita o la pone solo en este sitio (lista «Permitidos» del bloqueador) y recarga la página. Con el bloqueador apagado en Configuración, sin interruptor.
+  - Separador y acciones (`PopupAction`): «Añadir a marcadores» / «Quitar de marcadores» (Ctrl+D), «Copiar enlace» (pasa a «Enlace copiado» `siteInfoCopiedHold`), «Enviar por correo» (`mailto:`) y «Permisos de sitios» (Configuración).
+
 ### `BottomBar` — degradado compartido
-- Todos los controles (de atrás a opciones) se leen como una sola pieza de color: `controlsStart` a la izquierda, `controlsEnd` a la derecha. El degradado se reparte sobre el **ancho del grupo**, no de la ventana, así que el botón de atrás siempre es violeta y el de opciones siempre rosa, con el campo grande o pequeño.
+- Todos los controles (de atrás a opciones) se leen como una sola pieza de color: `controlsStart` a la izquierda, `controlsEnd` a la derecha. El degradado se reparte sobre el **ancho del grupo**, no de la ventana, así que el botón de atrás siempre lleva el tono claro (`bgGlow`) y el de opciones el oscuro (`bgMid`), con el campo grande o pequeño.
 - No se pinta un degradado grande recortado con máscara (costaría GPU): cada control recibe en `fillStart`/`fillEnd` el tramo que le corresponde según su posición, con `tone(x)`.
 - Un control nuevo en la fila debe recibir también `fillStart: root.tone(x)` y `fillEnd: root.tone(x + width)`.
 
@@ -494,8 +509,8 @@ Window (bgBase, sin marco)
   - Clic en una terminada: abre el archivo (cursor de mano). Abrir el archivo o la carpeta cierra el listado.
 
 ### `TitleBar`
-- Fondo con el degradado oscuro `titleBarStart → titleBarEnd` (violeta profundo → rosa ciruela). Nada de colores de marca vivos como fondo.
-- A la izquierda, el nombre de Mitis tal como va en el logo, sin el icono, de `titleBarLogoHeight` (20) de alto: `mitis-wordmark-dark.png` en los temas oscuros y `mitis-wordmark-light.png` en el Claro. Detrás, las píldoras «Beta» y «Privada».
+- Fondo con el degradado `titleBarStart → titleBarEnd` (los tonos de Configuración). Nada de colores de marca vivos como fondo.
+- A la izquierda, el nombre de Mitis tal como va en el logo, sin el icono, de `titleBarLogoHeight` (17) de alto (la barra mantiene su `titleBarHeight`): `mitis-wordmark-dark.png` en los temas oscuros y `mitis-wordmark-light.png` en el Claro. Detrás, las píldoras «Beta» y «Privada».
 - Los controles de ventana son `IconButton` con `flat: true`: solo iconos; el círculo aparece al pasar por encima.
 - Solo marca y controles de ventana. Toda la barra es zona de arrastre; doble clic maximiza. En pantalla completa no se arrastra ni maximiza (además, está oculta).
 

@@ -5,6 +5,19 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ## [Sin publicar]
 
+### Añadido
+
+- **Panel del sitio**, como en Zen: el candado del campo de dirección abre un panel con lo importante de la página. Muestra si la conexión es segura y, al pulsarla, el certificado: quién lo verificó, para quién es y hasta cuándo vale. También si la protección contra rastreadores está activa en ese sitio, con un interruptor para quitarla solo ahí. Y acciones: añadir a marcadores, copiar el enlace, enviarlo por correo y los permisos del sitio.
+
+- **Transparencia con desenfoque (experimental)**, en Configuración → Apariencia, apagada por defecto: el campo de dirección deja ver la página de detrás, difuminada, como el reproductor de Apple Music en la web. Necesita aceleración gráfica.
+
+### Cambiado
+
+- Toda la interfaz usa los tonos del fondo de Configuración: la barra de título (sin el rosa), los controles de abajo, los botones, el buscador de la nueva pestaña, los menús y los tooltips.
+- El contador de pestañas es más pequeño, más grueso y está mejor centrado; lo que escribes en los buscadores se ve algo más grueso; el nombre de la barra de título y el icono de Configuración son algo más pequeños.
+
+## [0.6.0] - 2026-10-22
+
 ### Corregido
 
 - Las notificaciones de las páginas (WhatsApp Web, Gmail, chats…) no se mostraban. Ahora son notificaciones del sistema: en Windows, en Linux (cualquier escritorio) y en macOS. Al pulsarla, Mitis vuelve a la pestaña del sitio.

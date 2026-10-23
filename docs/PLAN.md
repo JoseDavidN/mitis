@@ -10,13 +10,19 @@ Al terminar una tarea, quitarla de aquí y apuntar el cambio en `CHANGELOG.md`
 
 ## Interfaz
 
-- [ ] **Redimensionar la ventana sin parpadeos.** Al cambiar el tamaño, el contenido aparece y desaparece buscando acomodarse al nuevo tamaño; debe ser fluido.
+- [x] **Redimensionar la ventana sin parpadeos.** Al cambiar el tamaño, el contenido aparece y desaparece buscando acomodarse al nuevo tamaño; debe ser fluido.
   - Corregido (2026-10-22): el campo de dirección animaba su ancho con cada cambio de tamaño y siempre iba por detrás; ahora solo se anima al empezar o dejar de escribir. **Pendiente: comprobarlo en Windows** (en el servidor, sin gestor de ventanas, no se puede reproducir un redimensionado real) y, si sigue, ver qué parpadea.
   A investigar si sigue:
   - Qué parpadea: la página (WebEngineView, que el motor vuelve a pintar a cada tamaño y deja huecos mientras tanto) o la interfaz QML (barra inferior, página de nueva pestaña, Configuración).
   - El redimensionado de la ventana sin marco ya usa el del sistema (`startSystemResize`): no es la causa.
   - Mientras dura el redimensionado: rellenar con el color de fondo del tema lo que la página aún no ha pintado (en lugar de negro o restos del tamaño anterior), y evitar que los elementos anclados se recoloquen a saltos (animaciones o `Behavior` que se disparen con cada cambio de tamaño).
   - Probarlo en Windows (donde se vio) y en Linux.
+
+## Funcionalidad
+
+- [ ] **Transparencia con desenfoque: probarla en Windows** (Configuración → Apariencia, experimental). En el servidor de desarrollo Qt no puede copiar lo que pinta Chromium (sin GPU) y el campo se ve gris. Si en Windows el campo deja ver la página difuminada: extenderla a los botones de abajo, a las listas que se abren hacia arriba, a la pestaña del borde y (si encaja) al mini reproductor, y encenderla por defecto. Si sale transparente sin difuminar: quitarla y valorar controles algo translúcidos sin desenfoque.
+
+- [ ] **Captura de pantalla** de la página, desde el panel del sitio (candado del campo de dirección), como en Zen: la parte visible o la página entera, y guardarla (carpeta de descargas) o copiarla al portapapeles. Una acción más en `SiteInfoPopup`, bajo «Copiar enlace»; la imagen la da el motor (`WebEngineView.grabToImage` para lo visible; para la página entera, por partes desplazando o con el protocolo de DevTools).
 
 ## Identidad visual
 

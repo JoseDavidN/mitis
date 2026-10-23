@@ -16,6 +16,7 @@ const QString StartupUrlKey = QStringLiteral("Startup/url");
 const QString DefaultZoomKey = QStringLiteral("Pages/zoom");
 const QString DarkPagesKey = QStringLiteral("Pages/dark");
 const QString HideScrollbarsKey = QStringLiteral("Pages/hideScrollbars");
+const QString GlassEffectKey = QStringLiteral("Appearance/glassEffect");
 const QString LanguagesKey = QStringLiteral("Pages/languages");
 const QString BlockThirdPartyCookiesKey = QStringLiteral("Privacy/blockThirdPartyCookies");
 const QString ClearOnExitKey = QStringLiteral("Privacy/clearOnExit");
@@ -214,6 +215,18 @@ void Settings::setHideScrollbars(bool value)
 {
     if (storeBool(HideScrollbarsKey, value, false))
         emit hideScrollbarsChanged();
+    emit glassEffectChanged();
+}
+
+bool Settings::glassEffect() const
+{
+    return flag(GlassEffectKey, false);
+}
+
+void Settings::setGlassEffect(bool value)
+{
+    if (storeBool(GlassEffectKey, value, false))
+        emit glassEffectChanged();
 }
 
 QStringList Settings::languages() const
@@ -463,7 +476,7 @@ void Settings::resetPreferences()
 {
     const QStringList keys = {
         SearchEngineKey, NewTabBackgroundKey, DownloadFolderKey, DevToolsKey, PerformanceMonitorKey, RestoreSessionKey,
-        StartupModeKey, StartupUrlKey, DefaultZoomKey, DarkPagesKey, HideScrollbarsKey, LanguagesKey,
+        StartupModeKey, StartupUrlKey, DefaultZoomKey, DarkPagesKey, HideScrollbarsKey, GlassEffectKey, LanguagesKey,
         BlockThirdPartyCookiesKey, ClearOnExitKey, DoNotTrackKey, HideLocalIpKey, HttpsUpgradeKey,
         JavascriptKey, ImagesKey, BlockPopupsKey, AutoplayKey, BlockedPermissionsKey, AskDownloadFolderKey,
         SuspendAfterKey, BlockAdsKey, StripTrackingParamsKey, ThemeKey,

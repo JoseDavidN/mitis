@@ -18,6 +18,10 @@ Item {
     property bool loading: false
     property int loadProgress: 0
     property int tabCount: 1
+    // La página, detrás de los controles: se ve difuminada a través (Glass)
+    property Item backdrop: null
+    // Conexión de la página (ver AddressBar.security)
+    property string security: ""
     // La página actual está en marcadores: la estrella se ilumina
     property bool bookmarked: false
 
@@ -33,6 +37,7 @@ Item {
     readonly property Item tabsButton: tabsButton
     readonly property Item bookmarksButton: bookmarksButton
     readonly property Item optionsButton: optionsButton
+    readonly property Item addressField: address
     // Se está escribiendo en el campo de dirección
     readonly property bool editing: address.editing
 
@@ -45,6 +50,7 @@ Item {
     signal tabsRequested()
     signal bookmarksRequested()
     signal optionsRequested()
+    signal siteInfoRequested()
 
     function focusAddress() {
         address.focusAndSelect()
@@ -122,7 +128,10 @@ Item {
             pageTitle: root.pageTitle
             loading: root.loading
             loadProgress: root.loadProgress
+            security: root.security
+            backdrop: root.backdrop
             onNavigate: target => root.navigateRequested(target)
+            onSiteInfoRequested: root.siteInfoRequested()
 
             // Se anima solo al empezar o dejar de escribir. Su ancho depende
             // también del de la ventana: animarlo al redimensionar lo hacía ir

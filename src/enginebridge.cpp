@@ -3,6 +3,11 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
+#include <QPointer>
+#include <QSslCertificate>
+#include <QSslCipher>
+#include <QSslSocket>
+#include <QTimer>
 #include <QQmlEngine>
 #include <QQuickWebEngineProfile>
 #include <QWebEngineCookieStore>
@@ -11,6 +16,8 @@
 #include "contentblocker.h"
 #include "notifier.h"
 #include "requestinterceptor.h"
+
+#include <memory>
 
 namespace {
 // Un perfil con nombre de almacenamiento (vacío: sin disco). Qt 6.9 lo
@@ -184,6 +191,111 @@ bool EngineBridge::adBlockUpdating() const
 double EngineBridge::adBlockBlocked() const
 {
     return double(m_blocker->blockedCount());
+}
+
+namespace {
+// Motivo en español de un error de certificado (errorString() es inglés)
+QString certificateProblem(const QSslError &error)
+{
+    switch (error.error()) {
+    case QSslError::HostNameMismatch:
+        return QStringLiteral("El certificado es de otro sitio.");
+    case QSslError::CertificateExpired:
+        return QStringLiteral("El certificado ha caducado.");
+    case QSslError::CertificateNotYetValid:
+        return QStringLiteral("El certificado aún no es válido.");
+    case QSslError::SelfSignedCertificate:
+    case QSslError::SelfSignedCertificateInChain:
+        return QStringLiteral("El certificado lo firmó el propio sitio, no una entidad de confianza.");
+    case QSslError::UnableToGetLocalIssuerCertificate:
+    case QSslError::UnableToGetIssuerCertificate:
+    case QSslError::UnableToVerifyFirstCertificate:
+        return QStringLiteral("No se pudo comprobar quién emitió el certificado.");
+    case QSslError::CertificateRevoked:
+        return QStringLiteral("El certificado fue revocado.");
+    default:
+        return QStringLiteral("El certificado no es de confianza.");
+    }
+}
+
+QString protocolName(QSsl::SslProtocol protocol)
+{
+    switch (protocol) {
+    case QSsl::TlsV1_3:
+        return QStringLiteral("TLS 1.3");
+    case QSsl::TlsV1_2:
+        return QStringLiteral("TLS 1.2");
+    default:
+        return QString();
+    }
+}
+}
+
+void EngineBridge::requestCertificate(const QString &host, int port)
+{
+    if (host.isEmpty())
+        return;
+    const QString key = host + QLatin1Char(':') + QString::number(port);
+    if (m_certificates.contains(key)) {
+        emit certificateReady(host, m_certificates.value(key));
+        return;
+    }
+
+    auto *socket = new QSslSocket(this);
+    socket->setPeerVerifyName(host);
+    auto problems = std::make_shared<QStringList>();
+    auto done = std::make_shared<bool>(false);
+    QPointer<QSslSocket> guard(socket);
+
+    // Una sola respuesta por consulta: conectado, fallo o tiempo agotado
+    auto finish = [this, guard, host, key, problems, done](bool connected, const QString &failure) {
+        if (*done || !guard)
+            return;
+        *done = true;
+        QVariantMap info;
+        if (connected) {
+            const QSslCertificate certificate = guard->peerCertificate();
+            info.insert(QStringLiteral("verified"), problems->isEmpty());
+            info.insert(QStringLiteral("errors"), *problems);
+            info.insert(QStringLiteral("subject"),
+                        certificate.subjectInfo(QSslCertificate::CommonName).join(QStringLiteral(", ")));
+            info.insert(QStringLiteral("subjectOrganization"),
+                        certificate.subjectInfo(QSslCertificate::Organization).join(QStringLiteral(", ")));
+            info.insert(QStringLiteral("issuer"),
+                        certificate.issuerInfo(QSslCertificate::Organization).join(QStringLiteral(", ")));
+            info.insert(QStringLiteral("issuerName"),
+                        certificate.issuerInfo(QSslCertificate::CommonName).join(QStringLiteral(", ")));
+            info.insert(QStringLiteral("validFrom"), certificate.effectiveDate());
+            info.insert(QStringLiteral("validTo"), certificate.expiryDate());
+            QStringList names = certificate.subjectAlternativeNames().values(QSsl::DnsEntry);
+            info.insert(QStringLiteral("names"), names.mid(0, 8));
+            info.insert(QStringLiteral("protocol"), protocolName(guard->sessionProtocol()));
+            m_certificates.insert(key, info);
+        } else {
+            info.insert(QStringLiteral("error"), failure);
+        }
+        guard->abort();
+        guard->deleteLater();
+        emit certificateReady(host, info);
+    };
+
+    // Los errores se anotan y se sigue: aun así se quiere ver el certificado
+    connect(socket, &QSslSocket::sslErrors, this, [socket, problems](const QList<QSslError> &errors) {
+        for (const QSslError &error : errors) {
+            const QString problem = certificateProblem(error);
+            if (!problems->contains(problem))
+                problems->append(problem);
+        }
+        socket->ignoreSslErrors();
+    });
+    connect(socket, &QSslSocket::encrypted, this, [finish] { finish(true, QString()); });
+    connect(socket, &QAbstractSocket::errorOccurred, this, [finish](QAbstractSocket::SocketError) {
+        finish(false, QStringLiteral("No se pudo conectar con el sitio para ver su certificado."));
+    });
+    QTimer::singleShot(8000, socket, [finish] {
+        finish(false, QStringLiteral("El sitio tardó demasiado en responder."));
+    });
+    socket->connectToHostEncrypted(host, quint16(port));
 }
 
 void EngineBridge::updateFilterLists()

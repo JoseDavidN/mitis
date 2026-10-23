@@ -48,6 +48,8 @@ class Settings : public QObject
     Q_PROPERTY(bool darkPages READ darkPages WRITE setDarkPages NOTIFY darkPagesChanged)
     // Ocultar las barras de desplazamiento de las páginas (se sigue desplazando)
     Q_PROPERTY(bool hideScrollbars READ hideScrollbars WRITE setHideScrollbars NOTIFY hideScrollbarsChanged)
+    // Experimental: controles de vidrio esmerilado (Glass), apagado por defecto
+    Q_PROPERTY(bool glassEffect READ glassEffect WRITE setGlassEffect NOTIFY glassEffectChanged)
     // Idiomas preferidos de las páginas, en orden ("es", "en"…)
     Q_PROPERTY(QStringList languages READ languages WRITE setLanguages NOTIFY languagesChanged)
 
@@ -125,6 +127,8 @@ public:
     void setDarkPages(bool value);
     bool hideScrollbars() const;
     void setHideScrollbars(bool value);
+    bool glassEffect() const;
+    void setGlassEffect(bool value);
     QStringList languages() const;
     void setLanguages(const QStringList &value);
     bool blockThirdPartyCookies() const;
@@ -187,6 +191,7 @@ signals:
     void defaultZoomChanged();
     void darkPagesChanged();
     void hideScrollbarsChanged();
+    void glassEffectChanged();
     void languagesChanged();
     void blockThirdPartyCookiesChanged();
     void clearOnExitChanged();

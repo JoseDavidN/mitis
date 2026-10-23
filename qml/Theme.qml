@@ -26,14 +26,16 @@ QtObject {
         nocturno: {
             dark: true,
             bgBase: "#07050d", bgMid: "#150a2e", bgGlow: "#2a1352",
-            titleBarStart: "#2a1352", titleBarEnd: "#4a1438",
-            controlsStart: Qt.rgba(0x1d / 255, 0x0d / 255, 0x39 / 255, 0.92),
-            controlsEnd: Qt.rgba(0x34 / 255, 0x0e / 255, 0x27 / 255, 0.92),
+            // Barra de título, controles, botones sueltos y listas: los tonos del
+            // fondo de Configuración (bgGlow → bgMid), para que todo coincida
+            titleBarStart: "#2a1352", titleBarEnd: "#150a2e",
+            controlsStart: Qt.rgba(0x2a / 255, 0x13 / 255, 0x52 / 255, 0.94),
+            controlsEnd: Qt.rgba(0x15 / 255, 0x0a / 255, 0x2e / 255, 0.94),
             surfaceFloat: Qt.rgba(8 / 255, 3 / 255, 20 / 255, 0.88),
-            selectBg: "#1a0f3d",
+            selectBg: "#2a1352",
             backgroundScrim: Qt.rgba(7 / 255, 5 / 255, 13 / 255, 0.55),
             faviconBackdrop: Qt.rgba(1, 1, 1, 0.92),
-            surfacePopup: Qt.rgba(8 / 255, 3 / 255, 20 / 255, 1),
+            surfacePopup: "#150a2e",
             hairline: Qt.rgba(1, 1, 1, 0.13), hairlineSoft: Qt.rgba(1, 1, 1, 0.12),
             hairlineStrong: Qt.rgba(1, 1, 1, 0.20), hairlineHover: Qt.rgba(1, 1, 1, 0.18),
             line: Qt.rgba(1, 1, 1, 0.07),
@@ -50,9 +52,9 @@ QtObject {
         oscuro: {
             dark: true,
             bgBase: "#202124", bgMid: "#202124", bgGlow: "#2d2e31",
-            titleBarStart: "#1b1c1f", titleBarEnd: "#1b1c1f",
-            controlsStart: Qt.rgba(0x35 / 255, 0x36 / 255, 0x3a / 255, 0.94),
-            controlsEnd: Qt.rgba(0x35 / 255, 0x36 / 255, 0x3a / 255, 0.94),
+            titleBarStart: "#2d2e31", titleBarEnd: "#202124",
+            controlsStart: Qt.rgba(0x2d / 255, 0x2e / 255, 0x31 / 255, 0.94),
+            controlsEnd: Qt.rgba(0x20 / 255, 0x21 / 255, 0x24 / 255, 0.94),
             surfaceFloat: Qt.rgba(0x29 / 255, 0x2a / 255, 0x2d / 255, 0.94),
             selectBg: "#35363a",
             backgroundScrim: Qt.rgba(0x20 / 255, 0x21 / 255, 0x24 / 255, 0.55),
@@ -74,15 +76,15 @@ QtObject {
         claro: {
             dark: false,
             bgBase: "#f7f5fb", bgMid: "#f1ebfd", bgGlow: "#e4d7fc",
-            titleBarStart: "#ebe0fe", titleBarEnd: "#fbe1ef",
-            controlsStart: Qt.rgba(0xf4 / 255, 0xee / 255, 0xff / 255, 0.94),
-            controlsEnd: Qt.rgba(0xfd / 255, 0xec / 255, 0xf5 / 255, 0.94),
+            titleBarStart: "#e4d7fc", titleBarEnd: "#f1ebfd",
+            controlsStart: Qt.rgba(0xe4 / 255, 0xd7 / 255, 0xfc / 255, 0.94),
+            controlsEnd: Qt.rgba(0xf1 / 255, 0xeb / 255, 0xfd / 255, 0.94),
             surfaceFloat: Qt.rgba(1, 1, 1, 0.94),
-            selectBg: "#ede7fb",
+            selectBg: "#e4d7fc",
             backgroundScrim: Qt.rgba(0xf7 / 255, 0xf5 / 255, 0xfb / 255, 0.6),
             // Gris muy claro: los favicons blancos no desaparecen
             faviconBackdrop: "#ece9f2",
-            surfacePopup: "#ffffff",
+            surfacePopup: "#f1ebfd",
             hairline: Qt.rgba(0, 0, 0, 0.12), hairlineSoft: Qt.rgba(0, 0, 0, 0.08),
             hairlineStrong: Qt.rgba(0, 0, 0, 0.16), hairlineHover: Qt.rgba(0, 0, 0, 0.22),
             line: Qt.rgba(0, 0, 0, 0.07),
@@ -184,7 +186,7 @@ QtObject {
     readonly property int controlHeight: 34
     readonly property int logoSize: 18
     // Nombre de Mitis (logo sin icono) en la barra de título: alto
-    readonly property int titleBarLogoHeight: 20
+    readonly property int titleBarLogoHeight: 17
     readonly property int iconSize: 16
     readonly property int iconSizeSmall: 14
     readonly property int faviconSize: 16
@@ -198,6 +200,18 @@ QtObject {
     readonly property int popupWidth: 360
     readonly property int popupMaxHeight: 480
     readonly property int popupRowHeight: 36
+    // Vidrio esmerilado (Glass), experimental: lo enciende la opción de
+    // Configuración → Apariencia, apagada por defecto. En el servidor de
+    // desarrollo (Chromium sin GPU) Qt no puede copiar el contenido de la
+    // página y la copia sale vacía; falta confirmarlo con una GPU real
+    readonly property bool glassEnabled: Settings.glassEffect
+    // Desenfoque máximo de MultiEffect (px), algo
+    // más de color en lo difuminado (como Apple) y opacidad del relleno encima
+    readonly property int glassBlur: 48
+    readonly property real glassSaturation: 0.3
+    readonly property real glassFillOpacity: 0.55
+    // Panel del sitio: cuánto dura «Enlace copiado» (ms)
+    readonly property int siteInfoCopiedHold: 1500
     readonly property int optionsWidth: 270
     readonly property int textButtonHeight: 32
     readonly property int dialogWidth: 360
@@ -233,6 +247,9 @@ QtObject {
     readonly property int settingsSectionSpacing: 32
     readonly property int settingsRowHeight: 60
     readonly property int settingsIconBox: 36
+    // Círculo con el icono de la cabecera de Configuración y su icono
+    readonly property int settingsHeaderIconBox: 30
+    readonly property int settingsHeaderIconSize: 15
     // Avatar del perfil: colores para la inicial (iguales en todos los temas,
     // con texto onBrand encima) y tamaño grande (Configuración → Perfil)
     readonly property var avatarColors: [
@@ -316,7 +333,12 @@ QtObject {
     readonly property int fontSizeTitle: 14
     readonly property int fontSize: 13
     readonly property int fontSizeSmall: 12
-    readonly property int fontSizeIcon: 15
+    // Texto en lugar de icono en un botón (contador de pestañas): más pequeño
+    // que el texto normal y muy grueso, que en Nunito se ve redondeado
+    readonly property int fontSizeIcon: 12
+    readonly property int fontWeightIcon: Font.ExtraBold
+    // Texto que se escribe en los buscadores (dirección y nueva pestaña)
+    readonly property int fontWeightInput: Font.Medium
 
     // ── Herramientas de desarrollo (F12) ─────────────────────────────
     // Paleta propia, igual en todos los temas: negro puro, blanco y un acento

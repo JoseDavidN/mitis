@@ -123,6 +123,9 @@ Item {
     // poder reproducirlo (ver BrowserProfile.widevineAvailable).
     signal protectedContentUnavailable()
     readonly property bool certificateErrorPending: certState.pending !== null
+    // Se aceptó un certificado no válido de este sitio («Continuar» en el
+    // aviso): la conexión está cifrada pero no se sabe con quién
+    readonly property bool certificateOverridden: BrowserProfile.certificateExceptions[root._hostOf(root.url.toString())] === true
     // La página actual es de un host cuyo certificado inválido se aceptó
     readonly property bool certificateBypassed: BrowserProfile.certificateExceptions[root._hostOf(view.url.toString())] === true
 

@@ -6,6 +6,8 @@
 #include <QString>
 #include <QStringList>
 #include <QUrl>
+#include <QHash>
+#include <QVariantMap>
 
 #include <atomic>
 
@@ -80,6 +82,9 @@ public:
     QDateTime adBlockUpdated() const;
     bool adBlockUpdating() const;
     double adBlockBlocked() const;
+    // Certificado del sitio para el panel del sitio: Mitis abre su propia
+    // conexión TLS con él (solo al pedirlo) y responde con certificateReady
+    Q_INVOKABLE void requestCertificate(const QString &host, int port = 443);
 
     // Descarga ahora las listas de filtros
     Q_INVOKABLE void updateFilterLists();
@@ -105,6 +110,10 @@ signals:
     // El usuario pulsó una notificación del sistema del sitio `origin`
     // (src/notifier.*): Main.qml trae al frente su pestaña
     void notificationActivated(const QUrl &origin);
+    // { verified, errors: [texto], subject, subjectOrganization, issuer,
+    //   issuerName, validFrom, validTo, names: [dominios], protocol } o
+    // { error: texto } si no se pudo conectar
+    void certificateReady(const QString &host, const QVariantMap &certificate);
 
 private:
     // Interceptor de peticiones y filtro de cookies
@@ -114,6 +123,8 @@ private:
     SystemNotifier *m_notifier;
     RequestInterceptor *m_interceptor;
     QStringList m_adBlockAllowedSites;
+    // Certificados ya consultados en esta sesión ("host:puerto" → datos)
+    QHash<QString, QVariantMap> m_certificates;
     QQuickWebEngineProfile *m_profile = nullptr;
     QString m_widevinePath;
     // Lo lee el filtro de cookies, que el motor puede llamar desde otro hilo

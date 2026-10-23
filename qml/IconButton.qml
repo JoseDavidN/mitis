@@ -20,8 +20,10 @@ Item {
 
     // Relleno: degradado horizontal. Quien lo coloca puede darle un tramo
     // de un degradado mayor (ver BottomBar)
-    property color fillStart: Theme.surfaceFloat
-    property color fillEnd: Theme.surfaceFloat
+    // Por defecto, el degradado de los controles (los tonos de Configuración);
+    // la barra inferior le pasa a cada botón su tramo del degradado compartido
+    property color fillStart: Theme.controlsStart
+    property color fillEnd: Theme.controlsEnd
 
     signal clicked()
 
@@ -92,12 +94,24 @@ Item {
             color: bubble.tint
         }
 
+        // Centrado por la forma de los caracteres (tightBoundingRect), no por
+        // su caja: la caja deja sitio a acentos y descendentes y el número
+        // se vería desplazado
         Text {
+            id: glyphText
             visible: root.icon === ""
-            anchors.centerIn: parent
+            x: (parent.width - glyphBounds.tightBoundingRect.width) / 2 - glyphBounds.tightBoundingRect.x
+            y: parent.height / 2 - baselineOffset - glyphBounds.tightBoundingRect.y
+               - glyphBounds.tightBoundingRect.height / 2
             text: root.glyph
             font.pixelSize: Theme.fontSizeIcon
+            font.weight: Theme.fontWeightIcon
             color: bubble.tint
+        }
+        TextMetrics {
+            id: glyphBounds
+            font: glyphText.font
+            text: glyphText.text
         }
     }
 

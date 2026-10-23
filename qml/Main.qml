@@ -738,7 +738,7 @@ Window {
     property bool revealControls: false
     readonly property bool controlsInUse: revealControls || barHover.hovered || playerHover.hovered
         || controlsTab.hovered || bottomBar.editing
-        || tabsPopup.opened || bookmarksPopup.opened || optionsPopup.opened
+        || tabsPopup.opened || bookmarksPopup.opened || optionsPopup.opened || siteInfoPopup.opened
         || historyPopup.opened || downloadsPopup.opened || downloadPanel.opened
     // A la vista fuera de F11; al abrir Mitis también (para saber dónde están)
     property bool controlsAwake: true
@@ -953,6 +953,7 @@ Window {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
 
+        backdrop: pages
         currentUrl: win.currentView ? win.currentView.url : ""
         pageTitle: win.showingNewTabPage ? "Nueva pestaña"
                                          : (win.currentView ? win.currentView.title : "")
@@ -989,6 +990,16 @@ Window {
         onDownloadsRequested: downloadPanel.opened ? downloadPanel.close() : downloadPanel.show()
         onTabsRequested: tabsPopup.opened ? tabsPopup.close() : tabsPopup.open()
         onBookmarksRequested: bookmarksPopup.opened ? bookmarksPopup.close() : bookmarksPopup.open()
+        onSiteInfoRequested: siteInfoPopup.opened ? siteInfoPopup.close() : siteInfoPopup.open()
+        // Conexión de la página para el botón del sitio (candado)
+        security: {
+            if (!win.currentView || win.showingNewTabPage)
+                return ""
+            const address = win.currentView.url.toString()
+            if (address.startsWith("https:"))
+                return win.currentView.certificateOverridden ? "overridden" : "secure"
+            return address.startsWith("http:") ? "insecure" : ""
+        }
         // Con el listado de descargas abierto, el botón de opciones lo cierra
         onOptionsRequested: downloadsPopup.opened ? downloadsPopup.close()
                           : historyPopup.opened ? historyPopup.close()
@@ -1207,6 +1218,21 @@ Window {
         pageUrl: win.currentView && !win.showingNewTabPage ? win.currentView.url.toString() : ""
         pageTitle: win.currentView ? win.currentView.title : ""
         onOpenRequested: url => win.openUrl(url)
+    }
+
+    // Panel del sitio (candado del campo de dirección): conexión y
+    // certificado, rastreadores y acciones con la página
+    SiteInfoPopup {
+        id: siteInfoPopup
+        parent: bottomBar.addressField
+        x: 0
+        y: -height - Theme.floatingMargin
+        pageUrl: win.currentView && !win.showingNewTabPage ? win.currentView.url.toString() : ""
+        pageTitle: win.currentView ? win.currentView.title : ""
+        pageIcon: win.currentView ? win.currentView.icon : ""
+        security: bottomBar.security
+        onReloadRequested: if (win.currentView) win.currentView.reload()
+        onSettingsRequested: section => win.openSettings(section)
     }
 
     // Historial: reabrir la última cerrada, lo visitado y el acceso a Configuración

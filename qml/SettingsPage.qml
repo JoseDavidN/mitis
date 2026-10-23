@@ -309,8 +309,8 @@ FocusScope {
             spacing: Theme.margin
 
             Rectangle {
-                width: Theme.settingsIconBox
-                height: Theme.settingsIconBox
+                width: Theme.settingsHeaderIconBox
+                height: Theme.settingsHeaderIconBox
                 radius: width / 2
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
@@ -320,6 +320,7 @@ FocusScope {
                 Icon {
                     anchors.centerIn: parent
                     name: "settings"
+                    size: Theme.settingsHeaderIconSize
                     color: Theme.onBrand
                 }
             }
@@ -661,6 +662,15 @@ FocusScope {
                     Toggle {
                         checked: Settings.hideScrollbars
                         onToggled: Settings.hideScrollbars = checked
+                    }
+                }
+                SettingRow {
+                    title: "Transparencia con desenfoque (experimental)"
+                    description: "El campo de dirección deja ver la página de detrás, difuminada. Necesita aceleración gráfica; si el campo se ve transparente pero sin difuminar, apágalo."
+
+                    Toggle {
+                        checked: Settings.glassEffect
+                        onToggled: Settings.glassEffect = checked
                     }
                 }
                 ChoiceRow {

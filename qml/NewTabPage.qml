@@ -107,11 +107,17 @@ Item {
                 selectionColor: Theme.selection
                 selectedTextColor: Theme.ink
                 font.pixelSize: Theme.fontSizeLarge
+                font.weight: Theme.fontWeightInput
                 selectByMouse: true
 
+                // Mismo degradado que el campo de dirección y los controles
                 background: Rectangle {
                     radius: height / 2
-                    color: Theme.surfaceFloat
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: Theme.controlsStart }
+                        GradientStop { position: 1.0; color: Theme.controlsEnd }
+                    }
                     border.width: 1
                     border.color: search.activeFocus ? Theme.focusRing
                                                      : (searchHover.hovered ? Theme.hairlineHover : Theme.hairline)
