@@ -42,7 +42,6 @@ Al terminar una tarea, quitarla de aquí y apuntar el cambio en `CHANGELOG.md`
 
 ## Distribución
 
-- [ ] **Quitar el «if» TEMPORAL del trabajo de Windows** en `.github/workflows/compilar.yml` (desde 2026-10-23 los push solo compilan macOS). Antes de etiquetar una versión: con él, el release no se publica.
 - [ ] **macOS en GitHub Actions** (desde 2026-10-22, en cada push: `.dmg` universal, Apple Silicon e Intel, con firma ad hoc): comprobar que el primer run pasa y probar el `.dmg` en un Mac de cada tipo (Gatekeeper avisará: sin firma de Apple). Con códecs, el archivo de Qt WebEngine también tiene que ser universal (`compilar-macos.sh --arquitecturas "arm64;x86_64"`).
 - [ ] Probar en GitHub Actions la compilación de Linux (AppImage): solo a mano (Run workflow → «todos»).
 - [ ] Probar el AppImage en una distribución distinta de Arch y el `PKGBUILD` con `makepkg`.

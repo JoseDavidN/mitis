@@ -110,7 +110,7 @@ installer/      Instalador de Windows (proyecto CMake aparte, Win32 + GDI+, sin 
 assets/branding/ Icono de Mitis (mitis-icon.svg → mitis.png, mitis.ico; mitis.rc lo pone en Mitis.exe), logo completo (mitis-logo-dark/light.svg → .png, Configuración), solo el nombre (mitis-wordmark-dark/light.svg → .png, barra de título) y logo de StartCode (startcode.png; startcode-light.png para el tema Claro)
 packaging/macos/ Info.plist.in (abre http/https y HTML: navegador predeterminado)
 packaging/linux/ PKGBUILD (Arch, mitis-git), appimage.sh (+ apprun-sandbox.sh), mitis.desktop, mitis.svg (copia de mitis-icon.svg)
-.github/workflows/compilar.yml  En cada push, Windows (instalador) y macOS (.dmg universal arm64 + x86_64, firma ad hoc, ventana con fondo assets/branding/dmg-fondo.svg vía create-dmg, icono .icns generado con iconutil y subido como artefacto); Linux a mano («todos»); release con etiqueta v* (instalador y .dmg). TEMPORAL: los push solo compilan macOS (ver docs/PLAN.md)
+.github/workflows/compilar.yml  En cada push, Windows (instalador) y macOS (.dmg universal arm64 + x86_64, firma ad hoc, ventana con fondo assets/branding/dmg-fondo.svg vía create-dmg, icono .icns generado con iconutil y subido como artefacto); Linux a mano («todos»); release con etiqueta v* (instalador y .dmg)
 ```
 
 ## Diseño de la interfaz
