@@ -696,7 +696,7 @@ FocusScope {
                 }
                 SettingRow {
                     title: "Transparencia con desenfoque (experimental)"
-                    description: "Los controles, las listas y la barra de título dejan ver la página de detrás, difuminada, con un velo gris. "
+                    description: "Los controles, las listas y la barra de título dejan ver la página de detrás, difuminada, con un velo morado. "
                                  + (root.gpuRendering
                                     ? "Se dibuja con la GPU (" + root.graphicsApiName + "). Si se ven transparentes pero sin difuminar, apágala."
                                     : "No disponible: Mitis se está dibujando sin GPU (" + root.graphicsApiName + ").")
