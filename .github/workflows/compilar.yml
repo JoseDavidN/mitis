@@ -177,6 +177,14 @@ jobs:
           path: servidor/*
           if-no-files-found: error
 
+      # Solo el instalador, para descargarlo directo y pasarlo (descarga
+      # Mitis del servidor: lo de releases/ debe estar subido)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mitis-instalador
+          path: servidor/MitisInstalador.exe
+          if-no-files-found: error
+
       # Símbolos (no se distribuyen): para leer la pila y el .dmp de los
       # informes de cierres de esta compilación
       - uses: actions/upload-artifact@v4
@@ -364,6 +372,15 @@ jobs:
           set -euo pipefail
           cd servidor
           rm -f version.txt
+          ls -l
+          # Sin alguno de estos, el servidor quedaría a medias: mejor fallar
+          # aquí (un $(…) que falla dentro de echo no detiene el script)
+          for patron in MitisInstalador.exe 'Mitis-*-windows.zip' 'Mitis-*-macOS.zip'; do
+            if ! compgen -G "$patron" > /dev/null; then
+              echo "::error::Falta $patron en los artefactos de Windows y macOS"
+              exit 1
+            fi
+          done
           suma() { sha256sum "$1" | cut -d' ' -f1; }
           paquete=$(ls Mitis-*-windows.zip)
           version=${paquete#Mitis-}; version=${version%-windows.zip}
