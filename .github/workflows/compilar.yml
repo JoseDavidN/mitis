@@ -17,7 +17,7 @@ on:
       sistemas:
         description: "Qué compilar"
         type: choice
-        options: [windows-macos, todos]
+        options: [windows-macos, macos, todos]
         default: windows-macos
 
 env:
@@ -95,6 +95,11 @@ jobs:
 
   windows:
     name: Windows (instalador)
+    # TEMPORAL (2026-10-23): en los push solo se compila macOS (la versión de
+    # Windows de esta versión ya está hecha). Windows, a mano: Run workflow →
+    # «windows-macos» o «todos». Quitar este «if» antes de publicar una
+    # versión: con él, un push de etiqueta no compila Windows y no se publica
+    if: github.event_name == 'workflow_dispatch' && inputs.sistemas != 'macos'
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
@@ -230,14 +235,20 @@ jobs:
         run: |
           set -euo pipefail
           app=build/bin/Mitis.app
+          # El bundle sale sin Resources (aún no hay icono .icns que la cree)
+          mkdir -p "$app/Contents/Resources"
           cp LICENSE "$app/Contents/Resources/"
           cp -R licencias "$app/Contents/Resources/"
           macdeployqt "$app" -qmldir=qml
           # Las dos arquitecturas, en Mitis y en el proceso de Qt WebEngine
           # (si el Qt instalado no fuera universal, se nota aquí y no en el
           # Mac de quien lo descarga)
-          for binario in "$app/Contents/MacOS/Mitis" \
-              "$app/Contents/Frameworks/QtWebEngineCore.framework/Helpers/QtWebEngineProcess.app/Contents/MacOS/QtWebEngineProcess"; do
+          proceso=$(find "$app/Contents/Frameworks" -type f -path "*QtWebEngineProcess.app/Contents/MacOS/QtWebEngineProcess" | head -n 1)
+          if [ -z "$proceso" ]; then
+            echo "::error::No está QtWebEngineProcess dentro de Mitis.app (¿macdeployqt no copió Qt WebEngine?)"
+            exit 1
+          fi
+          for binario in "$app/Contents/MacOS/Mitis" "$proceso"; do
             arquitecturas=$(lipo -archs "$binario")
             echo "$(basename "$binario"): $arquitecturas"
             for a in arm64 x86_64; do
