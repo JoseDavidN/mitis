@@ -90,6 +90,9 @@ public:
     // ventana (o, sin ella, el que usaría Qt). GraphicsInfo de QML da
     // «desconocido» hasta que la ventana ha dibujado y no sirve para esto
     Q_INVOKABLE QString graphicsApi(QObject *window) const;
+    // Esquinas redondeadas de la ventana, como las del sistema (Windows 11,
+    // macOS); rectas con `rounded` en falso (maximizada, pantalla completa)
+    Q_INVOKABLE void setRoundedCorners(QObject *window, bool rounded) const;
 
     // Descarga ahora las listas de filtros
     Q_INVOKABLE void updateFilterLists();

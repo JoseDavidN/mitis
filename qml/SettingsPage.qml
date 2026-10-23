@@ -99,6 +99,9 @@ FocusScope {
 
     // Permisos guardados por sitio: se leen al abrir y tras olvidar uno
     property var sitePermissions: []
+    // Listas largas, plegadas: se despliegan con su fila
+    property bool allowedSitesOpen: false
+    property bool sitePermissionsOpen: false
     function refreshSitePermissions() {
         sitePermissions = BrowserProfile.sitePermissions()
     }
@@ -705,6 +708,14 @@ FocusScope {
                     }
                 }
                 ChoiceRow {
+                    visible: Settings.glassEffect && root.gpuRendering
+                    title: "Tono del velo"
+                    description: "El morado que tiñe lo difuminado: lavanda (suave), violeta o profundo (más oscuro)."
+                    options: Theme.glassTones
+                    isSelected: value => Settings.glassTone === value
+                    onChosen: value => Settings.glassTone = value
+                }
+                ChoiceRow {
                     title: "Idiomas de las páginas"
                     description: "Los sitios que tengan varias versiones mostrarán la primera disponible, por este orden: "
                                  + Settings.languages.map(code => root.languageName(code)).join(", ") + "."
@@ -918,9 +929,7 @@ FocusScope {
                 }
                 SettingRow {
                     title: "Permitir anuncios en un sitio"
-                    description: Settings.adBlockAllowedSites.length === 0
-                                 ? "Si una página no funciona bien, desactiva el bloqueador solo en ella."
-                                 : "Si una página no funciona bien, desactiva el bloqueador solo en ella. En estos sitios no se bloquea nada:"
+                    description: "Si una página no funciona bien, desactiva el bloqueador solo en ella."
 
                     TextButton {
                         visible: root.currentSite !== "" && !Settings.adBlockAllowedSites.includes(root.currentSite)
@@ -928,8 +937,17 @@ FocusScope {
                         onClicked: root.allowAdsOn(root.currentSite)
                     }
                 }
+                ExpandRow {
+                    visible: Settings.adBlockAllowedSites.length > 0
+                    title: "Sitios permitidos"
+                    description: Settings.adBlockAllowedSites.length === 1
+                                 ? "1 sitio: en él no se bloquea nada"
+                                 : Settings.adBlockAllowedSites.length + " sitios: en ellos no se bloquea nada"
+                    expanded: root.allowedSitesOpen
+                    onToggled: root.allowedSitesOpen = !root.allowedSitesOpen
+                }
                 Repeater {
-                    model: Settings.adBlockAllowedSites
+                    model: root.allowedSitesOpen ? Settings.adBlockAllowedSites : []
 
                     delegate: AllowedSiteRow {}
                 }
@@ -1004,43 +1022,18 @@ FocusScope {
                     }
                 }
 
-                // Lo decidido para cada sitio
-                Item {
-                    width: parent.width
-                    height: savedTitle.implicitHeight + Theme.margin + Theme.spacing
-
-                    Rectangle {
-                        anchors.top: parent.top
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        anchors.leftMargin: Theme.margin
-                        anchors.rightMargin: Theme.margin
-                        height: 1
-                        color: Theme.line
-                    }
-                    Text {
-                        id: savedTitle
-                        anchors.left: parent.left
-                        anchors.leftMargin: Theme.margin + Theme.spacing
-                        anchors.bottom: parent.bottom
-                        text: "Decidido para cada sitio"
-                        color: Theme.inkSecondary
-                        font.pixelSize: Theme.fontSizeSmall
-                        font.weight: Font.Bold
-                    }
-                }
-                Text {
-                    visible: root.sitePermissions.length === 0
-                    width: parent.width
-                    height: Theme.settingsRowHeight
-                    leftPadding: Theme.margin + Theme.spacing
-                    verticalAlignment: Text.AlignVCenter
-                    text: "Ningún sitio tiene permisos guardados."
-                    color: Theme.inkMuted
-                    font.pixelSize: Theme.fontSizeSmall
+                // Lo decidido para cada sitio, plegado
+                ExpandRow {
+                    title: "Sitios con permisos guardados"
+                    description: root.sitePermissions.length === 0 ? "Ningún sitio tiene permisos guardados."
+                               : root.sitePermissions.length === 1 ? "1 permiso decidido para un sitio"
+                               : root.sitePermissions.length + " permisos decididos para sitios concretos"
+                    expandable: root.sitePermissions.length > 0
+                    expanded: root.sitePermissionsOpen && expandable
+                    onToggled: root.sitePermissionsOpen = !root.sitePermissionsOpen
                 }
                 Repeater {
-                    model: root.sitePermissions
+                    model: root.sitePermissionsOpen ? root.sitePermissions : []
 
                     delegate: SitePermissionRow {}
                 }
@@ -1533,6 +1526,87 @@ FocusScope {
             anchors.rightMargin: Theme.margin + Theme.spacing
             anchors.verticalCenter: parent.verticalCenter
             spacing: Theme.spacing
+        }
+    }
+
+    // Fila que pliega o despliega la lista de debajo (sitios permitidos,
+    // permisos guardados): título, cuántos hay y la flecha
+    component ExpandRow: Item {
+        id: expandRow
+
+        property string title: ""
+        property string description: ""
+        property bool expandable: true
+        property bool expanded: false
+
+        signal toggled()
+
+        width: parent ? parent.width : 0
+        implicitHeight: Math.max(Theme.settingsRowHeight, expandTexts.implicitHeight + 2 * Theme.margin)
+
+        Rectangle {
+            anchors.fill: parent
+            anchors.leftMargin: Theme.spacing / 2
+            anchors.rightMargin: Theme.spacing / 2
+            radius: Theme.radiusSmall
+            color: expandHover.hovered && expandRow.expandable ? Theme.tintHover : "transparent"
+            Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+        }
+        Rectangle {
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: Theme.margin
+            anchors.rightMargin: Theme.margin
+            height: 1
+            color: Theme.line
+        }
+        Column {
+            id: expandTexts
+            anchors.left: parent.left
+            anchors.leftMargin: Theme.margin + Theme.spacing
+            anchors.right: expandIcon.left
+            anchors.rightMargin: Theme.margin
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Theme.spacing / 4
+
+            Text {
+                width: parent.width
+                text: expandRow.title
+                color: Theme.ink
+                font.pixelSize: Theme.fontSize
+                font.weight: Font.DemiBold
+                elide: Text.ElideRight
+            }
+            Text {
+                visible: text !== ""
+                width: parent.width
+                text: expandRow.description
+                color: Theme.inkMuted
+                font.pixelSize: Theme.fontSizeSmall
+                wrapMode: Text.Wrap
+            }
+        }
+        Icon {
+            id: expandIcon
+            visible: expandRow.expandable
+            anchors.right: parent.right
+            anchors.rightMargin: Theme.margin + Theme.spacing
+            anchors.verticalCenter: parent.verticalCenter
+            name: "expand"
+            size: Theme.iconSizeSmall
+            color: Theme.inkMuted
+            rotation: expandRow.expanded ? 180 : 0
+            Behavior on rotation { NumberAnimation { duration: Theme.durationFast } }
+        }
+        HoverHandler {
+            id: expandHover
+            cursorShape: expandRow.expandable ? Qt.PointingHandCursor : Qt.ArrowCursor
+        }
+        TapHandler {
+            enabled: expandRow.expandable
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            onTapped: expandRow.toggled()
         }
     }
 

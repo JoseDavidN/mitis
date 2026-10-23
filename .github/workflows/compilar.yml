@@ -229,8 +229,8 @@ jobs:
           mkdir -p ~/Library/Fonts && cp assets/fonts/Nunito.ttf ~/Library/Fonts/
           mkdir -p empaquetado
           # Fondo a 1× y 2× en un TIFF (Retina)
-          rsvg-convert -w 660 -h 400 assets/branding/dmg-fondo.svg -o empaquetado/fondo.png
-          rsvg-convert -w 1320 -h 800 assets/branding/dmg-fondo.svg -o empaquetado/fondo@2x.png
+          rsvg-convert -w 660 -h 480 assets/branding/dmg-fondo.svg -o empaquetado/fondo.png
+          rsvg-convert -w 1320 -h 960 assets/branding/dmg-fondo.svg -o empaquetado/fondo@2x.png
           tiffutil -cathidpicheck empaquetado/fondo.png empaquetado/fondo@2x.png -out empaquetado/fondo.tiff
 
       - name: Compilar (universal)
@@ -272,7 +272,9 @@ jobs:
           codesign --force --deep --sign - "$app"
           codesign --verify --deep --strict "$app"
           # Ventana del .dmg como el instalador de Windows: fondo propio, Mitis
-          # a la izquierda, flecha y acceso directo a Aplicaciones a la derecha
+          # a la izquierda, flecha y acceso directo a Aplicaciones a la derecha.
+          # El tamaño de la ventana incluye su barra de título (unos 28 px): con
+          # 458 de alto se ven los 430 de arriba del fondo (dmg-fondo.svg)
           dmg="Mitis-${{ steps.version.outputs.valor }}-macOS.dmg"
           mkdir -p empaquetado/contenido
           cp -R "$app" empaquetado/contenido/
@@ -287,12 +289,12 @@ jobs:
                 --volicon assets/branding/mitis.icns \
                 --background empaquetado/fondo.tiff \
                 --window-pos 200 120 \
-                --window-size 660 400 \
+                --window-size 660 458 \
                 --icon-size 128 \
                 --text-size 13 \
-                --icon "Mitis.app" 165 205 \
+                --icon "Mitis.app" 165 225 \
                 --hide-extension "Mitis.app" \
-                --app-drop-link 495 205 \
+                --app-drop-link 495 225 \
                 "$dmg" empaquetado/contenido; then
               hecho=si
               break

@@ -17,6 +17,7 @@ const QString DefaultZoomKey = QStringLiteral("Pages/zoom");
 const QString DarkPagesKey = QStringLiteral("Pages/dark");
 const QString HideScrollbarsKey = QStringLiteral("Pages/hideScrollbars");
 const QString GlassEffectKey = QStringLiteral("Appearance/glassEffect");
+const QString GlassToneKey = QStringLiteral("Appearance/glassTone");
 const QString LanguagesKey = QStringLiteral("Pages/languages");
 const QString BlockThirdPartyCookiesKey = QStringLiteral("Privacy/blockThirdPartyCookies");
 const QString ClearOnExitKey = QStringLiteral("Privacy/clearOnExit");
@@ -215,7 +216,6 @@ void Settings::setHideScrollbars(bool value)
 {
     if (storeBool(HideScrollbarsKey, value, false))
         emit hideScrollbarsChanged();
-    emit glassEffectChanged();
 }
 
 bool Settings::glassEffect() const
@@ -227,6 +227,20 @@ void Settings::setGlassEffect(bool value)
 {
     if (storeBool(GlassEffectKey, value, false))
         emit glassEffectChanged();
+}
+
+int Settings::glassTone() const
+{
+    return qBound(0, m_settings.value(GlassToneKey, 1).toInt(), 2);
+}
+
+void Settings::setGlassTone(int value)
+{
+    value = qBound(0, value, 2);
+    if (glassTone() == value)
+        return;
+    m_settings.setValue(GlassToneKey, value);
+    emit glassToneChanged();
 }
 
 QStringList Settings::languages() const
@@ -476,7 +490,7 @@ void Settings::resetPreferences()
 {
     const QStringList keys = {
         SearchEngineKey, NewTabBackgroundKey, DownloadFolderKey, DevToolsKey, PerformanceMonitorKey, RestoreSessionKey,
-        StartupModeKey, StartupUrlKey, DefaultZoomKey, DarkPagesKey, HideScrollbarsKey, GlassEffectKey, LanguagesKey,
+        StartupModeKey, StartupUrlKey, DefaultZoomKey, DarkPagesKey, HideScrollbarsKey, GlassEffectKey, GlassToneKey, LanguagesKey,
         BlockThirdPartyCookiesKey, ClearOnExitKey, DoNotTrackKey, HideLocalIpKey, HttpsUpgradeKey,
         JavascriptKey, ImagesKey, BlockPopupsKey, AutoplayKey, BlockedPermissionsKey, AskDownloadFolderKey,
         SuspendAfterKey, BlockAdsKey, StripTrackingParamsKey, ThemeKey,
@@ -494,6 +508,8 @@ void Settings::resetPreferences()
     emit defaultZoomChanged();
     emit darkPagesChanged();
     emit hideScrollbarsChanged();
+    emit glassEffectChanged();
+    emit glassToneChanged();
     emit languagesChanged();
     emit blockThirdPartyCookiesChanged();
     emit clearOnExitChanged();

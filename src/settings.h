@@ -50,6 +50,8 @@ class Settings : public QObject
     Q_PROPERTY(bool hideScrollbars READ hideScrollbars WRITE setHideScrollbars NOTIFY hideScrollbarsChanged)
     // Experimental: controles de vidrio esmerilado (Glass), apagado por defecto
     Q_PROPERTY(bool glassEffect READ glassEffect WRITE setGlassEffect NOTIFY glassEffectChanged)
+    // Tono morado del velo del vidrio: 0 lavanda, 1 violeta, 2 profundo
+    Q_PROPERTY(int glassTone READ glassTone WRITE setGlassTone NOTIFY glassToneChanged)
     // Idiomas preferidos de las páginas, en orden ("es", "en"…)
     Q_PROPERTY(QStringList languages READ languages WRITE setLanguages NOTIFY languagesChanged)
 
@@ -129,6 +131,8 @@ public:
     void setHideScrollbars(bool value);
     bool glassEffect() const;
     void setGlassEffect(bool value);
+    int glassTone() const;
+    void setGlassTone(int value);
     QStringList languages() const;
     void setLanguages(const QStringList &value);
     bool blockThirdPartyCookies() const;
@@ -192,6 +196,7 @@ signals:
     void darkPagesChanged();
     void hideScrollbarsChanged();
     void glassEffectChanged();
+    void glassToneChanged();
     void languagesChanged();
     void blockThirdPartyCookiesChanged();
     void clearOnExitChanged();

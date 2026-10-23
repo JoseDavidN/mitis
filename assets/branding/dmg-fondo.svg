@@ -1,12 +1,14 @@
 <!-- Fondo de la ventana del .dmg de macOS (lo usa create-dmg en el workflow).
      Mismo estilo que el instalador de Windows: negro de Nocturno con el
-     resplandor violeta arriba a la izquierda, el nombre de Mitis, la
+     resplandor violeta arriba a la izquierda, el logo completo de Mitis, la
      instrucción, una flecha con el degradado de la marca de Mitis a
      Aplicaciones y «by StartCode» abajo. Los iconos de Mitis.app y de
-     Aplicaciones los pone Finder en (165, 205) y (495, 205): la flecha va
-     entre ellos. 660 × 400 (a 2× para pantallas Retina) -->
+     Aplicaciones los pone Finder en (165, 225) y (495, 225): la flecha va
+     entre ellos. La ventana muestra 660 × 430 (create-dmg: 660 × 458, con la
+     barra de título); el fondo sigue hasta 480 por si la barra de título
+     fuera más baja en otra versión de macOS. A 2× para pantallas Retina -->
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-     width="660" height="400" viewBox="0 0 660 400">
+     width="660" height="480" viewBox="0 0 660 480">
   <defs>
     <!-- Theme: bgGlow → bgMid → bgBase de Nocturno, como ThemeBackground -->
     <radialGradient id="brillo" cx="0.2" cy="0" r="1.1" gradientUnits="objectBoundingBox">
@@ -21,24 +23,24 @@
     </linearGradient>
   </defs>
 
-  <rect width="660" height="400" fill="#07050d"/>
-  <rect width="660" height="400" fill="url(#brillo)"/>
+  <rect width="660" height="480" fill="#07050d"/>
+  <rect width="660" height="480" fill="url(#brillo)"/>
 
-  <!-- Nombre de Mitis (el de la barra de título) e instrucción -->
-  <image x="285" y="30" width="90" height="35" xlink:href="mitis-wordmark-dark.svg"/>
-  <text x="330" y="98" text-anchor="middle" fill="#f4f1ff" fill-opacity="0.65"
+  <!-- Logo completo de Mitis (icono y nombre) e instrucción -->
+  <image x="240" y="28" width="180" height="55" xlink:href="mitis-logo-dark.svg"/>
+  <text x="330" y="118" text-anchor="middle" fill="#f4f1ff" fill-opacity="0.65"
         font-family="Nunito, Helvetica Neue, Helvetica, sans-serif" font-size="14">
     Arrastra Mitis a la carpeta Aplicaciones para instalarlo
   </text>
 
   <!-- Flecha entre los dos iconos -->
-  <path d="M 258 205 C 300 178, 360 178, 402 205" fill="none" stroke="url(#marca)"
+  <path d="M 258 225 C 300 198, 360 198, 402 225" fill="none" stroke="url(#marca)"
         stroke-width="5" stroke-linecap="round"/>
-  <path d="M 388 191 L 404 206 L 384 211" fill="none" stroke="#ec4899"
+  <path d="M 388 211 L 404 226 L 384 231" fill="none" stroke="#ec4899"
         stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
 
   <!-- «by StartCode», como al pie del instalador de Windows -->
-  <text x="300" y="368" text-anchor="end" fill="#f4f1ff" fill-opacity="0.45"
+  <text x="300" y="384" text-anchor="end" fill="#f4f1ff" fill-opacity="0.45"
         font-family="Nunito, Helvetica Neue, Helvetica, sans-serif" font-size="12">by</text>
-  <image x="306" y="346" width="64" height="32" opacity="0.7" xlink:href="startcode.png"/>
+  <image x="306" y="362" width="64" height="32" opacity="0.7" xlink:href="startcode.png"/>
 </svg>

@@ -8,6 +8,24 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 ### Añadido
 
 - **Captura de pantalla**, como en Zen: Ctrl+Mayús+S o «Hacer captura de pantalla» en el panel del sitio. Al pasar el ratón, Mitis resalta la sección de la página que hay debajo y con un clic la eliges; también puedes arrastrar para marcar un área, o elegir la página visible o la página completa. La selección se ajusta con sus tiradores y, llevando el borde al de la ventana, crece hacia abajo (o hacia arriba) más allá de lo que se ve. Se copia al portapapeles o se guarda en la carpeta de descargas (y aparece en la lista de descargas).
+- Transparencia con desenfoque (experimental): el velo pasa a ser morado, con tres tonos a elegir en Configuración → Apariencia (lavanda, violeta o profundo).
+- Esquinas redondeadas de la ventana en Windows 11 y macOS, como las del sistema (rectas al maximizar o en pantalla completa).
+
+### Cambiado
+
+- La barra de título se oculta antes (1,5 s después de quitar el ratón) y los controles de abajo también (2 s después de dejar de usarlos).
+- macOS: el nombre de Mitis va centrado en la barra de título, como en las ventanas del sistema.
+- Configuración: la lista de sitios con anuncios permitidos y la de permisos guardados por sitio quedan plegadas en una fila («Sitios permitidos», «Sitios con permisos guardados») que dice cuántos hay y se despliega al pulsarla.
+- macOS: la ventana del `.dmg` muestra el logo completo de Mitis y ya no se corta por abajo (se veía sin el logo de StartCode).
+
+### Corregido
+
+- Restablecer la configuración también vuelve a apagar la transparencia con desenfoque en la interfaz al momento.
+
+## [0.7.0] - 2026-10-23
+
+### Añadido
+
 - Versión para macOS en cada compilación: un `.dmg` universal que funciona en los Mac con Apple Silicon y en los Intel. Al abrirlo, una ventana con el estilo del instalador de Windows indica arrastrar Mitis a Aplicaciones; Mitis tiene su icono en el Dock.
 - En macOS, los botones de la ventana son los del sistema: los tres círculos de cerrar, minimizar y zoom, a la izquierda.
 

@@ -106,10 +106,12 @@ Rectangle {
     }
 
     // Marca: el nombre de Mitis (el del logo, sin el icono), en su versión
-    // para temas oscuros o para el Claro
+    // para temas oscuros o para el Claro. En macOS, centrado, como el título
+    // de las ventanas del sistema; en Windows y Linux, a la izquierda
     Row {
-        anchors.left: root.macStyle ? macControls.right : parent.left
-        anchors.leftMargin: root.macStyle ? Theme.margin : Theme.margin + Theme.spacing / 2
+        anchors.left: root.macStyle ? undefined : parent.left
+        anchors.leftMargin: Theme.margin + Theme.spacing / 2
+        anchors.horizontalCenter: root.macStyle ? parent.horizontalCenter : undefined
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.spacing
 

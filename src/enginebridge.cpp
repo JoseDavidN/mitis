@@ -8,6 +8,7 @@
 #include <QSslCipher>
 #include <QSslSocket>
 #include <QTimer>
+#include <QWindow>
 #include <QQmlEngine>
 #include <QQuickWindow>
 #include <QSGRendererInterface>
@@ -17,6 +18,7 @@
 
 #include "contentblocker.h"
 #include "notifier.h"
+#include "windowstyle.h"
 #include "requestinterceptor.h"
 
 #include <memory>
@@ -256,6 +258,11 @@ QString EngineBridge::graphicsApi(QObject *window) const
     default:
         return QString();
     }
+}
+
+void EngineBridge::setRoundedCorners(QObject *window, bool rounded) const
+{
+    setWindowRoundedCorners(qobject_cast<QWindow *>(window), rounded);
 }
 
 void EngineBridge::requestCertificate(const QString &host, int port)

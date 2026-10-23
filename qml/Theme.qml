@@ -219,11 +219,25 @@ QtObject {
     // difuminado (como Apple)
     readonly property int glassBlur: 48
     readonly property real glassSaturation: 0.3
-    // Velo encima de lo difuminado: gris neutro, sin el color del tema (la
-    // transparencia es opcional; el aspecto normal es el de los colores del
-    // tema). Oscuro en los temas oscuros, tonos claros en el Claro
-    readonly property color glassTintDark: Qt.rgba(0.12, 0.12, 0.13, 0.35)
-    readonly property color glassTint: dark ? glassTintDark : Qt.rgba(0.96, 0.96, 0.97, 0.4)
+    // Velo encima de lo difuminado: un morado de la marca, en tres tonos a
+    // elegir en Configuración (Settings.glassTone: lavanda, violeta,
+    // profundo). En los temas oscuros, sobre oscuro; en el Claro, tonos
+    // claros. El mini reproductor (texto blanco) usa siempre los oscuros
+    readonly property var glassTintsDark: [
+        Qt.rgba(0xc0 / 255, 0x84 / 255, 0xfc / 255, 0.18),   // lavanda (brandLight1)
+        Qt.rgba(0x7c / 255, 0x3a / 255, 0xed / 255, 0.30),   // violeta
+        Qt.rgba(0x2a / 255, 0x13 / 255, 0x52 / 255, 0.55)    // profundo (bgGlow de Nocturno)
+    ]
+    readonly property var glassTintsLight: [
+        Qt.rgba(0xf3 / 255, 0xe8 / 255, 0xff / 255, 0.55),
+        Qt.rgba(0xe4 / 255, 0xd7 / 255, 0xfc / 255, 0.50),
+        Qt.rgba(0xc4 / 255, 0xb5 / 255, 0xfd / 255, 0.45)
+    ]
+    readonly property var glassTones: [
+        { value: 0, label: "Lavanda" }, { value: 1, label: "Violeta" }, { value: 2, label: "Profundo" }
+    ]
+    readonly property color glassTintDark: glassTintsDark[Settings.glassTone] ?? glassTintsDark[1]
+    readonly property color glassTint: dark ? glassTintDark : (glassTintsLight[Settings.glassTone] ?? glassTintsLight[1])
     // Captura de pantalla (ScreenshotOverlay): velo sobre lo que no entra,
     // relleno de la sección bajo el ratón, tiradores de la selección, franja
     // del borde que desplaza la página al estirar, paso de ese desplazamiento
@@ -405,9 +419,9 @@ QtObject {
     // Aviso «Datos borrados» de Configuración
     readonly property int clearedNoticeHold: 3000
     // La barra de título se queda este tiempo tras quitar el ratón
-    readonly property int titleBarHold: 5000
+    readonly property int titleBarHold: 1500
     // Los controles inferiores se ocultan este tiempo después de dejar de usarlos
-    readonly property int controlsHold: 5000
+    readonly property int controlsHold: 2000
     // Aviso «Pulsa Esc/F11 para salir de la pantalla completa»
     readonly property int fullscreenHintHold: 3000
     // Una vuelta del anillo de progreso sin total conocido

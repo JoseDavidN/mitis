@@ -137,9 +137,21 @@ Window {
     onYChanged: geometrySaver.restart()
     onWidthChanged: geometrySaver.restart()
     onHeightChanged: geometrySaver.restart()
-    onVisibilityChanged: geometrySaver.restart()
+    onVisibilityChanged: {
+        geometrySaver.restart()
+        win.applyCorners()
+    }
+    // Esquinas redondeadas como las del sistema (Windows 11, macOS); rectas
+    // maximizada o en pantalla completa
+    function applyCorners() {
+        // qmllint disable unqualified
+        if (typeof MitisEngine.setRoundedCorners === "function")
+            MitisEngine.setRoundedCorners(win, win.visibility === Window.Windowed)
+        // qmllint enable unqualified
+    }
 
     Component.onCompleted: {
+        Qt.callLater(win.applyCorners)
         // Si se cerró maximizada, se abre maximizada
         if (initialGeometry.maximized)
             Qt.callLater(win.showMaximized)

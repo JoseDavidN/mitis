@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(Mitis
-    VERSION 0.7.0
+    VERSION 0.8.0
     DESCRIPTION "Navegador web ligero, multiplataforma y con interfaz propia"
     LANGUAGES CXX
 )
@@ -46,17 +46,21 @@ qt_add_executable(mitis
     src/widevine.cpp
     src/notifier.h
     src/notifier.cpp
+    src/windowstyle.h
+    src/windowstyle.cpp
 )
 
 # Notificaciones del sistema (src/notifier.*): D-Bus en Linux,
 # UserNotifications en macOS; en Windows, Shell_NotifyIcon (shell32)
 if(APPLE)
     enable_language(OBJCXX)
-    target_sources(mitis PRIVATE src/notifier_mac.mm)
-    set_source_files_properties(src/notifier_mac.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
-    target_link_libraries(mitis PRIVATE "-framework Foundation" "-framework UserNotifications")
+    target_sources(mitis PRIVATE src/notifier_mac.mm src/windowstyle_mac.mm)
+    set_source_files_properties(src/notifier_mac.mm src/windowstyle_mac.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+    target_link_libraries(mitis PRIVATE "-framework Foundation" "-framework UserNotifications"
+                          "-framework AppKit" "-framework QuartzCore")
 elseif(WIN32)
-    target_link_libraries(mitis PRIVATE shell32)
+    # shell32: notificaciones; dwmapi: esquinas redondeadas (windowstyle.cpp)
+    target_link_libraries(mitis PRIVATE shell32 dwmapi)
 else()
     find_package(Qt6 REQUIRED COMPONENTS DBus)
     target_link_libraries(mitis PRIVATE Qt6::DBus)
