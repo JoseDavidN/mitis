@@ -32,6 +32,23 @@ Window {
     property var privateWindows: []
     // Ventana que abrió esta (solo en las privadas)
     property Window opener: null
+
+    // Con qué dibuja la ventana: "Metal", "Direct3D 11", "OpenGL"…, o
+    // "software" sin GPU; "" hasta el primer fotograma. Lo leen el vidrio
+    // (Glass) y Configuración con Window.window.graphicsApi. Se pregunta a C++
+    // (EngineBridge): GraphicsInfo de QML da «desconocido» demasiado tiempo
+    property string graphicsApi: ""
+    onFrameSwapped: {
+        if (graphicsApi !== "")
+            return
+        // qmllint disable unqualified
+        const api = typeof MitisEngine.graphicsApi === "function" ? MitisEngine.graphicsApi(win) : ""
+        // qmllint enable unqualified
+        if (api !== "") {
+            graphicsApi = api
+            console.info("[Mitis] Gráficos:", api)
+        }
+    }
     // Los atajos son de aplicación (así funcionan también con el foco en la
     // ventana de DevTools o sin gestor de ventanas que active ninguna), pero
     // con varias ventanas solo los atiende una: la activa o, si no hay
@@ -1164,6 +1181,7 @@ Window {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         open: win.settingsOpen
+        graphicsApi: win.graphicsApi
         currentPageUrl: win.currentView && !win.privateMode ? win.currentView.url.toString() : ""
         onCloseRequested: win.closeSettings()
     }

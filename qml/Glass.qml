@@ -26,9 +26,13 @@ Item {
     // usa siempre el oscuro)
     property color tint: Theme.glassTint
 
-    // La ventana dibuja con la GPU (OpenGL, Direct3D, Metal, Vulkan)
-    readonly property bool gpu: GraphicsInfo.api !== GraphicsInfo.Software
-                                && GraphicsInfo.api !== GraphicsInfo.Unknown
+    // La ventana dibuja con la GPU (Metal, Direct3D, Vulkan, OpenGL). Lo sabe
+    // la ventana (Main.graphicsApi, preguntado a C++); si no lo dice,
+    // GraphicsInfo
+    readonly property string graphicsApi: Window.window && typeof Window.window.graphicsApi === "string"
+                                          ? Window.window.graphicsApi : ""
+    readonly property bool gpu: graphicsApi !== "" ? graphicsApi !== "software"
+                              : GraphicsInfo.api !== GraphicsInfo.Software && GraphicsInfo.api !== GraphicsInfo.Unknown
     readonly property Item backdrop: Window.window ? findBackdrop(Window.window.contentItem) : null
     readonly property bool active: Theme.glassEnabled && gpu && backdrop !== null
 

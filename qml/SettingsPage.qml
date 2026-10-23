@@ -17,18 +17,12 @@ FocusScope {
     // Tapa las páginas: el vidrio esmerilado (Glass) no se usa dentro
     readonly property bool glassOpaque: true
 
-    // Cómo dibuja la ventana: con la GPU (y qué API) o por software. Lo
-    // muestra la opción de transparencia, que sin GPU no funciona
-    readonly property bool gpuRendering: GraphicsInfo.api !== GraphicsInfo.Software
-                                         && GraphicsInfo.api !== GraphicsInfo.Unknown
-    readonly property string graphicsApiName: ({
-        [GraphicsInfo.OpenGL]: "OpenGL",
-        [GraphicsInfo.Direct3D11]: "Direct3D 11",
-        [GraphicsInfo.Direct3D12]: "Direct3D 12",
-        [GraphicsInfo.Vulkan]: "Vulkan",
-        [GraphicsInfo.Metal]: "Metal",
-        [GraphicsInfo.Software]: "software"
-    })[GraphicsInfo.api] ?? "desconocido"
+    // Cómo dibuja la ventana: con la GPU (y qué API) o por software (lo
+    // pregunta Main a C++ al primer fotograma). Lo muestra la opción de
+    // transparencia, que sin GPU no funciona
+    property string graphicsApi: ""
+    readonly property string graphicsApiName: graphicsApi !== "" ? graphicsApi : "desconocido"
+    readonly property bool gpuRendering: graphicsApiName !== "software" && graphicsApiName !== "desconocido"
 
     // Página de la pestaña activa (para «Usar la página actual» al iniciar)
     property string currentPageUrl: ""

@@ -18,6 +18,9 @@ Rectangle {
     // Pulsó su avatar (abre Configuración → Perfil)
     signal profileRequested()
 
+    // En macOS, los botones de ventana del sistema (a la izquierda, redondos)
+    readonly property bool macStyle: Qt.platform.os === "osx" || Qt.platform.os === "macos"
+
     readonly property bool maximized: window.visibility === Window.Maximized
     // En pantalla completa la ventana no se mueve ni se maximiza desde aquí
     readonly property bool fullScreen: window.visibility === Window.FullScreen
@@ -67,11 +70,46 @@ Rectangle {
         onDoubleTapped: root.toggleMaximized()
     }
 
+    // macOS: cerrar, minimizar y zoom como en el sistema (círculos de color a
+    // la izquierda; al pasar el ratón por el grupo, su símbolo)
+    Row {
+        id: macControls
+        visible: root.macStyle
+        anchors.left: parent.left
+        anchors.leftMargin: Theme.margin
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: Theme.macDotSpacing
+
+        HoverHandler { id: macHover }
+
+        MacDot {
+            groupHovered: macHover.hovered
+            tone: Theme.macClose
+            symbol: "close"
+            tooltip: "Cerrar"
+            onClicked: root.window.close()
+        }
+        MacDot {
+            groupHovered: macHover.hovered
+            tone: Theme.macMinimize
+            symbol: "minimize"
+            tooltip: "Minimizar"
+            onClicked: root.window.showMinimized()
+        }
+        MacDot {
+            groupHovered: macHover.hovered
+            tone: Theme.macZoom
+            symbol: root.maximized ? "restore" : "maximize"
+            tooltip: root.maximized ? "Restaurar" : "Maximizar"
+            onClicked: root.toggleMaximized()
+        }
+    }
+
     // Marca: el nombre de Mitis (el del logo, sin el icono), en su versión
     // para temas oscuros o para el Claro
     Row {
-        anchors.left: parent.left
-        anchors.leftMargin: Theme.margin + Theme.spacing / 2
+        anchors.left: root.macStyle ? macControls.right : parent.left
+        anchors.leftMargin: root.macStyle ? Theme.margin : Theme.margin + Theme.spacing / 2
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.spacing
 
@@ -141,8 +179,8 @@ Rectangle {
     // ventanas privadas: no son del perfil)
     Item {
         visible: !root.privateMode
-        anchors.right: windowControls.left
-        anchors.rightMargin: Theme.spacing
+        anchors.right: root.macStyle ? parent.right : windowControls.left
+        anchors.rightMargin: root.macStyle ? Theme.margin : Theme.spacing
         anchors.verticalCenter: parent.verticalCenter
         width: Theme.titleButtonSize
         height: Theme.titleButtonSize
@@ -173,6 +211,7 @@ Rectangle {
     // Controles de ventana: solo el icono; el círculo aparece al pasar por encima
     Row {
         id: windowControls
+        visible: !root.macStyle
         anchors.right: parent.right
         anchors.rightMargin: Theme.margin
         anchors.verticalCenter: parent.verticalCenter
@@ -208,6 +247,51 @@ Rectangle {
             tooltipBelow: true
             danger: true
             onClicked: root.window.close()
+        }
+    }
+
+    // Botón redondo de macOS: color de Apple (gris con la ventana inactiva) y
+    // su símbolo al pasar el ratón por el grupo
+    component MacDot: Item {
+        id: dot
+
+        property color tone: "transparent"
+        property string symbol: ""
+        property string tooltip: ""
+        // El ratón está sobre el grupo: los tres muestran su símbolo
+        property bool groupHovered: false
+
+        signal clicked()
+
+        width: Theme.macDotSize
+        height: Theme.macDotSize
+
+        Rectangle {
+            anchors.fill: parent
+            radius: width / 2
+            color: dot.Window.active || dot.groupHovered ? dot.tone : Theme.macDotInactive
+            border.width: 1
+            border.color: Theme.macDotBorder
+        }
+        Icon {
+            anchors.centerIn: parent
+            name: dot.symbol
+            size: Theme.macDotSize - 4
+            color: Theme.macDotSymbol
+            visible: dot.groupHovered
+        }
+        HoverHandler {
+            id: dotHover
+            cursorShape: Qt.PointingHandCursor
+        }
+        TapHandler {
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            onTapped: dot.clicked()
+        }
+        Tooltip {
+            text: dot.tooltip
+            below: true
+            visible: dotHover.hovered
         }
     }
 }

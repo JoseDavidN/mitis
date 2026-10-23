@@ -227,6 +227,20 @@ set_target_properties(mitis PROPERTIES
     MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/packaging/macos/Info.plist.in"
 )
 
+# Icono de macOS (.icns, en Mitis.app/Contents/Resources): el de
+# assets/branding/mitis.icns si está en el repositorio, o el que genera el
+# workflow desde mitis-icon.svg (-DMITIS_MACOS_ICNS=ruta/mitis.icns)
+if(APPLE)
+    if(NOT MITIS_MACOS_ICNS AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/assets/branding/mitis.icns")
+        set(MITIS_MACOS_ICNS "${CMAKE_CURRENT_SOURCE_DIR}/assets/branding/mitis.icns")
+    endif()
+    if(MITIS_MACOS_ICNS)
+        set_source_files_properties("${MITIS_MACOS_ICNS}" PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+        target_sources(mitis PRIVATE "${MITIS_MACOS_ICNS}")
+        set_target_properties(mitis PROPERTIES MACOSX_BUNDLE_ICON_FILE mitis.icns)
+    endif()
+endif()
+
 include(GNUInstallDirs)
 install(TARGETS mitis
     BUNDLE DESTINATION .

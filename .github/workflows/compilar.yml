@@ -224,10 +224,39 @@ jobs:
         id: version
         run: echo "valor=$(sed -n '/^project(Mitis/,/)/s/^ *VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)" >> "$GITHUB_OUTPUT"
 
+      # Icono (.icns) y fondo de la ventana del .dmg, desde los SVG de
+      # assets/branding. iconutil solo existe en macOS: se generan aquí
+      - name: Icono y fondo del .dmg
+        run: |
+          set -euo pipefail
+          brew install librsvg create-dmg
+          # Nunito, para el texto del fondo (como la interfaz y el instalador)
+          mkdir -p ~/Library/Fonts && cp assets/fonts/Nunito.ttf ~/Library/Fonts/
+          mkdir -p empaquetado/mitis.iconset
+          # Rejilla de iconos de macOS: la forma ocupa 824 de 1024 px, centrada
+          dibujar() {
+            local lado=$1 cuerpo margen
+            cuerpo=$(( (lado * 824 + 512) / 1024 ))
+            margen=$(( (lado - cuerpo) / 2 ))
+            rsvg-convert -w "$cuerpo" -h "$cuerpo" \
+              --page-width "$lado" --page-height "$lado" --left "$margen" --top "$margen" \
+              assets/branding/mitis-icon.svg -o "$2"
+          }
+          for tam in 16 32 128 256 512; do
+            dibujar "$tam" "empaquetado/mitis.iconset/icon_${tam}x${tam}.png"
+            dibujar "$((tam * 2))" "empaquetado/mitis.iconset/icon_${tam}x${tam}@2x.png"
+          done
+          iconutil -c icns empaquetado/mitis.iconset -o empaquetado/mitis.icns
+          # Fondo a 1× y 2× en un TIFF (Retina)
+          rsvg-convert -w 660 -h 400 assets/branding/dmg-fondo.svg -o empaquetado/fondo.png
+          rsvg-convert -w 1320 -h 800 assets/branding/dmg-fondo.svg -o empaquetado/fondo@2x.png
+          tiffutil -cathidpicheck empaquetado/fondo.png empaquetado/fondo@2x.png -out empaquetado/fondo.tiff
+
       - name: Compilar (universal)
         run: |
           brew install ninja
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64" \
+            "-DMITIS_MACOS_ICNS=$PWD/empaquetado/mitis.icns"
           cmake --build build
 
       # Qt va dentro de Mitis.app; el .dmg se abre y se arrastra a Aplicaciones
@@ -235,7 +264,6 @@ jobs:
         run: |
           set -euo pipefail
           app=build/bin/Mitis.app
-          # El bundle sale sin Resources (aún no hay icono .icns que la cree)
           mkdir -p "$app/Contents/Resources"
           cp LICENSE "$app/Contents/Resources/"
           cp -R licencias "$app/Contents/Resources/"
@@ -263,13 +291,56 @@ jobs:
           # el aviso de Gatekeeper (eso pide firma de Apple y notarización)
           codesign --force --deep --sign - "$app"
           codesign --verify --deep --strict "$app"
-          hdiutil create -volname Mitis -srcfolder "$app" -ov -format UDZO \
-            "Mitis-${{ steps.version.outputs.valor }}-macOS.dmg"
+          # Ventana del .dmg como el instalador de Windows: fondo propio, Mitis
+          # a la izquierda, flecha y acceso directo a Aplicaciones a la derecha
+          dmg="Mitis-${{ steps.version.outputs.valor }}-macOS.dmg"
+          mkdir -p empaquetado/contenido
+          cp -R "$app" empaquetado/contenido/
+          # create-dmg prepara la ventana con Finder (AppleScript): en los
+          # runners a veces tarda o falla; se reintenta y, si no, un .dmg
+          # sencillo que al menos trae el acceso a Aplicaciones
+          hecho=no
+          for intento in 1 2 3; do
+            rm -f "$dmg"
+            if create-dmg \
+                --volname "Mitis" \
+                --volicon empaquetado/mitis.icns \
+                --background empaquetado/fondo.tiff \
+                --window-pos 200 120 \
+                --window-size 660 400 \
+                --icon-size 128 \
+                --text-size 13 \
+                --icon "Mitis.app" 165 205 \
+                --hide-extension "Mitis.app" \
+                --app-drop-link 495 205 \
+                "$dmg" empaquetado/contenido; then
+              hecho=si
+              break
+            fi
+            echo "create-dmg falló (intento $intento)"
+            sleep 5
+          done
+          if [ "$hecho" != si ]; then
+            echo "::warning::create-dmg no pudo preparar la ventana: .dmg sencillo con acceso a Aplicaciones"
+            ln -s /Applications empaquetado/contenido/Aplicaciones
+            hdiutil create -volname Mitis -srcfolder empaquetado/contenido -ov -format UDZO "$dmg"
+          fi
+          ls -l "$dmg"
 
       - uses: actions/upload-artifact@v4
         with:
           name: mitis-macos
           path: Mitis-*-macOS.dmg
+          if-no-files-found: error
+
+      # El icono generado, para guardarlo en assets/branding/ (con él en el
+      # repositorio, CMake lo usa sin generarlo)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: icono-macos
+          path: |
+            empaquetado/mitis.icns
+            empaquetado/mitis.iconset
           if-no-files-found: error
 
   release:

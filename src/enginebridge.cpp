@@ -9,6 +9,8 @@
 #include <QSslSocket>
 #include <QTimer>
 #include <QQmlEngine>
+#include <QQuickWindow>
+#include <QSGRendererInterface>
 #include <QQuickWebEngineProfile>
 #include <QWebEngineCookieStore>
 #include <QtDebug>
@@ -229,6 +231,31 @@ QString protocolName(QSsl::SslProtocol protocol)
         return QString();
     }
 }
+}
+
+QString EngineBridge::graphicsApi(QObject *window) const
+{
+    QSGRendererInterface::GraphicsApi api = QQuickWindow::graphicsApi();
+    if (auto *quick = qobject_cast<QQuickWindow *>(window)) {
+        if (QSGRendererInterface *renderer = quick->rendererInterface())
+            api = renderer->graphicsApi();
+    }
+    switch (api) {
+    case QSGRendererInterface::Software:
+        return QStringLiteral("software");
+    case QSGRendererInterface::OpenGL:
+        return QStringLiteral("OpenGL");
+    case QSGRendererInterface::Direct3D11:
+        return QStringLiteral("Direct3D 11");
+    case QSGRendererInterface::Direct3D12:
+        return QStringLiteral("Direct3D 12");
+    case QSGRendererInterface::Vulkan:
+        return QStringLiteral("Vulkan");
+    case QSGRendererInterface::Metal:
+        return QStringLiteral("Metal");
+    default:
+        return QString();
+    }
 }
 
 void EngineBridge::requestCertificate(const QString &host, int port)

@@ -26,7 +26,7 @@ Al terminar una tarea, quitarla de aquí y apuntar el cambio en `CHANGELOG.md`
 
 ## Identidad visual
 
-- [ ] Icono de macOS (`.icns`) desde `assets/branding/mitis-icon.svg`: hace falta `iconutil` (solo en macOS); se puede generar en GitHub Actions.
+- [ ] Icono de macOS: el workflow de macOS ya genera `mitis.icns` y lo sube como artefacto «icono-macos»; descargarlo y guardarlo en `assets/branding/mitis.icns` (CMake lo usa si está).
 - [ ] Versión simplificada del icono para 16–32 px (barra de tareas, pestañas): a ese tamaño las ondas se empastan y la gota casi no se ve.
 
 ## Motor web

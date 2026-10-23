@@ -7,11 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ### Añadido
 
-- Versión para macOS en cada compilación: un `.dmg` universal que funciona en los Mac con Apple Silicon y en los Intel.
+- Versión para macOS en cada compilación: un `.dmg` universal que funciona en los Mac con Apple Silicon y en los Intel. Al abrirlo, una ventana con el estilo del instalador de Windows indica arrastrar Mitis a Aplicaciones; Mitis tiene su icono en el Dock.
+- En macOS, los botones de la ventana son los del sistema: los tres círculos de cerrar, minimizar y zoom, a la izquierda.
 
 ### Cambiado
 
-- Transparencia con desenfoque (experimental): ahora en toda la interfaz (barra de título, controles de abajo, listas, tooltips, mini reproductor…), con un velo gris neutro (claro en el tema Claro). Sigue siendo opcional y viene apagada. La opción indica si Mitis se está dibujando con la tarjeta gráfica y, si no, no se puede activar.
+- Transparencia con desenfoque (experimental): ahora en toda la interfaz (barra de título, controles de abajo, listas, tooltips, mini reproductor…), con un velo gris neutro (claro en el tema Claro). Sigue siendo opcional y viene apagada. La opción indica si Mitis se está dibujando con la tarjeta gráfica (y con cuál: Metal, Direct3D, OpenGL…) y, si no, no se puede activar. Corregido: en macOS decía que no había tarjeta gráfica.
 
 ### Corregido
 

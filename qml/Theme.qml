@@ -182,6 +182,16 @@ QtObject {
     readonly property int floatingMargin: 10
     readonly property int buttonSize: 32
     readonly property int titleButtonSize: 24
+    // Botones de ventana de macOS (los «semáforos» del sistema): círculos de
+    // colores fijos de Apple, a la izquierda. Con la ventana inactiva, grises
+    readonly property int macDotSize: 12
+    readonly property int macDotSpacing: 8
+    readonly property color macClose: "#ff5f57"
+    readonly property color macMinimize: "#febc2e"
+    readonly property color macZoom: "#28c840"
+    readonly property color macDotBorder: Qt.rgba(0, 0, 0, 0.12)
+    readonly property color macDotSymbol: Qt.rgba(0, 0, 0, 0.55)
+    readonly property color macDotInactive: dark ? Qt.rgba(1, 1, 1, 0.18) : Qt.rgba(0, 0, 0, 0.14)
     readonly property int buttonSizeSmall: 24
     readonly property int controlHeight: 34
     readonly property int logoSize: 18

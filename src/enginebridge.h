@@ -85,6 +85,11 @@ public:
     // Certificado del sitio para el panel del sitio: Mitis abre su propia
     // conexión TLS con él (solo al pedirlo) y responde con certificateReady
     Q_INVOKABLE void requestCertificate(const QString &host, int port = 443);
+    // Con qué dibuja la ventana: "Metal", "Direct3D 11", "Direct3D 12",
+    // "Vulkan", "OpenGL", "software" o "" si aún no se sabe. Lo pregunta a la
+    // ventana (o, sin ella, el que usaría Qt). GraphicsInfo de QML da
+    // «desconocido» hasta que la ventana ha dibujado y no sirve para esto
+    Q_INVOKABLE QString graphicsApi(QObject *window) const;
 
     // Descarga ahora las listas de filtros
     Q_INVOKABLE void updateFilterLists();
