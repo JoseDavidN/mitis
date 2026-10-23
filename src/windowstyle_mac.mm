@@ -16,7 +16,9 @@ void setWindowRoundedCorners(QWindow *window, bool rounded)
 {
     if (!window)
         return;
-    NSView *view = reinterpret_cast<NSView *>(window->winId());
+    // Con ARC, el WId (un número) pasa a NSView * por void * con __bridge: sin
+    // cambiar quién es dueño de la vista (sigue siendo de Qt)
+    NSView *view = (__bridge NSView *)reinterpret_cast<void *>(window->winId());
     NSWindow *nsWindow = view.window;
     if (!view || !nsWindow)
         return;
