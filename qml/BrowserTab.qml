@@ -845,8 +845,15 @@ Item {
             root.certificateErrorRequested(request)
         }
         // Pantalla completa: se acepta siempre; la ventana la decide Main.qml
-        // Si el proceso de la página muere, con él se cierran micrófono y cámara
-        onRenderProcessTerminated: captureState.set(0, 0)
+        // Si el proceso de la página muere, con él se cierran micrófono y
+        // cámara. Queda en el registro de la sesión (informes de cierres)
+        onRenderProcessTerminated: (terminationStatus, exitCode) => {
+            captureState.set(0, 0)
+            if (terminationStatus !== WebEngineView.NormalTerminationStatus)
+                console.warn("[Mitis] Terminó el proceso de una página:",
+                             ["normal", "anormal", "caída", "cerrado por el sistema"][terminationStatus] ?? terminationStatus,
+                             "código", exitCode, "en", Urls.host(view.url.toString()))
+        }
         // Avisos de assets/scripts/drm.js y media.js
         onJavaScriptConsoleMessage: (level, message) => {
             if (message === "mitis:widevine-unavailable") {

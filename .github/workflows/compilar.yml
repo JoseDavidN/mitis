@@ -1,8 +1,10 @@
 # Compila Mitis y crea sus paquetes. En cada push y pull request, Windows
 # (instalador propio, installer/) y macOS (.dmg universal: Apple Silicon e
 # Intel); Linux (AppImage) se compila a mano: pestaña Actions → Compilar →
-# Run workflow → «todos». Con una etiqueta «v*» (p. ej. v0.5.0) publica el
-# instalador y el .dmg en un release de GitHub.
+# Run workflow → «todos». El artefacto «mitis-servidor» junta lo que va en el
+# servidor de descargas (releases/ de /srv/docker/mitis-releases), con su
+# version.txt. Con una etiqueta «v*» (p. ej. v0.5.0) publica los paquetes en
+# un release de GitHub.
 name: Compilar
 
 on:
@@ -158,19 +160,32 @@ jobs:
           cmake -S installer -B build-instalador -G Ninja -DCMAKE_BUILD_TYPE=Release "-DMITIS_VERSION=${{ steps.version.outputs.valor }}"
           cmake --build build-instalador
 
+      # Lo que se sube al servidor de descargas: el paquete, el instalador
+      # (sin Mitis dentro: lo descarga) y version.txt
       - name: Empaquetar
         shell: pwsh
         run: >
           ./installer/empaquetar.ps1
           -Mitis build/bin/Mitis.exe
           -Instalador build-instalador/MitisInstalador.exe
-          -Salida Mitis-${{ steps.version.outputs.valor }}-Instalador.exe
+          -Version ${{ steps.version.outputs.valor }}
+          -Salida servidor
 
       - uses: actions/upload-artifact@v4
         with:
           name: mitis-windows
-          path: Mitis-*-Instalador.exe
+          path: servidor/*
           if-no-files-found: error
+
+      # Símbolos (no se distribuyen): para leer la pila y el .dmp de los
+      # informes de cierres de esta compilación
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mitis-windows-simbolos
+          path: |
+            build/bin/Mitis.pdb
+            build/bin/Mitis.exe
+          if-no-files-found: warn
 
   macos:
     name: macOS (.dmg universal)
@@ -244,6 +259,8 @@ jobs:
         run: |
           set -euo pipefail
           app=build/bin/Mitis.app
+          # Símbolos antes de que macdeployqt recorte el ejecutable
+          dsymutil "$app/Contents/MacOS/Mitis" -o Mitis.dSYM
           mkdir -p "$app/Contents/Resources"
           cp LICENSE "$app/Contents/Resources/"
           cp -R licencias "$app/Contents/Resources/"
@@ -308,11 +325,69 @@ jobs:
             hdiutil create -volname Mitis -srcfolder empaquetado/contenido -ov -format UDZO "$dmg"
           fi
           ls -l "$dmg"
+          # Mitis.app comprimido con ditto (conserva enlaces, permisos y la
+          # firma): con él se actualiza Mitis desde el propio Mitis
+          ditto -c -k --keepParent "$app" "Mitis-${{ steps.version.outputs.valor }}-macOS.zip"
 
       - uses: actions/upload-artifact@v4
         with:
           name: mitis-macos
-          path: Mitis-*-macOS.dmg
+          path: |
+            Mitis-*-macOS.dmg
+            Mitis-*-macOS.zip
+          if-no-files-found: error
+
+      # Símbolos (no se distribuyen): para leer la pila de los informes de cierres
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mitis-macos-simbolos
+          path: Mitis.dSYM
+          if-no-files-found: warn
+
+  # Todo lo del servidor de descargas en un artefacto, con version.txt (el
+  # formato está en installer/src/red.h). Se copia tal cual en releases/
+  servidor:
+    name: Servidor de descargas
+    needs: [windows, macos, linux]
+    # Linux es opcional (solo a mano); Windows y macOS, no
+    if: ${{ !cancelled() && needs.windows.result == 'success' && needs.macos.result == 'success' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mitis-{windows,macos,linux}
+          path: servidor
+          merge-multiple: true
+
+      - name: version.txt
+        run: |
+          set -euo pipefail
+          cd servidor
+          rm -f version.txt
+          suma() { sha256sum "$1" | cut -d' ' -f1; }
+          paquete=$(ls Mitis-*-windows.zip)
+          version=${paquete#Mitis-}; version=${version%-windows.zip}
+          {
+            echo "version=$version"
+            echo "paquete=$paquete"
+            echo "sha256=$(suma "$paquete")"
+            echo "instalador=MitisInstalador.exe"
+            echo "instalador_sha256=$(suma MitisInstalador.exe)"
+            macos=$(ls Mitis-*-macOS.zip)
+            echo "macos=$macos"
+            echo "macos_sha256=$(suma "$macos")"
+            if linux=$(ls Mitis-*-x86_64.AppImage 2>/dev/null); then
+              echo "linux=$linux"
+              echo "linux_sha256=$(suma "$linux")"
+            fi
+          } > version.txt
+          cat version.txt
+          ls -l
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mitis-servidor
+          path: servidor/*
           if-no-files-found: error
 
   release:
@@ -344,6 +419,10 @@ jobs:
         with:
           path: paquetes
           merge-multiple: true
+
+      # Llegan también los símbolos (mitis-*-simbolos): no se publican
+      - name: Quitar los símbolos
+        run: rm -rf paquetes/Mitis.pdb paquetes/Mitis.exe paquetes/Mitis.dSYM
 
       - uses: softprops/action-gh-release@v2
         with:

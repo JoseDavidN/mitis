@@ -19,14 +19,10 @@ namespace fs = std::filesystem;
 
 namespace {
 
-// Final del instalador: [stub][ZIP][desplazamiento del ZIP: 8 bytes][marca: 8 bytes]
-constexpr char Marca[8] = { 'M', 'I', 'T', 'I', 'S', 'P', 'A', 'Q' };
-// Bytes del pie (no «Pie»: así se llama una función de wingdi.h)
-constexpr int TamanoPie = 16;
-
 const wchar_t *const ClaveDesinstalar = L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Mitis";
 const wchar_t *const Ejecutable = L"Mitis.exe";
-const wchar_t *const Desinstalador = L"desinstalar.exe";
+// El instalador que queda junto a Mitis: actualiza y desinstala
+const wchar_t *const Instalador = L"mitis-instalador.exe";
 
 std::wstring carpetaConocida(REFKNOWNFOLDERID id)
 {
@@ -194,23 +190,15 @@ std::wstring accesoEscritorio()
     return carpetaConocida(FOLDERID_Desktop) + L"\\Mitis.lnk";
 }
 
-// Copia el principio del instalador (sin el paquete): sirve de desinstalador
-bool copiarDesinstalador(FILE *instalador, uint64_t tamano, const std::wstring &destino)
+bool escribirArchivo(const fs::path &destino, const std::vector<char> &datos)
 {
-    FILE *salida = _wfopen(destino.c_str(), L"wb");
-    if (!salida)
+    HANDLE archivo = CreateFileW(destino.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (archivo == INVALID_HANDLE_VALUE)
         return false;
-    std::vector<char> bloque(1 << 16);
-    _fseeki64(instalador, 0, SEEK_SET);
-    uint64_t faltan = tamano;
-    bool bien = true;
-    while (faltan > 0 && bien) {
-        const size_t pedir = size_t(faltan < bloque.size() ? faltan : bloque.size());
-        const size_t leidos = fread(bloque.data(), 1, pedir, instalador);
-        bien = leidos == pedir && fwrite(bloque.data(), 1, leidos, salida) == leidos;
-        faltan -= leidos;
-    }
-    return fclose(salida) == 0 && bien;
+    DWORD escritos = 0;
+    const bool bien = WriteFile(archivo, datos.data(), DWORD(datos.size()), &escritos, nullptr) && escritos == datos.size();
+    CloseHandle(archivo);
+    return bien;
 }
 
 } // namespace
@@ -246,18 +234,6 @@ Instalada instalacionExistente()
     return actual;
 }
 
-bool tienePaquete(const std::wstring &ejecutable)
-{
-    FILE *exe = _wfopen(ejecutable.c_str(), L"rb");
-    if (!exe)
-        return false;
-    char pie[TamanoPie] = {};
-    const bool hay = _fseeki64(exe, -TamanoPie, SEEK_END) == 0 && fread(pie, 1, TamanoPie, exe) == TamanoPie
-        && std::memcmp(pie + 8, Marca, 8) == 0;
-    fclose(exe);
-    return hay;
-}
-
 bool dentroDeInstalacion(const std::wstring &ejecutable)
 {
     const std::wstring carpeta = carpetaInstalacion();
@@ -268,37 +244,17 @@ bool dentroDeInstalacion(const std::wstring &ejecutable)
     return fs::equivalent(fs::path(ejecutable).parent_path(), carpeta, error);
 }
 
-std::wstring instalar(const std::wstring &instalador, const Avance &avance)
+std::wstring instalar(const std::vector<char> &paquete, const std::wstring &version,
+                      const std::vector<char> &instaladorNuevo, const std::wstring &instalador,
+                      const Avance &avance)
 {
-    FILE *exe = _wfopen(instalador.c_str(), L"rb");
-    if (!exe)
-        return L"No se pudo leer el instalador.";
-
-    // El pie: dónde empieza el paquete
-    char pie[TamanoPie] = {};
-    _fseeki64(exe, -TamanoPie, SEEK_END);
-    const int64_t tamanoExe = _ftelli64(exe) + TamanoPie;
-    uint64_t inicio = 0;
-    if (fread(pie, 1, TamanoPie, exe) != TamanoPie || std::memcmp(pie + 8, Marca, 8) != 0) {
-        fclose(exe);
-        return L"El instalador está dañado: descárgalo de nuevo.";
-    }
-    std::memcpy(&inicio, pie, 8);
-    if (inicio == 0 || int64_t(inicio) >= tamanoExe - TamanoPie) {
-        fclose(exe);
-        return L"El instalador está dañado: descárgalo de nuevo.";
-    }
-
     mz_zip_archive zip;
     mz_zip_zero_struct(&zip);
-    _fseeki64(exe, int64_t(inicio), SEEK_SET);
-    if (!mz_zip_reader_init_cfile(&zip, exe, uint64_t(tamanoExe - TamanoPie) - inicio, 0)) {
-        fclose(exe);
-        return L"El instalador está dañado: descárgalo de nuevo.";
-    }
+    if (!mz_zip_reader_init_mem(&zip, paquete.data(), paquete.size(), 0))
+        return L"La descarga llegó dañada. Vuelve a intentarlo.";
 
     if (carpetaInstalacion().empty()) {
-        fclose(exe);
+        mz_zip_reader_end(&zip);
         return L"Windows no indica dónde instalar los programas del usuario.";
     }
     const fs::path carpeta = carpetaInstalacion();
@@ -306,24 +262,27 @@ std::wstring instalar(const std::wstring &instalador, const Avance &avance)
     std::error_code error;
     fs::remove_all(anterior, error);
     // Una versión instalada se aparta (no se borra hasta terminar). Si no se
-    // puede mover es que Mitis está abierto: sus archivos están en uso.
+    // puede mover es que Mitis está abierto: sus archivos están en uso. Al
+    // actualizar, Mitis (y sus procesos de páginas) tarda un poco en cerrarse
     if (fs::exists(carpeta)) {
-        fs::rename(carpeta, anterior, error);
+        for (int intento = 0; intento < 40; ++intento) {
+            error.clear();
+            fs::rename(carpeta, anterior, error);
+            if (!error)
+                break;
+            Sleep(500);
+        }
         if (error) {
             mz_zip_reader_end(&zip);
-            fclose(exe);
             return L"Mitis está abierto. Ciérralo y vuelve a intentarlo.";
         }
     }
 
     // Si algo falla, se deja todo como estaba
     bool zipAbierto = true;
-    bool exeAbierto = true;
     auto deshacer = [&](const std::wstring &mensaje) {
         if (zipAbierto)
             mz_zip_reader_end(&zip);
-        if (exeAbierto)
-            fclose(exe);
         std::error_code ignorado;
         fs::remove_all(carpeta, ignorado);
         if (fs::exists(anterior))
@@ -345,7 +304,7 @@ std::wstring instalar(const std::wstring &instalador, const Avance &avance)
     for (mz_uint i = 0; i < archivos; ++i) {
         mz_zip_archive_file_stat info;
         if (!mz_zip_reader_file_stat(&zip, i, &info))
-            return deshacer(L"El instalador está dañado: descárgalo de nuevo.");
+            return deshacer(L"La descarga llegó dañada. Vuelve a intentarlo.");
         std::wstring nombre = desdeUtf8(info.m_filename);
         for (auto &c : nombre) {
             if (c == L'/')
@@ -374,12 +333,13 @@ std::wstring instalar(const std::wstring &instalador, const Avance &avance)
 
     const fs::path mitis = carpeta / Ejecutable;
     if (!fs::exists(mitis))
-        return deshacer(L"El instalador está incompleto: descárgalo de nuevo.");
-    const bool conDesinstalador = copiarDesinstalador(exe, inicio, (carpeta / Desinstalador).wstring());
-    fclose(exe);
-    exeAbierto = false;
-    if (!conDesinstalador)
-        return deshacer(L"No se pudo crear el desinstalador.");
+        return deshacer(L"El paquete de Mitis está incompleto. Vuelve a intentarlo más tarde.");
+    // El instalador del servidor (o este mismo) queda para actualizar y desinstalar
+    const bool conInstalador = instaladorNuevo.empty()
+        ? CopyFileW(instalador.c_str(), (carpeta / Instalador).c_str(), FALSE) != 0
+        : escribirArchivo(carpeta / Instalador, instaladorNuevo);
+    if (!conInstalador)
+        return deshacer(L"No se pudo copiar el instalador en la carpeta de Mitis.");
     avance(0.94);
 
     // ── Accesos directos y entrada en «Aplicaciones instaladas» ──
@@ -389,11 +349,11 @@ std::wstring instalar(const std::wstring &instalador, const Avance &avance)
     if (RegCreateKeyExW(HKEY_CURRENT_USER, ClaveDesinstalar, 0, nullptr, 0, KEY_WRITE, nullptr, &clave, nullptr)
         == ERROR_SUCCESS) {
         textoRegistro(clave, L"DisplayName", L"Mitis");
-        textoRegistro(clave, L"DisplayVersion", desdeUtf8(MITIS_VERSION));
+        textoRegistro(clave, L"DisplayVersion", version);
         textoRegistro(clave, L"Publisher", L"StartCode");
         textoRegistro(clave, L"DisplayIcon", mitis.wstring());
         textoRegistro(clave, L"InstallLocation", carpeta.wstring());
-        textoRegistro(clave, L"UninstallString", L"\"" + (carpeta / Desinstalador).wstring() + L"\" --desinstalar");
+        textoRegistro(clave, L"UninstallString", L"\"" + (carpeta / Instalador).wstring() + L"\" --desinstalar");
         numeroRegistro(clave, L"EstimatedSize", DWORD(total / 1024));
         numeroRegistro(clave, L"NoModify", 1);
         numeroRegistro(clave, L"NoRepair", 1);
@@ -416,8 +376,8 @@ std::wstring desinstalar(const Avance &avance)
     const fs::path carpeta = carpetaInstalacion();
     std::error_code error;
 
-    // Desde el instalador (fuera de la carpeta) todo se borra ya; desde el
-    // desinstalador copiado dentro, este no puede borrarse mientras se ejecuta
+    // Desde fuera de la carpeta todo se borra ya; desde el instalador que
+    // queda dentro, este no puede borrarse mientras se ejecuta
     wchar_t propio[MAX_PATH * 4] = {};
     GetModuleFileNameW(nullptr, propio, DWORD(std::size(propio)));
     const bool dentro = dentroDeInstalacion(propio);
@@ -437,7 +397,7 @@ std::wstring desinstalar(const Avance &avance)
     // El resto de archivos, menos este desinstalador si está en marcha
     std::vector<fs::path> archivos;
     for (const auto &entrada : fs::recursive_directory_iterator(carpeta, error)) {
-        if (entrada.is_regular_file() && (!dentro || entrada.path().filename() != Desinstalador))
+        if (entrada.is_regular_file() && (!dentro || entrada.path().filename() != Instalador))
             archivos.push_back(entrada.path());
     }
     for (size_t i = 0; i < archivos.size(); ++i) {
@@ -471,4 +431,25 @@ void abrirMitis()
 {
     const fs::path carpeta = carpetaInstalacion();
     ShellExecuteW(nullptr, L"open", (carpeta / Ejecutable).c_str(), nullptr, carpeta.c_str(), SW_SHOWNORMAL);
+}
+
+void esperarProceso(unsigned long pid, unsigned long milisegundos)
+{
+    HANDLE proceso = OpenProcess(SYNCHRONIZE, FALSE, pid);
+    if (!proceso)
+        return; // ya terminó
+    WaitForSingleObject(proceso, milisegundos);
+    CloseHandle(proceso);
+}
+
+void borrarAlTerminar(const std::wstring &archivo)
+{
+    std::wstring orden = L"cmd.exe /c ping 127.0.0.1 -n 3 > nul & del /f /q \"" + archivo + L"\"";
+    STARTUPINFOW inicio { sizeof(inicio) };
+    PROCESS_INFORMATION proceso {};
+    if (CreateProcessW(nullptr, orden.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr, &inicio,
+                       &proceso)) {
+        CloseHandle(proceso.hThread);
+        CloseHandle(proceso.hProcess);
+    }
 }

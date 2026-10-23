@@ -15,7 +15,9 @@
 // Memoria (lo más parecido a «memoria de este proceso» que se puede sumar sin
 // contar dos veces lo compartido):
 //  · Linux: PSS (la memoria compartida se reparte entre quienes la usan)
-//  · Windows: memoria privada (PrivateUsage)
+//  · Windows: espacio de trabajo privado (PrivateWorkingSetSize, la columna
+//    «Memoria» del Administrador de tareas); antes de Windows 10 1809, la
+//    memoria comprometida (PrivateUsage)
 //  · macOS: huella física (phys_footprint, la del Monitor de Actividad)
 //
 // CPU: tiempo de usuario + sistema de cada proceso entre dos mediciones,

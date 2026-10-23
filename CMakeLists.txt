@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(Mitis
-    VERSION 0.8.0
+    VERSION 0.9.0
     DESCRIPTION "Navegador web ligero, multiplataforma y con interfaz propia"
     LANGUAGES CXX
 )
@@ -17,6 +17,11 @@ qt_standard_project_setup(REQUIRES 6.8)
 # 0.5.0-beta, «Beta» en la barra de título). Vacío en las versiones finales.
 set(MITIS_VERSION_SUFFIX "-beta" CACHE STRING "Sufijo de la versión (-beta, vacío en las finales)")
 
+# Servidor de descargas (sin barra final): version.txt y los paquetes. Mitis
+# lo consulta para actualizarse (src/updater.*); el instalador de Windows usa
+# el mismo (installer/CMakeLists.txt). Pruebas: por IP, en la red de Tailscale
+set(MITIS_SERVIDOR "http://100.67.58.55/mitis" CACHE STRING "Servidor de descargas de Mitis")
+
 # Windows: <windows.h> (memorymonitor.cpp) no debe definir min/max, y MSVC
 # debe leer el código como UTF-8 (textos con tildes)
 if(WIN32)
@@ -24,6 +29,17 @@ if(WIN32)
 endif()
 if(MSVC)
     add_compile_options(/utf-8)
+endif()
+
+# Símbolos también en Release, aparte del ejecutable (no cambian el código ni
+# el tamaño de lo que se distribuye): traducen la pila de los informes de
+# cierres (src/crashreporter.*) a funciones. Windows: Mitis.pdb; macOS: el
+# workflow saca el .dSYM antes de que macdeployqt recorte el ejecutable
+if(MSVC)
+    add_compile_options($<$<CONFIG:Release>:/Z7>)
+    add_link_options($<$<CONFIG:Release>:/DEBUG> $<$<CONFIG:Release>:/OPT:REF> $<$<CONFIG:Release>:/OPT:ICF>)
+elseif(APPLE)
+    add_compile_options($<$<CONFIG:Release>:-g>)
 endif()
 
 qt_add_executable(mitis
@@ -90,9 +106,14 @@ qt_add_qml_module(mitiscore
         src/captureindicator.cpp
         src/screenshot.h
         src/screenshot.cpp
+        src/crashreporter.h
+        src/crashreporter.cpp
+        src/updater.h
+        src/updater.cpp
 )
 # El registro de tipos generado incluye "settings.h" sin ruta
 target_include_directories(mitiscore PRIVATE src)
+target_compile_definitions(mitiscore PRIVATE MITIS_SERVIDOR="${MITIS_SERVIDOR}")
 target_link_libraries(mitiscore PRIVATE Qt6::Sql Qt6::Network Qt6::Gui Qt6::Svg)
 
 # Iconos SVG (Lucide, ISC: assets/icons/LICENSE), empaquetados en :/icons
@@ -117,7 +138,10 @@ qt_add_resources(mitis "branding"
           assets/branding/mitis-wordmark-light.png
 )
 if(WIN32)
-    target_sources(mitis PRIVATE assets/branding/mitis.rc)
+    # Icono y datos de la versión (nombre «Mitis» en las notificaciones)
+    set(MITIS_BRANDING_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/branding")
+    configure_file(assets/branding/mitis.rc.in mitis.rc @ONLY)
+    target_sources(mitis PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/mitis.rc")
 endif()
 
 qt_add_resources(mitis "scripts"
@@ -182,6 +206,9 @@ set(MITIS_QML_FILES
     qml/HistoryPopup.qml
     qml/ResizeHandles.qml
     qml/FullscreenHint.qml
+    qml/Notice.qml
+    qml/UpdateButton.qml
+    qml/UpdatePopup.qml
     qml/DevToolsWindow.qml
     qml/ProtectedContentNotice.qml
     qml/PageDialog.qml
@@ -206,6 +233,7 @@ qt_add_qml_module(mitis
 
 target_compile_definitions(mitis PRIVATE
     MITIS_VERSION="${PROJECT_VERSION}${MITIS_VERSION_SUFFIX}"
+    MITIS_SERVIDOR="${MITIS_SERVIDOR}"
     # Ruta a qml/ en el código fuente, usada por el modo desarrollo (--dev)
     MITIS_QML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/qml"
     # Iconos desde el código fuente en modo desarrollo

@@ -89,59 +89,76 @@ Item {
             id: column
             width: Math.min(root.width - 4 * Theme.margin, Theme.ntpMaxWidth)
             x: (root.width - width) / 2
-            y: Math.max(Theme.ntpSectionSpacing * 2, root.height * 0.22)
+            y: Math.max(Theme.ntpSectionSpacing * 2, root.height * 0.22 - logo.height - Theme.ntpLogoSpacing)
             spacing: Theme.ntpSectionSpacing
 
-            // Buscador
-            TextField {
-                id: search
+            // Logo completo de Mitis (el de temas oscuros o claros) y buscador
+            Column {
                 anchors.horizontalCenter: parent.horizontalCenter
-                width: Math.min(parent.width, Theme.ntpSearchWidth)
-                height: Theme.ntpSearchHeight
-                leftPadding: Theme.margin * 2 + Theme.iconSize
-                rightPadding: Theme.margin * 2
-                verticalAlignment: TextInput.AlignVCenter
-                color: Theme.ink
-                placeholderText: "Buscar en " + SearchEngines.name + " o escribir una dirección"
-                placeholderTextColor: Theme.inkMuted
-                selectionColor: Theme.selection
-                selectedTextColor: Theme.ink
-                font.pixelSize: Theme.fontSizeLarge
-                font.weight: Theme.fontWeightInput
-                selectByMouse: true
+                width: parent.width
+                spacing: Theme.ntpLogoSpacing
 
-                // Mismo degradado que el campo de dirección y los controles
-                background: Rectangle {
-                    radius: height / 2
-                    gradient: Gradient {
-                        orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: Theme.controlsStart }
-                        GradientStop { position: 1.0; color: Theme.controlsEnd }
-                    }
-                    border.width: 1
-                    border.color: search.activeFocus ? Theme.focusRing
-                                                     : (searchHover.hovered ? Theme.hairlineHover : Theme.hairline)
-                    Behavior on border.color { ColorAnimation { duration: Theme.durationFast } }
-
-                    Icon {
-                        anchors.left: parent.left
-                        anchors.leftMargin: Theme.margin + Theme.spacing / 2
-                        anchors.verticalCenter: parent.verticalCenter
-                        name: "search"
-                        color: search.activeFocus ? Theme.brandLight1 : Theme.inkMuted
-                    }
+                Image {
+                    id: logo
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: Theme.ntpLogoWidth
+                    height: width * implicitHeight / Math.max(1, implicitWidth)
+                    source: Theme.dark ? "qrc:/branding/mitis-logo-dark.png" : "qrc:/branding/mitis-logo-light.png"
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    mipmap: true
                 }
 
-                HoverHandler {
-                    id: searchHover
-                    cursorShape: Qt.IBeamCursor
-                }
+                TextField {
+                    id: search
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: Math.min(parent.width, Theme.ntpSearchWidth)
+                    height: Theme.ntpSearchHeight
+                    leftPadding: Theme.margin * 2 + Theme.iconSize
+                    rightPadding: Theme.margin * 2
+                    verticalAlignment: TextInput.AlignVCenter
+                    color: Theme.ink
+                    placeholderText: "Buscar en " + SearchEngines.name + " o escribir una dirección"
+                    placeholderTextColor: Theme.inkMuted
+                    selectionColor: Theme.selection
+                    selectedTextColor: Theme.ink
+                    font.pixelSize: Theme.fontSizeLarge
+                    font.weight: Theme.fontWeightInput
+                    selectByMouse: true
 
-                onAccepted: {
-                    const target = SearchEngines.resolve(text)
-                    if (target !== "") {
-                        text = ""
-                        root.navigate(target)
+                    // Mismo degradado que el campo de dirección y los controles
+                    background: Rectangle {
+                        radius: height / 2
+                        gradient: Gradient {
+                            orientation: Gradient.Horizontal
+                            GradientStop { position: 0.0; color: Theme.controlsStart }
+                            GradientStop { position: 1.0; color: Theme.controlsEnd }
+                        }
+                        border.width: 1
+                        border.color: search.activeFocus ? Theme.focusRing
+                                                         : (searchHover.hovered ? Theme.hairlineHover : Theme.hairline)
+                        Behavior on border.color { ColorAnimation { duration: Theme.durationFast } }
+
+                        Icon {
+                            anchors.left: parent.left
+                            anchors.leftMargin: Theme.margin + Theme.spacing / 2
+                            anchors.verticalCenter: parent.verticalCenter
+                            name: "search"
+                            color: search.activeFocus ? Theme.brandLight1 : Theme.inkMuted
+                        }
+                    }
+
+                    HoverHandler {
+                        id: searchHover
+                        cursorShape: Qt.IBeamCursor
+                    }
+
+                    onAccepted: {
+                        const target = SearchEngines.resolve(text)
+                        if (target !== "") {
+                            text = ""
+                            root.navigate(target)
+                        }
                     }
                 }
             }

@@ -10,12 +10,15 @@
 #include <QStandardPaths>
 #include <QTranslator>
 #include <QtQml/qqmlextensionplugin.h>
+#include <QtWebEngineCore/qtwebenginecoreglobal.h>
 #include <QtWebEngineQuick/qtwebenginequickglobal.h>
 
+#include "crashreporter.h"
 #include "devreloader.h"
 #include "enginebridge.h"
 #include "iconprovider.h"
 #include "links.h"
+#include "updater.h"
 #include "networkfactory.h"
 #include "widevine.h"
 
@@ -117,6 +120,13 @@ int main(int argc, char *argv[])
         Links::instance()->add(urls);
     Links::instance()->listen();
 
+    // Registro de la sesión e informes de cierres inesperados (Configuración
+    // → Desarrollo): desde aquí, ya sabiendo que este proceso se queda
+    CrashReporter::instance()->install();
+    qInfo("Chromium %s (Qt WebEngine)", qWebEngineChromiumVersion());
+    // Busca versiones nuevas en el servidor de descargas (al poco y cada tanto)
+    Updater::instance();
+
     // Perfiles del navegador y bloqueador: antes que la interfaz, que los usa,
     // y destruidos después de ella (ver el final)
     auto *bridge = new EngineBridge(widevinePath);
@@ -151,5 +161,6 @@ int main(int argc, char *argv[])
     delete ui;
     // Los perfiles, después de las páginas y antes que la aplicación
     delete bridge;
+    CrashReporter::instance()->finish();
     return result;
 }

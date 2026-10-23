@@ -1,16 +1,20 @@
-# Crea el instalador de Mitis para Windows: Mitis con todo lo que necesita
-# (Qt, Qt WebEngine y el runtime de Visual C++) en un ZIP, pegado al final
-# del instalador (MitisInstalador.exe) con su desplazamiento y una marca:
+# Prepara lo que va en el servidor de descargas de Mitis (MITIS_SERVIDOR):
 #
-#   [instalador][ZIP][desplazamiento del ZIP: 8 bytes][«MITISPAQ»]
+#   Mitis-<versión>-windows.zip   Mitis con todo lo que necesita (Qt, Qt
+#                                 WebEngine y el runtime de Visual C++)
+#   MitisInstalador.exe           el instalador (sin Mitis dentro: lo descarga)
+#   version.txt                   la versión, los nombres y sus SHA-256
+#                                 (lo lee el instalador y Mitis para actualizar)
 #
+# Se suben los tres a la carpeta del servidor, reemplazando los anteriores.
 # Lo usa GitHub Actions. En local, desde una consola de Visual Studio
 # (x64 Native Tools) con Qt en el PATH, tras compilar Mitis y el instalador:
 #   pwsh installer/empaquetar.ps1 -Mitis build/bin/Mitis.exe `
-#        -Instalador build-instalador/MitisInstalador.exe -Salida Mitis-Instalador.exe
+#        -Instalador build-instalador/MitisInstalador.exe -Version 0.8.1-beta -Salida servidor
 param(
     [Parameter(Mandatory)] [string] $Mitis,
     [Parameter(Mandatory)] [string] $Instalador,
+    [Parameter(Mandatory)] [string] $Version,
     [Parameter(Mandatory)] [string] $Salida,
     [string] $Qml = (Join-Path $PSScriptRoot "..\qml")
 )
@@ -19,6 +23,7 @@ $ErrorActionPreference = "Stop"
 $temporal = Join-Path ([IO.Path]::GetTempPath()) ("mitis-paquete-" + [Guid]::NewGuid())
 $carpeta = Join-Path $temporal "Mitis"
 New-Item -ItemType Directory -Path $carpeta | Out-Null
+New-Item -ItemType Directory -Path $Salida -Force | Out-Null
 
 try {
     # Mitis y las bibliotecas de Qt que usa (Qt WebEngine incluido: su
@@ -41,7 +46,9 @@ try {
 
     # Comprimido con 7-Zip (en los equipos de GitHub Actions) o, si no está,
     # con PowerShell (más lento)
-    $zip = Join-Path $temporal "Mitis.zip"
+    $paquete = "Mitis-$Version-windows.zip"
+    $zip = Join-Path $Salida $paquete
+    Remove-Item $zip -ErrorAction SilentlyContinue
     if (Get-Command 7z -ErrorAction SilentlyContinue) {
         & 7z a -tzip -mx=7 $zip (Join-Path $carpeta "*") | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "7z falló" }
@@ -49,20 +56,22 @@ try {
         Compress-Archive -Path (Join-Path $carpeta "*") -DestinationPath $zip -CompressionLevel Optimal
     }
 
-    # Instalador + ZIP + pie
-    Copy-Item $Instalador $Salida -Force
-    $inicio = (Get-Item $Salida).Length
-    $flujo = [IO.File]::Open((Resolve-Path $Salida), [IO.FileMode]::Append)
-    try {
-        $entrada = [IO.File]::OpenRead($zip)
-        try { $entrada.CopyTo($flujo) } finally { $entrada.Dispose() }
-        [byte[]] $pie = [BitConverter]::GetBytes([Int64]$inicio) + [Text.Encoding]::ASCII.GetBytes("MITISPAQ")
-        $flujo.Write($pie, 0, $pie.Length)
-    } finally {
-        $flujo.Dispose()
-    }
-    $mb = [Math]::Round((Get-Item $Salida).Length / 1MB)
-    Write-Host "Instalador creado: $Salida ($mb MB)"
+    $instaladorSalida = Join-Path $Salida "MitisInstalador.exe"
+    Copy-Item $Instalador $instaladorSalida -Force
+
+    # version.txt: una clave por línea, en UTF-8 sin BOM y con saltos \n
+    $lineas = @(
+        "version=$Version",
+        "paquete=$paquete",
+        "sha256=$((Get-FileHash $zip -Algorithm SHA256).Hash.ToLower())",
+        "instalador=MitisInstalador.exe",
+        "instalador_sha256=$((Get-FileHash $instaladorSalida -Algorithm SHA256).Hash.ToLower())"
+    )
+    [IO.File]::WriteAllText((Join-Path (Resolve-Path $Salida) "version.txt"), ($lineas -join "`n") + "`n",
+                            (New-Object Text.UTF8Encoding $false))
+
+    $mb = [Math]::Round((Get-Item $zip).Length / 1MB)
+    Write-Host "Listo en ${Salida}: $paquete ($mb MB), MitisInstalador.exe y version.txt"
 } finally {
     Remove-Item -Recurse -Force $temporal -ErrorAction SilentlyContinue
 }

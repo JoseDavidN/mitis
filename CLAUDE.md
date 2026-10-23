@@ -46,6 +46,8 @@ src/            C++ (main.cpp, devreloader.*, iconprovider.*: iconos SVG colorea
                 screenshot.*: junta, guarda y copia las capturas de pantalla (singleton `Screenshot`; los trozos los da ScreenshotOverlay),
                 windowstyle.*: esquinas redondeadas de la ventana sin marco (DWM en Windows 11, windowstyle_mac.mm en macOS),
                 captureindicator.*: aviso de micrófono/cámara en el icono de la ventana (singleton `CaptureIndicator`; cada BrowserTab informa con report()),
+                updater.*: busca versiones nuevas en el servidor de descargas y abre el instalador para actualizar (singleton `Updates`),
+                crashreporter.*: registro de la sesión e informes de cierres inesperados (singleton `CrashReports`; carpeta de datos `informes/`; pila y, en Windows, minidump),
                 links.*: enlaces que el sistema pide abrir (navegador predeterminado) y un solo Mitis por perfil (singleton `Links`))
 qml/            Interfaz. Todos los archivos planos en esta carpeta.
   Main.qml            Ventana (tamaño recordado en Settings, «Window/geometry»), modelo de pestañas, navegación, atajos, sesión (no conoce el motor). La ventana privada es otra instancia (privateMode)
@@ -94,6 +96,9 @@ qml/            Interfaz. Todos los archivos planos en esta carpeta.
   urls.js             Texto escrito → URL o búsqueda (con la plantilla que recibe); dominio y favicon de una URL; ruta local ↔ file://. Sin estado: el buscador lo pone SearchEngines
   ResizeHandles.qml   Bordes para redimensionar la ventana sin marco
   FullscreenHint.qml  Aviso «Pulsa Esc/F11 para salir de la pantalla completa»
+  Notice.qml          Aviso arriba en el centro con sus botones (cierre inesperado de la sesión anterior: copiar el informe)
+  UpdateButton.qml    Botón de actualizar de la barra inferior (tras Opciones, con una versión nueva): anillo con el degradado de la marca y pulso
+  UpdatePopup.qml     Confirmación de la actualización («Actualizar ahora»: Confirmar / Cancelar) y avance de la descarga
   CertificateDialog.qml Aviso de certificado inválido (PageDialog): volver o continuar
   PermissionDialog.qml Permisos de un sitio (PageDialog): cámara, micrófono, ubicación… en cola
   JsDialog.qml        alert, confirm, prompt y aviso de salir de la página (PageDialog), en cola
@@ -109,8 +114,9 @@ CHANGELOG.md    Cambios de cada versión, para usuarios («Sin publicar» arriba
 tools/codecs/   Compilar Qt WebEngine con códecs propietarios (H.264, AAC) para Windows y macOS, y página de prueba; guía en docs/codecs.md
 tools/          medir_ram.py: mide la RAM de Mitis, Chrome o Firefox con las páginas de paginas.txt
 installer/      Instalador de Windows (proyecto CMake aparte, Win32 + GDI+, sin Qt): src/main.cpp (ventana),
-                src/instalacion.* (extraer, accesos, registro, desinstalar), empaquetar.ps1 (pega el ZIP al .exe)
-assets/branding/ Icono de Mitis (mitis-icon.svg → mitis.png, mitis.ico, mitis.icns; mitis.rc lo pone en Mitis.exe; el .icns, en Mitis.app), logo completo (mitis-logo-dark/light.svg → .png, Configuración), solo el nombre (mitis-wordmark-dark/light.svg → .png, barra de título) y logo de StartCode (startcode.png; startcode-light.png para el tema Claro)
+                src/instalacion.* (extraer, accesos, registro, desinstalar), src/red.* (version.txt y descargas),
+                empaquetar.ps1 (ZIP, instalador y version.txt para el servidor de descargas)
+assets/branding/ Icono de Mitis (mitis-icon.svg → mitis.png, mitis.ico, mitis.icns; mitis.rc.in lo pone en Mitis.exe con los datos de la versión, que dan el nombre «Mitis» en las notificaciones; el .icns, en Mitis.app), logo completo (mitis-logo-dark/light.svg → .png, Configuración y nueva pestaña), solo el nombre (mitis-wordmark-dark/light.svg → .png, barra de título) y logo de StartCode (startcode.png; startcode-light.png para el tema Claro)
 packaging/macos/ Info.plist.in (abre http/https y HTML: navegador predeterminado)
 packaging/linux/ PKGBUILD (Arch, mitis-git), appimage.sh (+ apprun-sandbox.sh), mitis.desktop, mitis.svg (copia de mitis-icon.svg)
 .github/workflows/compilar.yml  En cada push, Windows (instalador) y macOS (.dmg universal arm64 + x86_64, firma ad hoc, ventana con fondo assets/branding/dmg-fondo.svg vía create-dmg, icono assets/branding/mitis.icns); Linux a mano («todos»); release con etiqueta v* (instalador y .dmg)
@@ -119,7 +125,7 @@ packaging/linux/ PKGBUILD (Arch, mitis-git), appimage.sh (+ apprun-sandbox.sh), 
 ## Diseño de la interfaz
 
 - **Arriba:** barra de título (en macOS, con los botones de ventana del sistema a la izquierda: círculos de cerrar, minimizar y zoom, y el nombre centrado) con el nombre de Mitis (el del logo, sin icono; versión clara u oscura según el tema) a la izquierda, y a la derecha el avatar del perfil (abre Configuración → Perfil; no en ventanas privadas) y minimizar/maximizar/cerrar. Nada más. Se arrastra para mover y con doble clic maximiza. **Se oculta sola** (oculta desde que se abre Mitis): flota sobre la página, aparece al pasar el ratón por el borde superior (sin maximizar, una franja de tolerancia bajo el borde de redimensionar) y se queda `titleBarHold` (1,5 s) tras quitarlo; con Configuración abierta, siempre visible.
-- **Abajo:** controles independientes que flotan sobre la página, **sin barra ni fondo**: atrás, adelante, recargar, campo de dirección, pestañas, marcadores y opciones. La página llega hasta el borde inferior de la ventana y cada control lleva su propio fondo y borde, sin sombra. El progreso de carga va dentro del campo de dirección. **Se ocultan solos** `controlsHold` (2 s) después de dejar de usarlos, para no tapar lo que las páginas fijan abajo; no vuelven al pasar por el borde ni al desplazar: solo con la pestaña del borde inferior (`ControlsTab`, con el título de la página). En la nueva pestaña no se ocultan.
+- **Abajo:** controles independientes que flotan sobre la página, **sin barra ni fondo**: atrás, adelante, recargar, campo de dirección, pestañas, marcadores y opciones (y, con una versión nueva, actualizar). La página llega hasta el borde inferior de la ventana y cada control lleva su propio fondo y borde, sin sombra. El progreso de carga va dentro del campo de dirección. **Se ocultan solos** `controlsHold` (2 s) después de dejar de usarlos, para no tapar lo que las páginas fijan abajo; no vuelven al pasar por el borde ni al desplazar: solo con la pestaña del borde inferior (`ControlsTab`, con el título de la página). En la nueva pestaña no se ocultan.
 - Botones redondeados y flotantes (`IconButton`). Las listas desplegables de la barra inferior se abren hacia arriba.
 
 ## Reglas de código
@@ -159,10 +165,12 @@ packaging/linux/ PKGBUILD (Arch, mitis-git), appimage.sh (+ apprun-sandbox.sh), 
 - Si se usa un módulo Qt nuevo, añadirlo a `find_package` y a `target_link_libraries`.
 
 ### Instalador de Windows (`installer/`)
-- No usa Qt (se ejecuta antes de que esté instalado): Win32, GDI+ y miniz (se descarga al configurar, con su hash). CRT estático.
+- No usa Qt (se ejecuta antes de que esté instalado): Win32, GDI+, WinHTTP, BCrypt y miniz (se descarga al configurar, con su hash). CRT estático.
 - Sus colores son los de Nocturno copiados en `src/main.cpp`: si cambia el tema, cambiarlos también allí. Medidas a 100 % de escala, multiplicadas por los DPI.
 - Si Mitis ya está instalado (clave de desinstalación o `Mitis.exe` en su carpeta), pregunta antes: desinstalar, reinstalar/actualizar o cancelar.
-- Formato: `[MitisInstalador.exe][ZIP][desplazamiento 8 bytes][«MITISPAQ»]`. El desinstalador es el mismo `.exe` sin el paquete, con `--desinstalar`.
+- **No lleva Mitis dentro:** lo descarga del servidor (`MITIS_SERVIDOR`, en `CMakeLists.txt` de Mitis y del instalador; de momento `http://100.67.58.55/mitis`, este servidor en la red de Tailscale) a memoria, comprueba su SHA-256 e instala desde ahí: en el disco solo queda lo instalado. En el servidor: `version.txt` (formato en `installer/src/red.h`), `Mitis-x.y.z-windows.zip` y `MitisInstalador.exe`; los prepara `installer/empaquetar.ps1` (artefacto `mitis-windows`).
+- En la carpeta de Mitis queda el instalador del servidor como `mitis-instalador.exe`: desinstala (`--desinstalar`, lo llama Windows) y actualiza (`--actualizar <pid>`, lo llama Mitis). Para instalar o actualizar desde esa carpeta se copia a la temporal y se relanza con `--temporal` (la copia se borra al terminar).
+- **Actualizaciones** (`src/updater.*`, singleton `Updates`): Mitis lee `version.txt` a los 15 s de arrancar y cada 6 h (`MITIS_SERVIDOR` en el entorno lo sustituye, para pruebas). Con una versión más nueva aparece `UpdateButton` tras Opciones (`BottomBar`) y su confirmación `UpdatePopup`; al confirmar, `Updates.install()` lo prepara y emite `readyToRestart`, y `Main.qml` se cierra como con la ✕ (guarda la sesión y deja `Session/restoreOnce` para restaurarla al volver). Windows: abre el instalador en modo actualización, que espera, instala y lo vuelve a abrir. macOS (`Mitis.app` comprimido con `ditto`, clave `macos`) y Linux solo como AppImage (clave `linux`, variable `APPIMAGE`): Mitis descarga el paquete, comprueba su SHA-256 y un script (`ReplacerScript` en `updater.cpp`) espera a que termine, cambia la app y la abre. Servidor: `/srv/docker/mitis-releases` (nginx en Docker, `releases/`; ver su LEEME.md).
 - Solo se compila en Windows (GitHub Actions); aquí no hay compilador para probarlo.
 
 ### General
@@ -193,6 +201,10 @@ packaging/linux/ PKGBUILD (Arch, mitis-git), appimage.sh (+ apprun-sandbox.sh), 
    ``` Para probar estados (varias pestañas, listas abiertas) sin xdotool, cambiar temporalmente el `Component.onCompleted` de `Main.qml` en `--dev` y restaurarlo después.
 5. GitHub Actions compila con **Qt 6.11.3** (en desarrollo, la de Arch: 6.11.2, con códecs propietarios). Se elige por los parches de seguridad de su Chromium, no por ser la más alta: Qt 6.12.0 tiene el mismo Chromium 140 con parches más antiguos (ver `CHROMIUM_VERSION` de qtwebengine en cada etiqueta). Una versión de Qt distinta puede rechazar QML que la local acepta (p. ej. Qt 6.10 no admite `short` como nombre de variable). Para comprobar con otra versión: instalar su `qmlcachegen` con aqtinstall (`aqt install-qt linux desktop <versión> linux_gcc_64 --archives qtbase qtdeclarative icu`; desde la 6.11 hace falta aqtinstall en desarrollo, ver `AQT_SOURCE` en el workflow) y compilar cada QML con `--only-bytecode --resource-path /qt/qml/Mitis/<archivo>`.
 6. Si se toca `devreloader.*`, probar: editar un QML con la app abierta, introducir un error a propósito (la app no debe cerrarse) y corregirlo, y cambiar un valor de `Theme.qml`.
+
+## Cierres inesperados
+
+`CrashReporter` (`src/crashreporter.*`) escribe cada sesión en `informes/sesion.log` de la carpeta de datos (versión, sistema, Chromium y todos los mensajes de Qt y de la interfaz) y termina con «== Cierre normal ==». Una caída añade «== Caída: motivo» y la pila (módulo+desplazamiento) y, en Windows, `sesion.dmp`. Un registro sin cierre normal pasa al arrancar a `cierre-AAAAMMDD-HHMMSS.txt` y Mitis avisa (`Notice` en `Main.qml`, Configuración → Desarrollo). Para leer la pila: los símbolos de esa compilación están en los artefactos `mitis-windows-simbolos` (`Mitis.pdb`; el `.dmp` se abre con WinDbg o Visual Studio) y `mitis-macos-simbolos` (`Mitis.dSYM`: `atos -o Mitis.dSYM/Contents/Resources/DWARF/Mitis -arch arm64 -l 0x100000000 0x100000000+desplazamiento`). En Linux, `addr2line -e build/bin/Mitis desplazamiento` (compilado con símbolos). Los procesos de las páginas (QtWebEngineProcess) no entran: su caída solo deja una línea «Terminó el proceso de una página».
 
 ## Problemas conocidos ya resueltos (no reintroducir)
 

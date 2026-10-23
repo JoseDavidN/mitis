@@ -158,12 +158,16 @@ Window {
         // Enlaces con los que se abrió Mitis (navegador predeterminado): con
         // ellos no hace falta la página de inicio ni la de nueva pestaña
         const links = privateMode ? [] : Links.takePending()
+        // Tras actualizarse (installUpdate), las pestañas vuelven siempre
+        const afterUpdate = !privateMode && String(Settings.value("Session/restoreOnce", false)) === "true"
+        if (afterUpdate)
+            Settings.setValue("Session/restoreOnce", false)
         if (privateMode) {
             BrowserProfile.retainPrivate()
             openNewTabPage()
-        } else if (Settings.startupMode === "page" && Settings.startupUrl !== "" && links.length === 0) {
+        } else if (!afterUpdate && Settings.startupMode === "page" && Settings.startupUrl !== "" && links.length === 0) {
             newTab(Settings.startupUrl)
-        } else if (!(Settings.startupMode === "restore" && restoreSession(links.length > 0))
+        } else if (!((afterUpdate || Settings.startupMode === "restore") && restoreSession(links.length > 0))
                    && links.length === 0) {
             openNewTabPage()
         }
@@ -257,6 +261,30 @@ Window {
     // Settings ("Session/tabs"). Se guarda un momento después de cada cambio
     // y al cerrar. Al abrir, solo carga la activa: las demás esperan a que se
     // seleccionen (BrowserTab.deferred) y no gastan un proceso del motor.
+    // Actualizar: Updates prepara la versión nueva (Windows: el instalador;
+    // macOS y Linux: la descarga) y avisa con readyToRestart. Entonces Mitis
+    // se cierra como al pulsar la ✕ (la sesión se guarda, y al volver se
+    // restaura aunque «Al abrir Mitis» diga otra cosa), con las privadas antes;
+    // lo que queda la reemplaza y lo vuelve a abrir
+    function installUpdate() {
+        Updates.install()
+    }
+    Connections {
+        target: Updates
+        enabled: !win.privateMode
+        function onReadyToRestart() {
+            Settings.setValue("Session/restoreOnce", true)
+            win.quitForUpdate()
+        }
+    }
+    function quitForUpdate() {
+        for (const window of privateWindows) {
+            if (window)
+                window.close()
+        }
+        win.close()
+    }
+
     function saveSession() {
         if (privateMode || closingWindow)
             return
@@ -778,7 +806,7 @@ Window {
     readonly property bool controlsInUse: revealControls || barHover.hovered || playerHover.hovered
         || controlsTab.hovered || bottomBar.editing
         || tabsPopup.opened || bookmarksPopup.opened || optionsPopup.opened || siteInfoPopup.opened
-        || historyPopup.opened || downloadsPopup.opened || downloadPanel.opened
+        || historyPopup.opened || downloadsPopup.opened || downloadPanel.opened || updatePopup.opened
     // A la vista fuera de F11; al abrir Mitis también (para saber dónde están)
     property bool controlsAwake: true
     onControlsInUseChanged: {
@@ -1002,6 +1030,7 @@ Window {
         tabCount: tabs.count
         bookmarked: win.currentView !== null && Bookmarks.urls.indexOf(win.currentView.url.toString()) >= 0
         downloadsShown: downloadPanel.active
+        updateAvailable: !win.privateMode && Updates.available !== ""
         download: downloadPanel.item
         downloadPanelOpen: downloadPanel.visible
 
@@ -1042,6 +1071,7 @@ Window {
         onOptionsRequested: downloadsPopup.opened ? downloadsPopup.close()
                           : historyPopup.opened ? historyPopup.close()
                           : optionsPopup.opened ? optionsPopup.close() : optionsPopup.open()
+        onUpdateRequested: updatePopup.opened ? updatePopup.close() : updatePopup.open()
     }
 
     Item {
@@ -1205,6 +1235,7 @@ Window {
         graphicsApi: win.graphicsApi
         currentPageUrl: win.currentView && !win.privateMode ? win.currentView.url.toString() : ""
         onCloseRequested: win.closeSettings()
+        onUpdateRequested: win.installUpdate()
     }
 
     // «Preguntar dónde guardar» (Configuración → Descargas): la carpeta se
@@ -1296,6 +1327,14 @@ Window {
         onOpenRequested: url => win.openUrl(url)
         onReopenRequested: win.reopenClosedTab()
         onSettingsRequested: win.openSettings("history")
+    }
+
+    // Confirmación de la actualización (botón tras Opciones)
+    UpdatePopup {
+        id: updatePopup
+        parent: bottomBar.updateButton
+        x: parent.width - width
+        y: -height - Theme.floatingMargin
     }
 
     OptionsPopup {
@@ -1451,6 +1490,38 @@ Window {
         z: 1.5
         anchors.fill: parent
         source: pages
+    }
+
+    // Avisos de arriba, solo en la ventana principal: cierre inesperado de la
+    // sesión anterior
+    Column {
+        z: 2
+        anchors.top: parent.top
+        anchors.topMargin: Theme.floatingMargin
+        anchors.horizontalCenter: parent.horizontalCenter
+        spacing: Theme.spacing
+
+        Notice {
+            id: crashNotice
+            anchors.horizontalCenter: parent.horizontalCenter
+            shown: !win.privateMode && CrashReports.pending !== ""
+            text: "Mitis se cerró de forma inesperada. Se guardó un informe."
+            onClosed: CrashReports.dismiss()
+
+            property bool copied: false
+
+            TextButton {
+                text: crashNotice.copied ? "Copiado" : "Copiar informe"
+                onClicked: {
+                    CrashReports.copy(CrashReports.pending)
+                    crashNotice.copied = true
+                }
+            }
+            TextButton {
+                text: "Abrir carpeta"
+                onClicked: CrashReports.openFolder()
+            }
+        }
     }
 
     FullscreenHint {

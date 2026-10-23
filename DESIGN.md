@@ -324,8 +324,9 @@ Window (bgBase, sin marco)
 - La lista mide lo que suman sus filas visibles, con `popupMaxHeight` como tope para todo el desplegable.
 
 ### `NewTabPage` — página de nueva pestaña
-- Minimalista y en una columna centrada de hasta `ntpMaxWidth`: buscador, accesos rápidos, noticias. Se desplaza si no cabe.
+- Minimalista y en una columna centrada de hasta `ntpMaxWidth`: logo, buscador, accesos rápidos, noticias. Se desplaza si no cabe.
 - **Fondo:** el del tema (`ThemeBackground`, compartido con Configuración), un radial `bgGlow → bgMid → bgBase` desde arriba a la izquierda (como StartCode). Con imagen propia, la imagen a pantalla completa (recortada, decodificada al tamaño de la pantalla para no gastar RAM) y encima un velo `backgroundScrim`.
+- **Logo:** el completo de Mitis (oscuro o claro según el tema), `ntpLogoWidth` de ancho, centrado sobre el buscador a `ntpLogoSpacing`.
 - **Buscador:** píldora de `ntpSearchHeight`, `surfaceFloat`, texto `fontSizeLarge`, icono de búsqueda; borde `focusRing` con foco. Tiene el foco al abrir una pestaña nueva.
 - **Accesos rápidos:** cuadros de `tileSize` con el favicon del sitio (`tileIconSize`) sobre un círculo `faviconBackdrop` de `tileIconBackdrop` (muchos favicons son negros y desaparecerían sobre el fondo oscuro), y el nombre debajo en `inkSecondary`. Sin favicon, la inicial del sitio en `brandLight1`. Los favicons vienen del servicio de iconos de DuckDuckGo y quedan en la caché en disco. La ✕ para quitar aparece al pasar por encima. Hasta `quickLinksMax`; el último cuadro es "Añadir".
 - **Noticias:** encabezado con icono `news` en `brandLight1`, tarjetas `NewsCard` (titular de hasta dos líneas en `ink`, fuente y antigüedad en `inkMuted`), en dos columnas desde `ntpNewsTwoColumnsWidth`.
@@ -469,6 +470,12 @@ Window (bgBase, sin marco)
 - Pulsarlo abre o cierra el panel de la descarga actual.
 - **Anillo de progreso** (`ProgressRing`): con el panel cerrado y la descarga en curso, un arco de `progressRingWidth` sobre el borde del botón, desde arriba en el sentido del reloj, en `brandLight1` sobre una pista `tintActive`, que avanza con el porcentaje. Sin total conocido, un arco de `progressIndeterminateSpan` gira (`durationSpin`). En pausa, el arco en `inkMuted` y quieto. Aparece con fundido (`durationBase`) y acompaña la escala del botón al pasar por encima o pulsar.
 - Se dibuja con `QtQuick.Shapes` (`PathAngleArc`; `CurveRenderer` para bordes suaves con Qt 6.6+), sin efectos de GPU ni sombras. Un trazo de `ShapePath` no admite degradado: por eso el color plano de marca.
+
+### Botón de actualizar (`UpdateButton`) y `UpdatePopup`
+- Solo con una versión nueva de Mitis (`Updates.available`), **después de Opciones** y solo en la ventana principal. Recibe su tramo del degradado con `tone(x)`, como los demás.
+- Es un `IconButton` `update` encendido (icono en `brandLight1`) dentro de un **anillo de `updateRingWidth` con el degradado de marca** `brand1 → brand2` (un círculo con el degradado detrás del botón, que asoma por el borde). El anillo acompaña la escala del botón al pasar por encima o pulsar.
+- **Pulso** para que se note: un aro de `updateRingWidth` en `brandLight1` crece de 1 a `updatePulseScale` mientras se desvanece (`updatePulseDuration`, `OutCubic`), espera `updatePulsePause` y repite. Sin sombras ni efectos de GPU.
+- Pulsarlo abre o cierra `UpdatePopup`: `Popup` hacia arriba anclado al botón (borde derecho alineado, `floatingMargin`), ancho `updatePopupWidth`, fondo `PopupBackground`, relleno `margin`, fundido `durationFast`. Título «Actualizar ahora» en `ink` DemiBold; debajo, en `fontSizeSmall` `inkMuted`, qué pasará (o el avance de la descarga, o el error en `danger`); abajo a la derecha, `TextButton` «Cancelar» (cierra el popup) y `primary` «Confirmar» (o «Reintentar»). Mientras se descarga no se cierra al pulsar fuera.
 
 ### `DownloadPanel` — descarga actual
 - `Popup` hacia arriba anclado al botón de descargas (borde derecho alineado, `floatingMargin` de separación), ancho `downloadPanelWidth`, fondo `PopupBackground`, relleno `margin`. Fundido `durationFast`. No toma el foco del teclado (se abre solo mientras se navega). Se cierra con su ✕ o pulsando fuera.

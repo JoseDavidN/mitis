@@ -28,6 +28,8 @@ FocusScope {
     property string currentPageUrl: ""
 
     signal closeRequested()
+    // «Actualizar» (Acerca de Mitis): lo hace la ventana, que debe cerrarse
+    signal updateRequested()
 
     // Secciones del índice, en el orden de la página
     readonly property var sections: [
@@ -1260,6 +1262,28 @@ FocusScope {
                         onToggled: Settings.performanceMonitor = checked
                     }
                 }
+                SettingRow {
+                    id: crashRow
+                    readonly property var last: CrashReports.reports.length > 0 ? CrashReports.reports[0] : null
+
+                    title: "Informes de cierres inesperados"
+                    description: (last
+                                  ? "Último: " + last.date.toLocaleString(Qt.locale(), "d MMM yyyy, HH:mm") + " · "
+                                    + (last.kind === "caida" ? "caída, con la pila" : "sin pila (se colgó, se cerró a la fuerza o le faltó memoria)")
+                                    + (CrashReports.reports.length > 1 ? " · " + CrashReports.reports.length + " guardados" : "")
+                                  : "Ninguno.")
+                                 + " Mitis guarda un registro de cada sesión; si se cierra sin despedirse, queda como informe. No se envía nada."
+
+                    TextButton {
+                        visible: crashRow.last !== null
+                        text: "Copiar el último"
+                        onClicked: CrashReports.copy(crashRow.last.path)
+                    }
+                    TextButton {
+                        text: "Abrir carpeta"
+                        onClicked: CrashReports.openFolder()
+                    }
+                }
             }
 
             SettingsSection {
@@ -1271,6 +1295,33 @@ FocusScope {
                     divider: false
                     title: "Mitis " + Qt.application.version
                     description: "Navegador ligero con interfaz propia"
+                }
+                SettingRow {
+                    title: "Actualizaciones"
+                    description: Updates.checking ? "Buscando…"
+                               : Updates.installing
+                                 ? "Descargando Mitis " + Updates.available + "…"
+                                   + (Updates.progress >= 0 ? " " + Math.round(Updates.progress * 100) + " %" : "")
+                               : Updates.error !== "" && Updates.available !== "" && Updates.canInstall ? Updates.error
+                               : Updates.available !== ""
+                                 ? "Hay una versión nueva: " + Updates.available + "."
+                                   + (Updates.canInstall ? " Al actualizar, Mitis se cierra y vuelve a abrirse con tus pestañas."
+                                                         : " Descárgala e instálala para actualizar (o, en Linux, con el sistema de paquetes).")
+                               : Updates.error !== "" ? Updates.error
+                               : "Mitis busca versiones nuevas al abrirse y cada 6 horas."
+
+                    TextButton {
+                        visible: Updates.available === ""
+                        enabled: !Updates.checking
+                        text: "Buscar ahora"
+                        onClicked: Updates.check()
+                    }
+                    TextButton {
+                        visible: Updates.available !== "" && Updates.canInstall && !Updates.installing
+                        primary: true
+                        text: "Actualizar"
+                        onClicked: root.updateRequested()
+                    }
                 }
                 SettingRow {
                     title: "Motor"

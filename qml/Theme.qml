@@ -258,6 +258,14 @@ QtObject {
     // Panel del sitio: cuánto dura «Enlace copiado» (ms)
     readonly property int siteInfoCopiedHold: 1500
     readonly property int optionsWidth: 270
+    // Botón de actualización (barra inferior): anillo con el degradado de la
+    // marca, su pulso (cada tanto, un anillo que crece y se desvanece) y la
+    // ventana de confirmación
+    readonly property int updateRingWidth: 2
+    readonly property real updatePulseScale: 1.45
+    readonly property int updatePulseDuration: 1400
+    readonly property int updatePulsePause: 1200
+    readonly property int updatePopupWidth: 300
     readonly property int textButtonHeight: 32
     readonly property int dialogWidth: 360
     // Aviso de certificado: más texto que un diálogo normal
@@ -265,6 +273,9 @@ QtObject {
     // Página de nueva pestaña
     readonly property int ntpMaxWidth: 720
     readonly property int ntpSearchWidth: 600
+    // Logo completo de Mitis sobre el buscador: ancho y espacio hasta él
+    readonly property int ntpLogoWidth: 220
+    readonly property int ntpLogoSpacing: 28
     readonly property int ntpSearchHeight: 48
     readonly property int ntpSectionSpacing: 40
     readonly property int ntpNewsTwoColumnsWidth: 560

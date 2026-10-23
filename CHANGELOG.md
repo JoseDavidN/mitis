@@ -7,6 +7,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ### Añadido
 
+- **Instalador que descarga Mitis.** El instalador de Windows ya no lleva Mitis dentro: pesa muy poco, descarga la última versión del servidor de Mitis y la instala sin dejar archivos temporales. Si algo falla (sin conexión, descarga cortada), ofrece «Reintentar».
+- **Actualizaciones.** Mitis busca versiones nuevas al abrirse y cada 6 horas. Si hay una, aparece un botón animado después del de Opciones; al pulsarlo, «Actualizar ahora» con «Confirmar» y «Cancelar». Al confirmar, Mitis se cierra, se actualiza y vuelve a abrirse con tus pestañas: en Windows con la ventana del instalador; en macOS (si Mitis está en una carpeta donde puedes escribir, como Aplicaciones) y en Linux con el AppImage, descargando antes la versión nueva. También en Configuración → Acerca de Mitis («Buscar ahora»).
+- **Informes de cierres inesperados.** Si Mitis se cierra de golpe, al volver a abrirlo avisa y guarda un informe (qué estaba pasando y, si fue una caída, dónde falló) que puedes copiar con un clic para enviarlo. También en Configuración → Desarrollo. Todo queda en tu equipo: no se envía nada.
+
+### Cambiado
+
+- La página de nueva pestaña muestra el logo completo de Mitis sobre el buscador.
+
+### Corregido
+
+- Windows: las notificaciones, el Administrador de tareas y el mezclador de volumen muestran «Mitis» en lugar de «Mitis.exe».
+- Monitor de rendimiento en Windows: la memoria es ahora la que de verdad ocupan Mitis y sus procesos en RAM (la columna «Memoria» del Administrador de tareas). Antes contaba también la memoria reservada sin usar y salía mucho mayor que en macOS.
+
+## [0.8.0] - 2026-10-23
+
+### Añadido
+
 - **Captura de pantalla**, como en Zen: Ctrl+Mayús+S o «Hacer captura de pantalla» en el panel del sitio. Al pasar el ratón, Mitis resalta la sección de la página que hay debajo y con un clic la eliges; también puedes arrastrar para marcar un área, o elegir la página visible o la página completa. La selección se ajusta con sus tiradores y, llevando el borde al de la ventana, crece hacia abajo (o hacia arriba) más allá de lo que se ve. Se copia al portapapeles o se guarda en la carpeta de descargas (y aparece en la lista de descargas).
 - Transparencia con desenfoque (experimental): el velo pasa a ser morado, con tres tonos a elegir en Configuración → Apariencia (lavanda, violeta o profundo).
 - Esquinas redondeadas de la ventana en Windows 11 y macOS, como las del sistema (rectas al maximizar o en pantalla completa).

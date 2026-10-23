@@ -29,12 +29,15 @@ Item {
     property bool downloadsShown: false
     property var download: null
     property bool downloadPanelOpen: false
+    // Hay una versión nueva de Mitis: botón de actualizar tras Opciones
+    property bool updateAvailable: false
 
     // Botones para anclar las listas desplegables
     readonly property Item downloadsButton: downloadsButton
     readonly property Item tabsButton: tabsButton
     readonly property Item bookmarksButton: bookmarksButton
     readonly property Item optionsButton: optionsButton
+    readonly property Item updateButton: updateButton
     readonly property Item addressField: address
     // Se está escribiendo en el campo de dirección
     readonly property bool editing: address.editing
@@ -48,6 +51,7 @@ Item {
     signal tabsRequested()
     signal bookmarksRequested()
     signal optionsRequested()
+    signal updateRequested()
     signal siteInfoRequested()
 
     function focusAddress() {
@@ -248,6 +252,13 @@ Item {
                 icon: "options"
                 tooltip: "Opciones"
                 onClicked: root.optionsRequested()
+            }
+            UpdateButton {
+                id: updateButton
+                visible: root.updateAvailable
+                fillStart: root.tone(rightGroup.x + x)
+                fillEnd: root.tone(rightGroup.x + x + width)
+                onClicked: root.updateRequested()
             }
         }
     }

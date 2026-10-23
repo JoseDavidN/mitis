@@ -1,7 +1,8 @@
 # Instalador de Mitis para Windows (ver src/main.cpp). Proyecto aparte del
 # navegador: Win32 y GDI+, sin Qt, porque se ejecuta antes de que Qt esté
-# instalado. Lo compila GitHub Actions (.github/workflows/compilar.yml) y
-# empaquetar.ps1 le pega al final el ZIP con Mitis.
+# instalado. Lo compila GitHub Actions (.github/workflows/compilar.yml); no
+# lleva Mitis dentro: lo descarga del servidor (ver src/red.h), donde
+# empaquetar.ps1 deja el ZIP y version.txt.
 cmake_minimum_required(VERSION 3.21)
 project(MitisInstalador LANGUAGES C CXX)
 
@@ -15,7 +16,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # viaja dentro del paquete y aún no está en el equipo
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-set(MITIS_VERSION "0.0.0" CACHE STRING "Versión de Mitis que instala")
+set(MITIS_VERSION "0.0.0" CACHE STRING "Versión de Mitis con la que se compila el instalador")
+# Dónde están version.txt y los paquetes (sin barra final). Pruebas: el
+# servidor de la red de Tailscale, por IP
+set(MITIS_SERVIDOR "http://100.67.58.55/mitis" CACHE STRING "Servidor de descargas de Mitis")
 
 # miniz (MIT): lectura de ZIP en un solo archivo de C
 include(FetchContent)
@@ -41,6 +45,8 @@ add_executable(MitisInstalador WIN32
     src/main.cpp
     src/instalacion.h
     src/instalacion.cpp
+    src/red.h
+    src/red.cpp
     "${CMAKE_CURRENT_BINARY_DIR}/recursos.rc"
 )
 target_compile_definitions(MitisInstalador PRIVATE
@@ -48,9 +54,10 @@ target_compile_definitions(MitisInstalador PRIVATE
     # _wfopen y compañía: se usan con rutas propias, sin riesgo
     _CRT_SECURE_NO_WARNINGS
     MITIS_VERSION="${MITIS_VERSION}"
+    MITIS_SERVIDOR="${MITIS_SERVIDOR}"
 )
 target_link_libraries(MitisInstalador PRIVATE
-    miniz gdiplus shlwapi ole32 shell32 uuid dwmapi advapi32 user32 gdi32
+    miniz gdiplus winhttp bcrypt shlwapi ole32 shell32 uuid dwmapi advapi32 user32 gdi32
 )
 if(MSVC)
     # Fuentes en UTF-8 (textos con tildes); el manifiesto va en recursos.rc

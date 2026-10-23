@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <string>
+#include <vector>
 
 // Lo que hace el instalador, sin interfaz. Cada función informa del avance
 // (0 a 1) por `avance`, desde el hilo en el que se la llame, y devuelve ""
@@ -24,16 +25,18 @@ struct Instalada {
 };
 Instalada instalacionExistente();
 
-// Si el ejecutable lleva el paquete pegado (el instalador) o no (el
-// desinstalador que se copia en la carpeta de Mitis)
-bool tienePaquete(const std::wstring &ejecutable);
-
-// Si el ejecutable está dentro de la carpeta de instalación (el desinstalador)
+// Si el ejecutable está dentro de la carpeta de instalación (el instalador
+// que queda allí para actualizar y desinstalar)
 bool dentroDeInstalacion(const std::wstring &ejecutable);
 
-// Instala el paquete que lleva el propio ejecutable `instalador` (ver
-// empaquetar.ps1: el ZIP va pegado al final del .exe, con una marca)
-std::wstring instalar(const std::wstring &instalador, const Avance &avance);
+// Instala `paquete` (el ZIP descargado, en memoria: ver empaquetar.ps1) como
+// la versión `version`. En la carpeta queda `instaladorNuevo` (el del
+// servidor) como mitis-instalador.exe o, si está vacío, una copia de
+// `instalador` (este mismo). Si Mitis se está cerrando (actualización),
+// espera unos segundos a que suelte sus archivos.
+std::wstring instalar(const std::vector<char> &paquete, const std::wstring &version,
+                      const std::vector<char> &instaladorNuevo, const std::wstring &instalador,
+                      const Avance &avance);
 
 // Quita Mitis: archivos, accesos directos y la entrada de Windows. Los datos
 // del usuario (historial, marcadores…, en %LOCALAPPDATA%\Mitis) se conservan.
@@ -43,3 +46,11 @@ std::wstring desinstalar(const Avance &avance);
 
 // Abre el Mitis instalado
 void abrirMitis();
+
+// Espera (hasta `milisegundos`) a que termine el proceso `pid`: el Mitis que
+// pidió la actualización
+void esperarProceso(unsigned long pid, unsigned long milisegundos);
+
+// Borra `archivo` en cuanto termine este proceso (la copia temporal del
+// instalador con la que se actualiza)
+void borrarAlTerminar(const std::wstring &archivo);

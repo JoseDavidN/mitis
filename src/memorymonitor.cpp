@@ -53,15 +53,47 @@ QList<qint64> descendants(qint64 root)
     return found;
 }
 
+// PROCESS_MEMORY_COUNTERS_EX2 (Windows 10 1809+), con nombre propio por si el
+// SDK con que se compila no la trae
+struct MemoryCountersEx2
+{
+    DWORD cb;
+    DWORD PageFaultCount;
+    SIZE_T PeakWorkingSetSize;
+    SIZE_T WorkingSetSize;
+    SIZE_T QuotaPeakPagedPoolUsage;
+    SIZE_T QuotaPagedPoolUsage;
+    SIZE_T QuotaPeakNonPagedPoolUsage;
+    SIZE_T QuotaNonPagedPoolUsage;
+    SIZE_T PagefileUsage;
+    SIZE_T PeakPagefileUsage;
+    SIZE_T PrivateUsage;
+    SIZE_T PrivateWorkingSetSize;
+    SIZE_T SharedCommitUsage;
+};
+
+// Espacio de trabajo privado: lo propio del proceso que está en RAM (la
+// columna «Memoria» del Administrador de tareas; lo más parecido a la huella
+// de macOS). La memoria comprometida (PrivateUsage) cuenta también lo
+// reservado y sin usar, y con Chromium salía mucho mayor. Sin el dato
+// (Windows anterior a 10 1809), la comprometida
 qint64 processBytes(qint64 pid)
 {
     HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, DWORD(pid));
     if (!process)
         return 0;
-    PROCESS_MEMORY_COUNTERS_EX counters = {};
     qint64 bytes = 0;
-    if (GetProcessMemoryInfo(process, reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&counters), sizeof(counters)))
-        bytes = qint64(counters.PrivateUsage);
+    MemoryCountersEx2 counters = {};
+    counters.cb = sizeof(counters);
+    if (GetProcessMemoryInfo(process, reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&counters), sizeof(counters))
+        && counters.PrivateWorkingSetSize > 0) {
+        bytes = qint64(counters.PrivateWorkingSetSize);
+    } else {
+        PROCESS_MEMORY_COUNTERS_EX older = {};
+        older.cb = sizeof(older);
+        if (GetProcessMemoryInfo(process, reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&older), sizeof(older)))
+            bytes = qint64(older.PrivateUsage);
+    }
     CloseHandle(process);
     return bytes;
 }
