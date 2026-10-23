@@ -18,8 +18,6 @@ Item {
     property bool loading: false
     property int loadProgress: 0
     property int tabCount: 1
-    // La página, detrás de los controles: se ve difuminada a través (Glass)
-    property Item backdrop: null
     // Conexión de la página (ver AddressBar.security)
     property string security: ""
     // La página actual está en marcadores: la estrella se ilumina
@@ -129,7 +127,6 @@ Item {
             loading: root.loading
             loadProgress: root.loadProgress
             security: root.security
-            backdrop: root.backdrop
             onNavigate: target => root.navigateRequested(target)
             onSiteInfoRequested: root.siteInfoRequested()
 

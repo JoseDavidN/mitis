@@ -27,9 +27,19 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: height / 2
-        color: Theme.miniPlayerBg
+        color: glass.active ? "transparent" : Theme.miniPlayerBg
         border.width: 1
         border.color: Theme.miniPlayerLine
+
+        // Vidrio esmerilado (experimental): con velo oscuro siempre, por el
+        // texto blanco
+        Glass {
+            id: glass
+            z: -1
+            anchors.fill: parent
+            radius: parent.radius
+            tint: Theme.glassTintDark
+        }
     }
 
     // Plataforma (favicon) y nombre de lo que suena

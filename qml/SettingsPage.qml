@@ -14,6 +14,22 @@ FocusScope {
     id: root
 
     property bool open: false
+    // Tapa las páginas: el vidrio esmerilado (Glass) no se usa dentro
+    readonly property bool glassOpaque: true
+
+    // Cómo dibuja la ventana: con la GPU (y qué API) o por software. Lo
+    // muestra la opción de transparencia, que sin GPU no funciona
+    readonly property bool gpuRendering: GraphicsInfo.api !== GraphicsInfo.Software
+                                         && GraphicsInfo.api !== GraphicsInfo.Unknown
+    readonly property string graphicsApiName: ({
+        [GraphicsInfo.OpenGL]: "OpenGL",
+        [GraphicsInfo.Direct3D11]: "Direct3D 11",
+        [GraphicsInfo.Direct3D12]: "Direct3D 12",
+        [GraphicsInfo.Vulkan]: "Vulkan",
+        [GraphicsInfo.Metal]: "Metal",
+        [GraphicsInfo.Software]: "software"
+    })[GraphicsInfo.api] ?? "desconocido"
+
     // Página de la pestaña activa (para «Usar la página actual» al iniciar)
     property string currentPageUrl: ""
 
@@ -437,6 +453,23 @@ FocusScope {
         }
     }
 
+    // La rueda sobre la columna del índice solo mueve el índice: sin esto,
+    // al llegar a su final (o con el índice entero a la vista) pasaba a la
+    // lista de ajustes, que ocupa todo el ancho por debajo. Recoge la rueda
+    // que el índice no usa; los clics siguen llegando al índice
+    MouseArea {
+        visible: nav.visible
+        // Entre la lista de ajustes (z 0) y el índice (z 1): el índice
+        // recibe la rueda primero y esto solo se queda con la que le sobra
+        z: 0.5
+        x: nav.x
+        y: nav.y
+        width: nav.width
+        height: root.height - nav.y
+        acceptedButtons: Qt.NoButton
+        onWheel: wheel => wheel.accepted = true
+    }
+
     // Logo completo de Mitis (el de temas oscuros o claros), centrado en la
     // columna del índice y al pie de la ventana. Siempre visible: el índice
     // se acorta (y se desplaza) para dejarle sitio
@@ -666,10 +699,14 @@ FocusScope {
                 }
                 SettingRow {
                     title: "Transparencia con desenfoque (experimental)"
-                    description: "El campo de dirección deja ver la página de detrás, difuminada. Necesita aceleración gráfica; si el campo se ve transparente pero sin difuminar, apágalo."
+                    description: "Los controles, las listas y la barra de título dejan ver la página de detrás, difuminada, con un velo gris. "
+                                 + (root.gpuRendering
+                                    ? "Se dibuja con la GPU (" + root.graphicsApiName + "). Si se ven transparentes pero sin difuminar, apágala."
+                                    : "No disponible: Mitis se está dibujando sin GPU (" + root.graphicsApiName + ").")
 
                     Toggle {
-                        checked: Settings.glassEffect
+                        enabled: root.gpuRendering
+                        checked: Settings.glassEffect && root.gpuRendering
                         onToggled: Settings.glassEffect = checked
                     }
                 }

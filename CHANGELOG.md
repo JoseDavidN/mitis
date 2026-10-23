@@ -7,14 +7,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ### Añadido
 
-- **Panel del sitio**, como en Zen: el candado del campo de dirección abre un panel con lo importante de la página. Muestra si la conexión es segura y, al pulsarla, el certificado: quién lo verificó, para quién es y hasta cuándo vale. También si la protección contra rastreadores está activa en ese sitio, con un interruptor para quitarla solo ahí. Y acciones: añadir a marcadores, copiar el enlace, enviarlo por correo y los permisos del sitio.
-
-- **Transparencia con desenfoque (experimental)**, en Configuración → Apariencia, apagada por defecto: el campo de dirección deja ver la página de detrás, difuminada, como el reproductor de Apple Music en la web. Necesita aceleración gráfica.
+- Versión para macOS en cada compilación: un `.dmg` universal que funciona en los Mac con Apple Silicon y en los Intel.
 
 ### Cambiado
 
-- Toda la interfaz usa los tonos del fondo de Configuración: la barra de título (sin el rosa), los controles de abajo, los botones, el buscador de la nueva pestaña, los menús y los tooltips.
-- El contador de pestañas es más pequeño, más grueso y está mejor centrado; lo que escribes en los buscadores se ve algo más grueso; el nombre de la barra de título y el icono de Configuración son algo más pequeños.
+- Transparencia con desenfoque (experimental): ahora en toda la interfaz (barra de título, controles de abajo, listas, tooltips, mini reproductor…), con un velo gris neutro (claro en el tema Claro). Sigue siendo opcional y viene apagada. La opción indica si Mitis se está dibujando con la tarjeta gráfica y, si no, no se puede activar.
+
+### Corregido
+
+- Configuración: la rueda del ratón sobre el índice de secciones ya no desplaza también los ajustes; cada columna se desplaza por su cuenta.
+- Al descargar un archivo desde un enlace que se abre en otra pestaña, ya no queda una pestaña vacía: se cierra sola y vuelves a la página en la que estabas.
 
 ## [0.6.0] - 2026-10-22
 
@@ -32,6 +34,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 - En la página de nueva pestaña, los controles de abajo (con el campo de búsqueda) ya no se ocultan.
 - El instalador sabe si Mitis ya está instalado: entonces ofrece desinstalarlo (tu historial, marcadores y ajustes se conservan) o reinstalarlo/actualizarlo.
 - Configuración: el índice de secciones ya no se corta. Ocupa como mucho el 40 % del alto, se desplaza solo para mostrar la sección en la que estás, y tanto el índice como los ajustes se desvanecen suavemente en los bordes al desplazarse.
+- Toda la interfaz usa los tonos del fondo de Configuración: la barra de título (sin el rosa), los controles de abajo, los botones, el buscador de la nueva pestaña, los menús y los tooltips.
+- El contador de pestañas es más pequeño, más grueso y está mejor centrado; lo que escribes en los buscadores se ve algo más grueso; el nombre de la barra de título y el icono de Configuración son algo más pequeños.
 
 ### Añadido
 
@@ -41,6 +45,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 - Configuración → Apariencia: «Ocultar la barra de desplazamiento» de las páginas; se sigue pudiendo desplazar con la rueda, el teclado o el dedo.
 - «by StartCode» al final de Configuración.
 - **Perfil:** Opciones → Perfil (o tu avatar en la barra de título) abre Configuración → Perfil, donde pones tu nombre y una foto o un color. Tu avatar aparece en la barra de título y en el menú de opciones. Se guarda solo en tu equipo.
+- **Panel del sitio**, como en Zen: el candado del campo de dirección abre un panel con lo importante de la página. Muestra si la conexión es segura y, al pulsarla, el certificado: quién lo verificó, para quién es y hasta cuándo vale. También si la protección contra rastreadores está activa en ese sitio, con un interruptor para quitarla solo ahí. Y acciones: añadir a marcadores, copiar el enlace, enviarlo por correo y los permisos del sitio.
+- **Transparencia con desenfoque (experimental)**, en Configuración → Apariencia, apagada por defecto: el campo de dirección deja ver la página de detrás, difuminada, como el reproductor de Apple Music en la web. Necesita aceleración gráfica.
 
 ## [0.5.0] - 2026-10-22
 

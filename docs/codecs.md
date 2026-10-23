@@ -4,6 +4,10 @@ Tarea de la Fase 6 (`docs/PLAN.md`, «Códecs propietarios»). Aquí se explica 
 Qt WebEngine con H.264 y AAC para Windows y macOS, y cómo hacer que GitHub Actions lo use
 en lugar del oficial.
 
+**Para hacerlo con Claude Code en un Windows:** `tools/codecs/GUIA-CLAUDE-WINDOWS.md`
+(pasos por fases, con la versión que usa ahora el workflow, **6.11.3**; los ejemplos de
+abajo dicen 6.11.2).
+
 Resumen: se compila **solo el módulo qtwebengine**, en un equipo propio, contra un Qt
 oficial de la misma versión. El resultado se empaqueta en un archivo (`.7z` en Windows,
 `.tar.xz` en macOS), se publica en un release de GitHub y el workflow lo extrae encima del

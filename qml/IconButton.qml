@@ -57,9 +57,18 @@ Item {
             radius: parent.radius
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: root.fillStart }
-                GradientStop { position: 1.0; color: root.fillEnd }
+                GradientStop { position: 0.0; color: glass.active ? "transparent" : root.fillStart }
+                GradientStop { position: 1.0; color: glass.active ? "transparent" : root.fillEnd }
             }
+        }
+
+        // Vidrio esmerilado (experimental): solo en los botones con relleno
+        Glass {
+            id: glass
+            z: -1
+            anchors.fill: parent
+            radius: parent.radius
+            visible: active && !root.flat
         }
 
         // Peligro (cerrar): rosa al pasar por encima

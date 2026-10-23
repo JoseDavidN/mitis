@@ -20,7 +20,7 @@ Al terminar una tarea, quitarla de aquí y apuntar el cambio en `CHANGELOG.md`
 
 ## Funcionalidad
 
-- [ ] **Transparencia con desenfoque: probarla en Windows** (Configuración → Apariencia, experimental). En el servidor de desarrollo Qt no puede copiar lo que pinta Chromium (sin GPU) y el campo se ve gris. Si en Windows el campo deja ver la página difuminada: extenderla a los botones de abajo, a las listas que se abren hacia arriba, a la pestaña del borde y (si encaja) al mini reproductor, y encenderla por defecto. Si sale transparente sin difuminar: quitarla y valorar controles algo translúcidos sin desenfoque.
+- [ ] **Transparencia con desenfoque: probarla en Windows y macOS** (Configuración → Apariencia, experimental; ya en todos los controles, con velo gris). La fila de la opción dice si se dibuja con la GPU y con qué API. En el servidor de desarrollo Qt no puede copiar lo que pinta Chromium (sin GPU) y los controles se ven grises. Si con GPU real se ve la página difuminada, se queda como está: **opción que se activa a mano, nunca encendida por defecto**, con el velo gris (oscuro en Nocturno y Oscuro, claro en el Claro); el aspecto normal y sus colores no cambian. Si sale transparente sin difuminar o gris: arreglarlo o quitar la opción. Medir también el gasto de GPU con un vídeo detrás.
 
 - [ ] **Captura de pantalla** de la página, desde el panel del sitio (candado del campo de dirección), como en Zen: la parte visible o la página entera, y guardarla (carpeta de descargas) o copiarla al portapapeles. Una acción más en `SiteInfoPopup`, bajo «Copiar enlace»; la imagen la da el motor (`WebEngineView.grabToImage` para lo visible; para la página entera, por partes desplazando o con el protocolo de DevTools).
 
@@ -42,7 +42,8 @@ Al terminar una tarea, quitarla de aquí y apuntar el cambio en `CHANGELOG.md`
 
 ## Distribución
 
-- [ ] Probar en GitHub Actions la compilación de Linux (AppImage) y macOS (`.dmg`): por ahora solo se compila Windows (Run workflow → «todos» para los demás).
+- [ ] **macOS en GitHub Actions** (desde 2026-10-22, en cada push: `.dmg` universal, Apple Silicon e Intel, con firma ad hoc): comprobar que el primer run pasa y probar el `.dmg` en un Mac de cada tipo (Gatekeeper avisará: sin firma de Apple). Con códecs, el archivo de Qt WebEngine también tiene que ser universal (`compilar-macos.sh --arquitecturas "arm64;x86_64"`).
+- [ ] Probar en GitHub Actions la compilación de Linux (AppImage): solo a mano (Run workflow → «todos»).
 - [ ] Probar el AppImage en una distribución distinta de Arch y el `PKGBUILD` con `makepkg`.
 - [ ] Firmar el instalador de Windows y la app de macOS (y notarizarla): sin firma, SmartScreen y Gatekeeper avisan al abrirlos. Requiere certificados de pago.
 

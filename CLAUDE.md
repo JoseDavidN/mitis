@@ -53,7 +53,7 @@ qml/            Interfaz. Todos los archivos planos en esta carpeta.
   TitleBar.qml        Barra superior: nombre de Mitis (logo sin icono, según el tema) y controles de ventana
   BottomBar.qml       Controles inferiores flotantes: navegación, dirección, pestañas, marcadores, opciones
   AddressBar.qml      Campo de dirección/búsqueda, con sugerencias de marcadores e historial y el botón del sitio (candado)
-  Glass.qml           Vidrio esmerilado (experimental, Settings.glassEffect): la página de detrás difuminada bajo un control (ShaderEffectSource + MultiEffect); sin GPU no se dibuja
+  Glass.qml           Vidrio esmerilado (experimental, Settings.glassEffect): la página de detrás (capa objectName "mitisBackdrop") difuminada con velo gris bajo un control (ShaderEffectSource + MultiEffect). Hijo z:-1 del fondo del control, que deja su relleno transparente con `glass.active`. Se apaga sin GPU, dentro de las páginas y dentro de algo con `glassOpaque: true` (Configuración)
   SiteInfoPopup.qml   Panel del sitio (candado): conexión y certificado, rastreadores del sitio, marcadores, copiar/enviar enlace, permisos
   TabsPopup.qml       Lista desplegable de pestañas
   OptionsPopup.qml    Menú de opciones (ventana privada, historial, descargas, perfil, configuración)
@@ -110,7 +110,7 @@ installer/      Instalador de Windows (proyecto CMake aparte, Win32 + GDI+, sin 
 assets/branding/ Icono de Mitis (mitis-icon.svg → mitis.png, mitis.ico; mitis.rc lo pone en Mitis.exe), logo completo (mitis-logo-dark/light.svg → .png, Configuración), solo el nombre (mitis-wordmark-dark/light.svg → .png, barra de título) y logo de StartCode (startcode.png; startcode-light.png para el tema Claro)
 packaging/macos/ Info.plist.in (abre http/https y HTML: navegador predeterminado)
 packaging/linux/ PKGBUILD (Arch, mitis-git), appimage.sh (+ apprun-sandbox.sh), mitis.desktop, mitis.svg (copia de mitis-icon.svg)
-.github/workflows/compilar.yml  En cada push, solo Windows (instalador); Linux y macOS a mano («todos»); release con etiqueta v*
+.github/workflows/compilar.yml  En cada push, Windows (instalador) y macOS (.dmg universal arm64 + x86_64, firma ad hoc); Linux a mano («todos»); release con etiqueta v* (instalador y .dmg)
 ```
 
 ## Diseño de la interfaz

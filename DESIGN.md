@@ -435,8 +435,9 @@ Window (bgBase, sin marco)
 - Progreso de carga: línea de `progressHeight` con el degradado de marca en el borde inferior, dentro del radio.
 
 ### `Glass` — vidrio esmerilado (experimental)
-- Lo enciende Configuración → Apariencia, «Transparencia con desenfoque (experimental)» (`Settings.glassEffect`, apagada por defecto; `Theme.glassEnabled`). Por ahora solo en el campo de dirección.
-- Copia el trozo de página que tapa el control (`ShaderEffectSource` con `sourceRect`, sin copiar la página entera), lo difumina (`MultiEffect`, `glassBlur` 48 px, `glassSaturation` 0,3) y lo recorta con la forma del control. Encima, el relleno de siempre al `glassFillOpacity` (55 %).
+- **Siempre opcional:** apagada por defecto y no forma parte del diseño de Mitis; el aspecto normal (los tonos de Configuración en cada tema) es el que vale. Lo enciende Configuración → Apariencia, «Transparencia con desenfoque (experimental)» (`Settings.glassEffect`, apagada por defecto; `Theme.glassEnabled`). La fila dice si la ventana se dibuja con la GPU y con qué API (OpenGL, Direct3D 11/12, Vulkan, Metal); sin GPU, el interruptor está desactivado.
+- En todo lo que flota sobre la página: barra de título, campo de dirección y botones de abajo, pestaña del borde, mini reproductor, buscar en la página, zoom, aviso de pantalla completa, listas desplegables, diálogos sobre la página y tooltips. No dentro de Configuración (la tapa: `glassOpaque`) ni en lo que está dentro de las páginas (nueva pestaña).
+- Copia el trozo de página que tapa el control a media resolución (`ShaderEffectSource` con `sourceRect`), lo difumina (`MultiEffect`, `glassBlur` 48 px, `glassSaturation` 0,3) y lo recorta con la forma del control. Encima, un velo **gris neutro** sin el color del tema (`glassTint`: oscuro en Nocturno y Oscuro, tonos claros en el Claro; el mini reproductor, siempre el oscuro, `glassTintDark`). El relleno propio del control pasa a transparente; el borde se mantiene.
 - Sin GPU (backend software) no hay shaders: no se dibuja y el control queda opaco como siempre. En el servidor de desarrollo (Chromium sin GPU) la copia del contenido de la página sale vacía: falta confirmar que con una GPU real sí se copia (ver `docs/PLAN.md`).
 
 ### Botón y panel del sitio (`SiteInfoPopup`)

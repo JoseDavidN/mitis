@@ -205,11 +205,15 @@ QtObject {
     // desarrollo (Chromium sin GPU) Qt no puede copiar el contenido de la
     // página y la copia sale vacía; falta confirmarlo con una GPU real
     readonly property bool glassEnabled: Settings.glassEffect
-    // Desenfoque máximo de MultiEffect (px), algo
-    // más de color en lo difuminado (como Apple) y opacidad del relleno encima
+    // Desenfoque máximo de MultiEffect (px) y algo más de color en lo
+    // difuminado (como Apple)
     readonly property int glassBlur: 48
     readonly property real glassSaturation: 0.3
-    readonly property real glassFillOpacity: 0.55
+    // Velo encima de lo difuminado: gris neutro, sin el color del tema (la
+    // transparencia es opcional; el aspecto normal es el de los colores del
+    // tema). Oscuro en los temas oscuros, tonos claros en el Claro
+    readonly property color glassTintDark: Qt.rgba(0.12, 0.12, 0.13, 0.5)
+    readonly property color glassTint: dark ? glassTintDark : Qt.rgba(0.96, 0.96, 0.97, 0.55)
     // Panel del sitio: cuánto dura «Enlace copiado» (ms)
     readonly property int siteInfoCopiedHold: 1500
     readonly property int optionsWidth: 270

@@ -23,10 +23,6 @@ TextField {
     // Relleno: tramo del degradado compartido de los controles (ver BottomBar)
     property color fillStart: Theme.surfaceFloat
     property color fillEnd: Theme.surfaceFloat
-    // Lo que hay detrás del campo (la página), para el vidrio esmerilado;
-    // sin él, o sin GPU, el relleno es el de siempre
-    property Item backdrop: null
-    readonly property bool glassy: glass.available
 
     readonly property bool editing: activeFocus
 
@@ -163,16 +159,9 @@ TextField {
         text: root.shortTitle || "Buscar"
     }
 
-    // Fondo: el vidrio (la página difuminada) y encima el relleno, que con
-    // vidrio es semitransparente
+    // Fondo: el relleno del tema o, con el vidrio activo, la página
+    // difuminada con su velo gris (Glass, debajo)
     background: Item {
-        Glass {
-            id: glass
-            anchors.fill: parent
-            backdrop: root.backdrop
-            radius: height / 2
-        }
-
         Rectangle {
             id: field
             anchors.fill: parent
@@ -182,11 +171,18 @@ TextField {
                                        : (fieldHover.hovered ? Theme.hairlineHover : Theme.hairline)
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: root.fillStart }
-                GradientStop { position: 1.0; color: root.fillEnd }
+                GradientStop { position: 0.0; color: glass.active ? "transparent" : root.fillStart }
+                GradientStop { position: 1.0; color: glass.active ? "transparent" : root.fillEnd }
             }
 
             Behavior on border.color { ColorAnimation { duration: Theme.durationFast } }
+
+            Glass {
+                id: glass
+                z: -1
+                anchors.fill: parent
+                radius: parent.radius
+            }
 
             // Realce al pasar por encima
             Rectangle {

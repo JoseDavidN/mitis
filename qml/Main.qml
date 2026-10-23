@@ -436,6 +436,7 @@ Window {
     // plano continúa la serie de enlaces. Devuelve la pestaña nueva.
     function openFromTab(opener, openerIndex, target, background) {
         const created = newTab(target, !background, linkTabPosition(opener, openerIndex))
+        created.openerTab = opener
         if (background) {
             linkOpener = opener
             linkLast = created
@@ -953,7 +954,6 @@ Window {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
 
-        backdrop: pages
         currentUrl: win.currentView ? win.currentView.url : ""
         pageTitle: win.showingNewTabPage ? "Nueva pestaña"
                                          : (win.currentView ? win.currentView.title : "")
@@ -1008,6 +1008,8 @@ Window {
 
     Item {
         id: pages
+        // Lo que se ve difuminado a través de los controles (Glass)
+        objectName: "mitisBackdrop"
         // Desde el borde superior: la barra de título flota encima
         anchors.top: parent.top
         anchors.left: parent.left
@@ -1076,6 +1078,15 @@ Window {
                 }
 
                 onCloseRequested: win.closeTab(index)
+                // Se abrió solo para una descarga: se cierra y se vuelve a la
+                // pestaña desde la que se pidió (si sigue abierta)
+                onOpenedOnlyForDownload: {
+                    const back = tab.openerTab
+                    const wasCurrent = tab === win.currentView
+                    win.closeTab(index)
+                    if (wasCurrent && back)
+                        win.selectView(back)
+                }
                 onPageFullScreenRequested: on => win.setPageFullScreen(tab, on)
                 onContextMenuRequested: info => win.openContextMenu(tab, info)
 

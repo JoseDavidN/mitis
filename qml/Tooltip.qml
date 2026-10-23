@@ -26,9 +26,16 @@ ToolTip {
 
     background: Rectangle {
         radius: Theme.radiusSmall
-        color: Theme.surfacePopup
+        color: glass.active ? "transparent" : Theme.surfacePopup
         border.width: 1
         border.color: Theme.hairlineStrong
+
+        Glass {
+            id: glass
+            z: -1
+            anchors.fill: parent
+            radius: parent.radius
+        }
     }
 
     contentItem: Row {

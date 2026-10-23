@@ -115,6 +115,9 @@ QtObject {
     // empezar cada descarga. `request`: { fileName, folder (ruta local),
     // accept(folder), reject() }. Lo atiende una ventana (Main).
     signal downloadFolderRequested(var request)
+    // Una página pidió una descarga (`view`: su WebEngineView, o null). La
+    // pestaña que se abrió solo para ella se cierra (ver BrowserTab)
+    signal downloadStarted(var view)
     // Descargas esperando carpeta (que el recolector no las destruya)
     property var _awaitingFolder: []
 
@@ -293,6 +296,7 @@ QtObject {
 
     // Antes de empezar: si hay que preguntar la carpeta, espera la respuesta
     function _requestDownload(download, privateMode) {
+        root.downloadStarted(download.view)
         if (!Settings.askDownloadFolder) {
             _startDownload(download, privateMode)
             return

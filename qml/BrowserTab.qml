@@ -73,6 +73,11 @@ Item {
     signal newTabRequested(bool background, var request)
     // La página pidió cerrarse (window.close())
     signal closeRequested()
+    // La pestaña se abrió para un enlace (nueva pestaña o ventana) que resultó
+    // ser una descarga: no tiene página y la interfaz la cierra, como Chrome
+    signal openedOnlyForDownload()
+    // Pestaña desde la que se abrió esta (enlace a nueva pestaña); la pone Main
+    property Item openerTab: null
     // La página entra (`on`) o sale de pantalla completa. Ya está aceptado:
     // mientras dure, la página debería ocupar toda la ventana.
     signal pageFullScreenRequested(bool on)
@@ -228,7 +233,23 @@ Item {
     }
     // Carga en esta pestaña lo que otra pidió abrir (ver newTabRequested)
     function adopt(request) {
+        pageState.adopted = true
         request.openIn(view)
+    }
+
+    QtObject {
+        id: pageState
+        // Se abrió con adopt() (enlace a otra pestaña, window.open…)
+        property bool adopted: false
+        // Ha llegado a mostrar alguna página
+        property bool hasPage: false
+    }
+    Connections {
+        target: BrowserProfile
+        function onDownloadStarted(downloadView) {
+            if (downloadView === view && pageState.adopted && !pageState.hasPage)
+                root.openedOnlyForDownload()
+        }
     }
 
     // ── Menú contextual ──────────────────────────────────────────────
@@ -662,6 +683,11 @@ Item {
             // qmllint enable unqualified
             if (loadingInfo.status !== WebEngineView.LoadStartedStatus)
                 captureState.sync()
+            // La página en blanco inicial de una pestaña abierta por otra
+            // (about:blank) no cuenta como página
+            if (loadingInfo.status === WebEngineView.LoadSucceededStatus
+                    && !/^(about:|$)/.test(loadingInfo.url.toString()))
+                pageState.hasPage = true
             if (loadingInfo.status === WebEngineView.LoadSucceededStatus
                     && view.url.toString() !== visitState.url) {
                 visitState.url = view.url.toString()

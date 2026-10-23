@@ -19,11 +19,11 @@ Historial con este esquema (ver [CHANGELOG.md](../CHANGELOG.md)):
 | 0.3.0 | Fase 3: navegación completa | `d2fa2ac` |
 | 0.4.0 | Fase 4: persistencia y Configuración | `d6cfa89` |
 | 0.5.0 | Fase 5 y casi toda la 6: memoria, suspensión, bloqueador, temas, instalador y paquetes | el de «Publica la versión 0.5.0» |
-| 0.6.0 | Interfaz que se oculta sola, perfil, icono y logo, mini reproductor nuevo, monitor de rendimiento, notificaciones del sistema, aviso de micrófono y cámara, instalador que también desinstala | el de «Publica la versión 0.6.0» |
+| 0.6.0 | Interfaz que se oculta sola, perfil, icono y logo, mini reproductor nuevo, monitor de rendimiento, notificaciones del sistema, aviso de micrófono y cámara, instalador que también desinstala, panel del sitio, tonos de Configuración en toda la interfaz y transparencia con desenfoque (experimental) | `51bf4ba` |
 
 Las fases 0–2 van juntas en 0.2.0 porque entraron en un solo commit. Esas versiones no tienen etiqueta ni release: son anteriores al workflow de publicación. Si se quieren marcar, basta con etiquetas ligeras (`git tag v0.4.0 d6cfa89`); al subirlas no se publica nada porque esos commits no tienen `.github/workflows/`.
 
-**Versión actual: 0.6.0-beta** (`MITIS_VERSION_SUFFIX` «-beta»). Se publica al subir la etiqueta `v0.6.0`: instalador de Windows (y, con «todos», `.dmg` de macOS y AppImage).
+**Versión actual: 0.7.0-beta** (en desarrollo; la 0.6.0 ya se publicó). Trae novedades (el `.dmg` universal de macOS, la transparencia en toda la interfaz) además de correcciones: sube MENOR. Se publica al subir la etiqueta `v0.7.0`.
 
 ## Dónde vive la versión
 

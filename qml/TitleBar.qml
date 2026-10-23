@@ -34,8 +34,15 @@ Rectangle {
     // Violeta oscuro a la izquierda, rosa oscuro a la derecha
     gradient: Gradient {
         orientation: Gradient.Horizontal
-        GradientStop { position: 0.0; color: Theme.titleBarStart }
-        GradientStop { position: 1.0; color: Theme.titleBarEnd }
+        GradientStop { position: 0.0; color: glass.active ? "transparent" : Theme.titleBarStart }
+        GradientStop { position: 1.0; color: glass.active ? "transparent" : Theme.titleBarEnd }
+    }
+
+    // Vidrio esmerilado (experimental): la página difuminada debajo
+    Glass {
+        id: glass
+        z: -1
+        anchors.fill: parent
     }
 
     // Separador inferior

@@ -48,8 +48,14 @@ Item {
         border.color: Theme.hairline
         gradient: Gradient {
             orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: Theme.controlsStart }
-            GradientStop { position: 1.0; color: Theme.controlsEnd }
+            GradientStop { position: 0.0; color: glass.active ? "transparent" : Theme.controlsStart }
+            GradientStop { position: 1.0; color: glass.active ? "transparent" : Theme.controlsEnd }
+        }
+        Glass {
+            id: glass
+            z: -1
+            anchors.fill: parent
+            radius: parent.radius
         }
     }
 

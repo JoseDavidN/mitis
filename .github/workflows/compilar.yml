@@ -1,8 +1,8 @@
-# Compila Mitis y crea sus paquetes. Por ahora, en cada push y pull request
-# solo Windows (instalador propio, installer/); Linux (AppImage) y macOS
-# (.dmg) se compilan a mano: pestaña Actions → Compilar → Run workflow →
-# «todos». Con una etiqueta «v*» (p. ej. v0.5.0) publica el instalador en un
-# release de GitHub.
+# Compila Mitis y crea sus paquetes. En cada push y pull request, Windows
+# (instalador propio, installer/) y macOS (.dmg universal: Apple Silicon e
+# Intel); Linux (AppImage) se compila a mano: pestaña Actions → Compilar →
+# Run workflow → «todos». Con una etiqueta «v*» (p. ej. v0.5.0) publica el
+# instalador y el .dmg en un release de GitHub.
 name: Compilar
 
 on:
@@ -10,14 +10,15 @@ on:
     branches: [main]
     tags: ["v*"]
   pull_request:
-  # A mano (pestaña Actions → Compilar → Run workflow): todo o solo Windows
+  # A mano (pestaña Actions → Compilar → Run workflow): Windows y macOS, o
+  # también Linux
   workflow_dispatch:
     inputs:
       sistemas:
         description: "Qué compilar"
         type: choice
-        options: [windows, todos]
-        default: windows
+        options: [windows-macos, todos]
+        default: windows-macos
 
 env:
   # Qt 6.11.3 (el mínimo es la 6.8; en desarrollo, la 6.11 de Arch). No la
@@ -172,9 +173,10 @@ jobs:
           if-no-files-found: error
 
   macos:
-    name: macOS (.dmg)
-    # Solo a mano, eligiendo «todos» (por ahora la versión es solo para Windows)
-    if: github.event_name == 'workflow_dispatch' && inputs.sistemas == 'todos'
+    name: macOS (.dmg universal)
+    # Apple Silicon (el runner) e Intel en un solo binario universal. El Qt
+    # oficial de macOS (clang_64) ya es universal: basta con pedir las dos
+    # arquitecturas al compilar Mitis
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
@@ -191,7 +193,9 @@ jobs:
           cache: true
           cache-key-prefix: ${{ env.QT_CACHE_PREFIX }}
 
-      # Encima del Qt oficial; macdeployqt lo copia después a Mitis.app
+      # Encima del Qt oficial; macdeployqt lo copia después a Mitis.app. Para
+      # el .dmg universal, el archivo debe compilarse universal también
+      # (tools/codecs/compilar-macos.sh --arquitecturas "arm64;x86_64")
       - name: Qt WebEngine con códecs propietarios
         if: env.QT_CODECS_RELEASE != ''
         env:
@@ -215,19 +219,41 @@ jobs:
         id: version
         run: echo "valor=$(sed -n '/^project(Mitis/,/)/s/^ *VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)" >> "$GITHUB_OUTPUT"
 
-      - name: Compilar
+      - name: Compilar (universal)
         run: |
           brew install ninja
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
           cmake --build build
 
       # Qt va dentro de Mitis.app; el .dmg se abre y se arrastra a Aplicaciones
       - name: Empaquetar
         run: |
-          cp LICENSE build/bin/Mitis.app/Contents/Resources/
-          cp -R licencias build/bin/Mitis.app/Contents/Resources/
-          macdeployqt build/bin/Mitis.app -qmldir=qml -dmg
-          mv build/bin/Mitis.dmg Mitis-${{ steps.version.outputs.valor }}-macOS.dmg
+          set -euo pipefail
+          app=build/bin/Mitis.app
+          cp LICENSE "$app/Contents/Resources/"
+          cp -R licencias "$app/Contents/Resources/"
+          macdeployqt "$app" -qmldir=qml
+          # Las dos arquitecturas, en Mitis y en el proceso de Qt WebEngine
+          # (si el Qt instalado no fuera universal, se nota aquí y no en el
+          # Mac de quien lo descarga)
+          for binario in "$app/Contents/MacOS/Mitis" \
+              "$app/Contents/Frameworks/QtWebEngineCore.framework/Helpers/QtWebEngineProcess.app/Contents/MacOS/QtWebEngineProcess"; do
+            arquitecturas=$(lipo -archs "$binario")
+            echo "$(basename "$binario"): $arquitecturas"
+            for a in arm64 x86_64; do
+              case " $arquitecturas " in
+                *" $a "*) ;;
+                *) echo "::error::$(basename "$binario") no incluye $a ($arquitecturas)"; exit 1 ;;
+              esac
+            done
+          done
+          # Firma ad hoc (sin certificado): macdeployqt cambia los binarios y
+          # en Apple Silicon un binario sin firma válida no arranca. No evita
+          # el aviso de Gatekeeper (eso pide firma de Apple y notarización)
+          codesign --force --deep --sign - "$app"
+          codesign --verify --deep --strict "$app"
+          hdiutil create -volname Mitis -srcfolder "$app" -ov -format UDZO \
+            "Mitis-${{ steps.version.outputs.valor }}-macOS.dmg"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -238,7 +264,7 @@ jobs:
   release:
     name: Publicar
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [windows]
+    needs: [windows, macos]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
