@@ -1350,6 +1350,7 @@ Window {
         anchors.leftMargin: Theme.margin
         // Configuración lo tapa: se oculta (y deja de medir) mientras está abierta
         shown: Settings.performanceMonitor && win.performancePanelOpen && !win.settingsOpen
+        graphicsApi: win.graphicsApi
         onRefreshRequested: win.measurePerformance()
         onTabSelected: index => win.selectTab(index)
         onCloseRequested: win.togglePerformancePanel()

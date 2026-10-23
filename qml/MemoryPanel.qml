@@ -16,6 +16,9 @@ Item {
     // CPU y GPU: -1 = sin dato (la CPU lo está en la primera medición)
     property var sample: null
     property bool shown: false
+    // Con qué dibuja la ventana ("Metal", "Direct3D 11", "OpenGL"…, o
+    // "software"); lo pone Main (Main.graphicsApi). "" si aún no se sabe
+    property string graphicsApi: ""
 
     // Últimas medidas, la más reciente al final (Theme.performanceHistoryLength)
     property var cpuHistory: []
@@ -106,9 +109,14 @@ Item {
             system.push(formatPercent(gpu.systemUsage))
         if (gpu.vramTotal > 0)
             system.push(formatBytes(Math.max(gpu.vramUsed, 0)) + " de " + formatBytes(gpu.vramTotal))
+        // La API de dibujo se sabe siempre; el uso, solo donde el sistema lo
+        // da (por ahora, Linux)
+        const api = root.graphicsApi === "software" ? "Sin GPU (software)"
+                  : root.graphicsApi !== "" ? root.graphicsApi : ""
         if (own.length === 0 && system.length === 0)
-            return [{ label: "GPU", value: "No disponible" }]
-        const rows = [{ label: "GPU de Mitis", value: own.length > 0 ? own.join(" · ") : "No disponible" }]
+            return [{ label: "GPU", value: api !== "" ? api + " · uso no disponible aquí" : "No disponible" }]
+        const rows = [{ label: api !== "" && api !== "Sin GPU (software)" ? "GPU de Mitis (" + api + ")" : "GPU de Mitis",
+                        value: own.length > 0 ? own.join(" · ") : "No disponible" }]
         if (system.length > 0)
             rows.push({ label: "GPU del sistema", value: system.join(" · ") })
         return rows

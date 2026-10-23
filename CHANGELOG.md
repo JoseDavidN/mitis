@@ -12,7 +12,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ### Cambiado
 
-- Transparencia con desenfoque (experimental): ahora en toda la interfaz (barra de título, controles de abajo, listas, tooltips, mini reproductor…), con un velo gris neutro (claro en el tema Claro). Sigue siendo opcional y viene apagada. La opción indica si Mitis se está dibujando con la tarjeta gráfica (y con cuál: Metal, Direct3D, OpenGL…) y, si no, no se puede activar. Corregido: en macOS decía que no había tarjeta gráfica.
+- El monitor de rendimiento dice con qué dibuja Mitis (Metal, Direct3D, OpenGL…) aunque el uso de la GPU solo se mida en Linux; antes ponía «No disponible».
+- Transparencia con desenfoque (experimental): ahora en toda la interfaz (barra de título, controles de abajo, listas, tooltips, mini reproductor…), con un velo gris neutro y bastante transparente (claro en el tema Claro). Sigue siendo opcional y viene apagada. La opción indica si Mitis se está dibujando con la tarjeta gráfica (y con cuál: Metal, Direct3D, OpenGL…) y, si no, no se puede activar. Corregido: en macOS decía que no había tarjeta gráfica.
 
 ### Corregido
 

@@ -222,8 +222,8 @@ QtObject {
     // Velo encima de lo difuminado: gris neutro, sin el color del tema (la
     // transparencia es opcional; el aspecto normal es el de los colores del
     // tema). Oscuro en los temas oscuros, tonos claros en el Claro
-    readonly property color glassTintDark: Qt.rgba(0.12, 0.12, 0.13, 0.5)
-    readonly property color glassTint: dark ? glassTintDark : Qt.rgba(0.96, 0.96, 0.97, 0.55)
+    readonly property color glassTintDark: Qt.rgba(0.12, 0.12, 0.13, 0.35)
+    readonly property color glassTint: dark ? glassTintDark : Qt.rgba(0.96, 0.96, 0.97, 0.4)
     // Panel del sitio: cuánto dura «Enlace copiado» (ms)
     readonly property int siteInfoCopiedHold: 1500
     readonly property int optionsWidth: 270
