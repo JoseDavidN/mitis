@@ -25,7 +25,7 @@ Historial con este esquema (ver [CHANGELOG.md](../CHANGELOG.md)):
 
 Las fases 0–2 van juntas en 0.2.0 porque entraron en un solo commit. Esas versiones no tienen etiqueta ni release: son anteriores al workflow de publicación. Si se quieren marcar, basta con etiquetas ligeras (`git tag v0.4.0 d6cfa89`); al subirlas no se publica nada porque esos commits no tienen `.github/workflows/`.
 
-**Versión actual: 0.9.0-beta** (en desarrollo; la 0.8.0 ya se publicó). Trae funciones nuevas (instalador que descarga, actualizaciones, informes de cierres): sube MENOR. Se publica al subir la etiqueta `v0.9.0`.
+**Versión actual: 0.9.0-beta** (en desarrollo; la 0.8.0 ya se publicó). Trae funciones nuevas (actualizaciones desde el servidor, informes de cierres): sube MENOR. Se publica al subir la etiqueta `v0.9.0`.
 
 ## Dónde vive la versión
 
@@ -33,7 +33,7 @@ Una sola fuente: `project(Mitis VERSION x.y.z)` en `CMakeLists.txt`. Nunca se es
 
 - `MITIS_VERSION` (definición del compilador) → `QGuiApplication::setApplicationVersion()` en `src/main.cpp` → `Qt.application.version` en Configuración → Acerca de Mitis.
 - `MACOSX_BUNDLE_*_VERSION` → versión de `Mitis.app` en macOS.
-- El workflow (`.github/workflows/compilar.yml`) la lee de `CMakeLists.txt` y se la pasa al instalador de Windows (`-DMITIS_VERSION`) y a `installer/empaquetar.ps1`, que la escribe en `version.txt` (la que el instalador anota en «Aplicaciones instaladas» y la que Mitis compara para actualizarse) y en los nombres de los paquetes: `Mitis-x.y.z-windows.zip`, `Mitis-x.y.z-macOS.dmg`.
+- El workflow (`.github/workflows/compilar.yml`) la lee de `CMakeLists.txt` y se la pasa al instalador de Windows (`-DMITIS_VERSION`, que la muestra en «Aplicaciones instaladas») y a los nombres de los paquetes: `Mitis-x.y.z-Instalador.exe`, `Mitis-x.y.z-macOS.dmg`, `Mitis-x.y.z-macOS.zip`. El trabajo «Servidor de descargas» la escribe en `version.txt`, la que Mitis compara para actualizarse.
 - La etiqueta de git (`vx.y.z`) debe coincidir; el workflow lo comprueba antes de publicar.
 
 `qt_add_qml_module(... VERSION 1.0)` es la versión de los módulos QML (`Mitis`, `Mitis.Core`), no la de Mitis: no se toca.
@@ -55,6 +55,6 @@ Una sola fuente: `project(Mitis VERSION x.y.z)` en `CMakeLists.txt`. Nunca se es
 5. Commit: `git commit -am "Publica la versión 0.5.0"`.
 6. Etiqueta anotada: `git tag -a v0.5.0 -m "Mitis 0.5.0"`.
 7. Subir el commit y la etiqueta: `git push origin main v0.5.0`.
-8. El workflow compila, comprueba que la etiqueta coincide con `project(VERSION)`, extrae las notas de `CHANGELOG.md` y publica el release con el instalador, el paquete de Windows, `version.txt` y el `.dmg`.
-9. **Servidor de descargas** (`MITIS_SERVIDOR`, de momento `http://100.67.58.55/mitis`, servido por `/srv/docker/mitis-releases`): copiar en su carpeta `releases/` el contenido del artefacto `mitis-servidor` (paquetes de Windows, macOS y, si se compiló, Linux, `MitisInstalador.exe` y `version.txt`), reemplazando los anteriores. `version.txt` va el último: en cuanto cambia, los instaladores descargan la versión nueva y los Mitis instalados avisan para actualizarse. El ZIP de la versión anterior se puede borrar después.
+8. El workflow compila, comprueba que la etiqueta coincide con `project(VERSION)`, extrae las notas de `CHANGELOG.md` y publica el release con el instalador, el `.dmg`, el `.zip` de macOS y `version.txt`.
+9. **Servidor de descargas** (`MITIS_SERVIDOR`, de momento `http://100.67.58.55/mitis`, servido por `/srv/docker/mitis-releases`): copiar en su carpeta `releases/` el contenido del artefacto `mitis-servidor` (el instalador de Windows, el `.dmg` y el `.zip` de macOS, el AppImage si se compiló y `version.txt`), reemplazando los anteriores. `version.txt` va el último: en cuanto cambia, los Mitis instalados avisan para actualizarse. Los paquetes de la versión anterior se pueden borrar después.
 10. Revisar el release en GitHub. Si algo falla, corregir en `main`, borrar la etiqueta (`git push --delete origin v0.5.0`, `git tag -d v0.5.0`) y volver a etiquetar; si el release ya se descargó, mejor publicar `0.5.1`.

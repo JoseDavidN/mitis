@@ -1,35 +1,29 @@
 // Instalador de Mitis para Windows: una ventana propia (como la de Chrome)
 // con el logo de Mitis, el estado, una barra de progreso y el logo de
 // StartCode. Win32 y GDI+, sin Qt: tiene que funcionar antes de que Qt esté
-// instalado. El trabajo (instalacion.cpp, red.cpp) va en un hilo aparte y
-// avisa a la ventana con mensajes.
+// instalado. El trabajo (instalacion.cpp) va en un hilo aparte y avisa a la
+// ventana con mensajes.
 //
-// No lleva Mitis dentro: lo descarga del servidor (MITIS_SERVIDOR) a memoria
-// y lo instala desde ahí, así que en el disco solo queda lo instalado.
-//
-//   MitisInstalador.exe                 descarga, instala y abre Mitis; si ya
-//                                       está instalado, pregunta: desinstalar
-//                                       o actualizar (reinstalar)
-//   mitis-instalador.exe --desinstalar  lo quita (la entrada de Windows lo llama así)
-//   mitis-instalador.exe --actualizar <pid>
-//                                       lo lanza Mitis al encontrar una versión
-//                                       nueva: espera a que se cierre, actualiza
-//                                       y lo vuelve a abrir
-//
-// Desde la carpeta de Mitis no puede instalar (sus propios archivos estarían
-// en uso): se copia a la carpeta temporal, se relanza desde allí con
-// --temporal y esa copia se borra al terminar.
+//   MitisInstalador.exe                 instala y abre Mitis; si ya está
+//                                       instalado, pregunta: desinstalar o
+//                                       actualizar (reinstalar)
+//   desinstalar.exe --desinstalar       lo quita (la entrada de Windows lo llama así)
+//   MitisInstalador.exe --actualizar <pid>
+//                                       lo abre Mitis (src/updater.cpp) tras
+//                                       descargarlo: espera a que Mitis se
+//                                       cierre, instala sin preguntar y lo
+//                                       vuelve a abrir
 
 #include <windows.h>
 #include <windowsx.h>
 #include <dwmapi.h>
 #include <objidl.h>
-#include <shellapi.h>
 #include <shlwapi.h>
 
 #include <algorithm>
 #include <memory>
 #include <iterator>
+#include <cwchar>
 #include <string>
 #include <thread>
 #include <vector>
@@ -42,7 +36,6 @@ using std::min;
 #include <gdiplus.h>
 
 #include "instalacion.h"
-#include "red.h"
 
 using namespace Gdiplus;
 
@@ -73,30 +66,22 @@ constexpr int RecursoLogo = 103;
 
 constexpr UINT MsgAvance = WM_APP + 1;    // wParam: milésimas
 constexpr UINT MsgTerminado = WM_APP + 2; // lParam: std::wstring* con el error ("" si bien)
-constexpr UINT MsgEtapa = WM_APP + 3;     // wParam: Etapa
-constexpr UINT MsgUltima = WM_APP + 4;    // lParam: std::wstring* con la última versión ("" si no se supo)
 constexpr UINT_PTR TimerAnimacion = 1;
 constexpr UINT_PTR TimerCerrar = 2;
 
 // Pregunta: Mitis ya estaba instalado y se espera a que el usuario elija
 enum class Fase { Pregunta, Trabajando, Listo, Error };
 
-enum class Boton { Ninguno, Cerrar, Cancelar, Reinstalar, Desinstalar, Reintentar };
-
-// Qué se está haciendo (el texto de encima de la barra)
-enum class Etapa { Conectando, CerrandoMitis, Descargando, Instalando, Desinstalando };
+enum class Boton { Ninguno, Cerrar, Cancelar, Reinstalar, Desinstalar };
 
 struct Estado {
     bool desinstalando = false;
-    // Lanzado por Mitis (--actualizar): sin pregunta, y esperando a que se cierre
+    // Abierto por Mitis para actualizarse: sin pregunta, tras esperar a que se cierre
     bool actualizando = false;
     unsigned long pidMitis = 0;
-    // Copia en la carpeta temporal (--temporal): se borra al terminar
-    bool temporal = false;
-    Etapa etapa = Etapa::Conectando;
-    std::wstring versionNueva; // la del servidor, cuando se sabe
     Fase fase = Fase::Trabajando;
     std::wstring versionInstalada; // la de la instalación que ya había
+    bool conPaquete = false;       // este .exe puede instalar (no es el desinstalador)
     // Al terminar de desinstalar, botón «Cerrar» en vez de cerrarse solo. Solo
     // desde fuera de la carpeta: desde dentro, la carpeta no se borra hasta
     // que este proceso termina (ver desinstalar())
@@ -193,11 +178,10 @@ void texto(Graphics &g, const std::wstring &cadena, const RectF &r, float tamano
     g.DrawString(cadena.c_str(), -1, &fuente, r, &formato, &pincel);
 }
 
-// El servidor tiene una versión más nueva que la instalada
-bool hayNueva()
+std::wstring versionPropia()
 {
-    return !estado.versionNueva.empty()
-        && (estado.versionInstalada.empty() || compararVersiones(estado.versionNueva, estado.versionInstalada) > 0);
+    const std::string version = MITIS_VERSION; // ASCII
+    return std::wstring(version.begin(), version.end());
 }
 
 struct BotonVisible {
@@ -213,13 +197,13 @@ std::vector<BotonVisible> botones()
     std::vector<BotonVisible> lista;
     if (estado.fase == Fase::Pregunta) {
         lista.push_back({ Boton::Cancelar, L"Cancelar", false, {} });
-        lista.push_back({ Boton::Reinstalar, hayNueva() ? L"Actualizar" : L"Reinstalar", false, {} });
+        if (estado.conPaquete) {
+            const bool misma = estado.versionInstalada.empty() || estado.versionInstalada == versionPropia();
+            lista.push_back({ Boton::Reinstalar, misma ? L"Reinstalar" : L"Actualizar", false, {} });
+        }
         lista.push_back({ Boton::Desinstalar, L"Desinstalar", true, {} });
-    } else if (estado.fase == Fase::Error) {
-        lista.push_back({ Boton::Cerrar, L"Cerrar", false, {} });
-        if (!estado.desinstalando)
-            lista.push_back({ Boton::Reintentar, L"Reintentar", false, {} });
-    } else if (estado.fase == Fase::Listo && estado.cerrarConBoton && estado.mostrado >= 1.0) {
+    } else if (estado.fase == Fase::Error
+               || (estado.fase == Fase::Listo && estado.cerrarConBoton && estado.mostrado >= 1.0)) {
         lista.push_back({ Boton::Cerrar, L"Cerrar", false, {} });
     }
     if (lista.empty())
@@ -301,8 +285,8 @@ void dibujar(HDC hdc, int ancho, int alto)
         std::wstring version;
         if (!estado.versionInstalada.empty()) {
             version = L"Versión instalada: " + estado.versionInstalada;
-            if (hayNueva())
-                version += L" · nueva: " + estado.versionNueva;
+            if (estado.conPaquete && estado.versionInstalada != versionPropia())
+                version += L" · este instalador: " + versionPropia();
         }
         texto(g, version, rectangulo(32, 181, Ancho - 64, 18), 12, FontStyleRegular, InkSecondary);
         texto(g, L"Tu historial, marcadores y ajustes se conservan.", rectangulo(32, 199, Ancho - 64, 18), 12,
@@ -320,15 +304,11 @@ void dibujar(HDC hdc, int ancho, int alto)
             : estado.actualizando    ? L"Mitis está actualizado. Abriéndolo…"
                                      : L"Mitis está listo. Abriéndolo…";
     } else {
-        const std::wstring porcentaje = L" " + std::to_wstring(int(estado.mostrado * 100 + 0.5)) + L" %";
-        const std::wstring version = estado.versionNueva.empty() ? std::wstring() : L" " + estado.versionNueva;
-        switch (estado.etapa) {
-        case Etapa::Conectando: linea = L"Conectando con el servidor de Mitis…"; break;
-        case Etapa::CerrandoMitis: linea = L"Esperando a que Mitis se cierre…"; break;
-        case Etapa::Descargando: linea = L"Descargando Mitis" + version + L"…" + porcentaje; break;
-        case Etapa::Instalando: linea = L"Instalando Mitis" + version + L"…" + porcentaje; break;
-        case Etapa::Desinstalando: linea = L"Desinstalando Mitis…" + porcentaje; break;
-        }
+        const int porcentaje = int(estado.mostrado * 100 + 0.5);
+        linea = (estado.desinstalando ? L"Desinstalando Mitis… "
+                 : estado.actualizando  ? L"Actualizando Mitis… "
+                                        : L"Instalando Mitis… ")
+            + std::to_wstring(porcentaje) + L" %";
     }
     if (estado.fase != Fase::Pregunta)
         texto(g, linea, rectangulo(32, 160, Ancho - 64, 40), 14, FontStyleRegular, colorLinea);
@@ -368,76 +348,28 @@ void dibujar(HDC hdc, int ancho, int alto)
 
 // ── Ventana ──────────────────────────────────────────────────────────
 
-// Pide la última versión al servidor, descarga el paquete (y el instalador
-// nuevo) a memoria, comprueba que llegó entero e instala
-std::wstring descargarEInstalar(HWND ventana, const std::wstring &instalador, bool actualizando, unsigned long pid)
-{
-    auto etapa = [ventana](Etapa e) { PostMessageW(ventana, MsgEtapa, WPARAM(e), 0); };
-    auto avisar = [ventana](double avance) { PostMessageW(ventana, MsgAvance, WPARAM(avance * 1000), 0); };
-
-    if (actualizando && pid) {
-        etapa(Etapa::CerrandoMitis);
-        esperarProceso(pid, 60000);
-    }
-    etapa(Etapa::Conectando);
-    Ultima ultima;
-    std::wstring error = consultarUltima(ultima);
-    if (!error.empty())
-        return error;
-    PostMessageW(ventana, MsgUltima, 0, LPARAM(new std::wstring(ultima.version)));
-
-    // Descarga: 0 → 70 %
-    etapa(Etapa::Descargando);
-    std::vector<char> paquete;
-    error = descargar(urlServidor(ultima.paquete), paquete, [&](double f) { avisar(0.70 * f); });
-    if (!error.empty())
-        return error;
-    if (sha256(paquete) != ultima.sha256)
-        return L"La descarga llegó dañada (no coincide su huella). Vuelve a intentarlo.";
-    // El instalador del servidor es el que queda junto a Mitis. Si no se
-    // puede descargar, queda este (que también sirve)
-    std::vector<char> instaladorNuevo;
-    if (!ultima.instalador.empty()
-        && (!descargar(urlServidor(ultima.instalador), instaladorNuevo).empty()
-            || sha256(instaladorNuevo) != ultima.instaladorSha256))
-        instaladorNuevo.clear();
-
-    // Instalación: 70 → 100 %
-    etapa(Etapa::Instalando);
-    return instalar(paquete, ultima.version, instaladorNuevo, instalador,
-                    [&](double f) { avisar(0.70 + 0.30 * f); });
-}
-
 void empezar(HWND ventana)
 {
     auto avisar = [ventana](double avance) {
         PostMessageW(ventana, MsgAvance, WPARAM(avance * 1000), 0);
     };
     const bool desinstalando = estado.desinstalando;
-    const bool actualizando = estado.actualizando;
-    const unsigned long pid = estado.pidMitis;
     const std::wstring instalador = estado.instalador;
-    estado.objetivo = 0;
-    estado.mostrado = 0;
-    estado.etapa = desinstalando ? Etapa::Desinstalando : Etapa::Conectando;
-    estado.trabajo = std::thread([ventana, avisar, desinstalando, actualizando, pid, instalador] {
+    const unsigned long pid = estado.actualizando ? estado.pidMitis : 0;
+    estado.trabajo = std::thread([ventana, avisar, desinstalando, instalador, pid] {
+        // Al actualizar, Mitis se está cerrando: hasta que termine, sus
+        // archivos están en uso (instalar() reintenta un poco más)
+        if (pid) {
+            if (HANDLE proceso = OpenProcess(SYNCHRONIZE, FALSE, pid)) {
+                WaitForSingleObject(proceso, 60000);
+                CloseHandle(proceso);
+            }
+        }
         CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-        auto *error = new std::wstring(desinstalando ? desinstalar(avisar)
-                                                     : descargarEInstalar(ventana, instalador, actualizando, pid));
+        auto *error = new std::wstring(desinstalando ? desinstalar(avisar) : instalar(instalador, avisar));
         CoUninitialize();
         PostMessageW(ventana, MsgTerminado, 0, LPARAM(error));
     });
-}
-
-// En la pregunta (Mitis ya instalado): la última versión, para ofrecer
-// «Actualizar» en vez de «Reinstalar». Sin conexión no se dice nada
-void consultarEnSegundoPlano(HWND ventana)
-{
-    std::thread([ventana] {
-        Ultima ultima;
-        const bool bien = consultarUltima(ultima).empty();
-        PostMessageW(ventana, MsgUltima, 0, LPARAM(new std::wstring(bien ? ultima.version : std::wstring())));
-    }).detach();
 }
 
 // Tras elegir en la pregunta: instala (actualiza) o desinstala
@@ -466,8 +398,6 @@ LRESULT CALLBACK procedimiento(HWND ventana, UINT mensaje, WPARAM wParam, LPARAM
         if (estado.fase == Fase::Trabajando) {
             SetTimer(ventana, TimerAnimacion, 16, nullptr);
             empezar(ventana);
-        } else {
-            consultarEnSegundoPlano(ventana);
         }
         return 0;
     }
@@ -481,17 +411,6 @@ LRESULT CALLBACK procedimiento(HWND ventana, UINT mensaje, WPARAM wParam, LPARAM
     case MsgAvance:
         estado.objetivo = std::max(estado.objetivo, double(wParam) / 1000.0);
         return 0;
-    case MsgEtapa:
-        estado.etapa = Etapa(wParam);
-        InvalidateRect(ventana, nullptr, FALSE);
-        return 0;
-    case MsgUltima: {
-        std::unique_ptr<std::wstring> version(reinterpret_cast<std::wstring *>(lParam));
-        if (!version->empty())
-            estado.versionNueva = *version;
-        InvalidateRect(ventana, nullptr, FALSE);
-        return 0;
-    }
     case MsgTerminado: {
         std::unique_ptr<std::wstring> error(reinterpret_cast<std::wstring *>(lParam));
         if (estado.trabajo.joinable())
@@ -579,9 +498,6 @@ LRESULT CALLBACK procedimiento(HWND ventana, UINT mensaje, WPARAM wParam, LPARAM
         case Boton::Desinstalar:
             elegir(ventana, true);
             break;
-        case Boton::Reintentar:
-            elegir(ventana, false);
-            break;
         case Boton::Ninguno:
             break;
         }
@@ -619,48 +535,15 @@ LRESULT CALLBACK procedimiento(HWND ventana, UINT mensaje, WPARAM wParam, LPARAM
 
 } // namespace
 
-// Copia este instalador a la carpeta temporal y lo abre desde allí con los
-// mismos argumentos y --temporal. true si se pudo (y este debe terminar)
-bool relanzarDesdeTemporal(const std::wstring &propio, const std::wstring &linea)
-{
-    wchar_t carpeta[MAX_PATH + 1] = {};
-    if (!GetTempPathW(DWORD(std::size(carpeta)), carpeta))
-        return false;
-    const std::wstring copia = std::wstring(carpeta) + L"mitis-instalador-" + std::to_wstring(GetCurrentProcessId())
-        + L".exe";
-    if (!CopyFileW(propio.c_str(), copia.c_str(), FALSE))
-        return false;
-    std::wstring orden = L"\"" + copia + L"\" " + linea + L" --temporal";
-    STARTUPINFOW inicio { sizeof(inicio) };
-    PROCESS_INFORMATION proceso {};
-    // Su carpeta de trabajo, la temporal: si fuera la de Mitis, no se podría reemplazar
-    if (!CreateProcessW(copia.c_str(), orden.data(), nullptr, nullptr, FALSE, 0, nullptr, carpeta, &inicio,
-                        &proceso)) {
-        DeleteFileW(copia.c_str());
-        return false;
-    }
-    CloseHandle(proceso.hThread);
-    CloseHandle(proceso.hProcess);
-    return true;
-}
-
 int WINAPI wWinMain(HINSTANCE instancia, HINSTANCE, PWSTR linea, int)
 {
-    int argc = 0;
-    LPWSTR *argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-    for (int i = 1; i < argc; ++i) {
-        const std::wstring argumento = argv[i];
-        if (argumento == L"--desinstalar")
-            estado.desinstalando = true;
-        else if (argumento == L"--temporal")
-            estado.temporal = true;
-        else if (argumento == L"--actualizar") {
-            estado.actualizando = true;
-            if (i + 1 < argc)
-                estado.pidMitis = wcstoul(argv[++i], nullptr, 10);
-        }
+    estado.desinstalando = std::wstring(linea).find(L"--desinstalar") != std::wstring::npos;
+    // --actualizar <pid>: el número que sigue es el proceso de Mitis
+    const size_t actualizar = std::wstring(linea).find(L"--actualizar");
+    if (!estado.desinstalando && actualizar != std::wstring::npos) {
+        estado.actualizando = true;
+        estado.pidMitis = wcstoul(linea + actualizar + wcslen(L"--actualizar"), nullptr, 10);
     }
-    LocalFree(argv);
     if (estado.desinstalando
         && MessageBoxW(nullptr,
                        L"¿Quieres desinstalar Mitis?\n\nTu historial, marcadores y demás datos se conservan.",
@@ -671,17 +554,17 @@ int WINAPI wWinMain(HINSTANCE instancia, HINSTANCE, PWSTR linea, int)
     GetModuleFileNameW(nullptr, ruta, DWORD(std::size(ruta)));
     estado.instalador = ruta;
 
-    // Instalar o actualizar desde la carpeta de Mitis: desde una copia temporal
-    if (!estado.desinstalando && !estado.temporal && dentroDeInstalacion(estado.instalador)
-        && relanzarDesdeTemporal(estado.instalador, linea))
-        return 0;
-
-    // Abierto sin --desinstalar ni --actualizar con Mitis ya instalado:
-    // primero se pregunta (desinstalar o actualizar)
-    const Instalada actual = instalacionExistente();
-    estado.versionInstalada = actual.version;
-    if (!estado.desinstalando && !estado.actualizando && actual.hay)
-        estado.fase = Fase::Pregunta;
+    // Abierto sin --desinstalar con Mitis ya instalado: primero se pregunta
+    // (desinstalar o actualizar). También si se abre desinstalar.exe a mano:
+    // sin paquete, solo ofrece desinstalar
+    if (!estado.desinstalando && !estado.actualizando) {
+        const Instalada actual = instalacionExistente();
+        if (actual.hay) {
+            estado.fase = Fase::Pregunta;
+            estado.versionInstalada = actual.version;
+            estado.conPaquete = tienePaquete(estado.instalador);
+        }
+    }
 
     ULONG_PTR tokenGdi = 0;
     GdiplusStartupInput inicioGdi;
@@ -725,8 +608,5 @@ int WINAPI wWinMain(HINSTANCE instancia, HINSTANCE, PWSTR linea, int)
     estado.familia.reset();
     estado.fuentes.reset();
     GdiplusShutdown(tokenGdi);
-    // La copia temporal no deja rastro
-    if (estado.temporal)
-        borrarAlTerminar(estado.instalador);
     return 0;
 }

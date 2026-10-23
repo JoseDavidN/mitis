@@ -7,8 +7,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ### Añadido
 
-- **Instalador que descarga Mitis.** El instalador de Windows ya no lleva Mitis dentro: pesa muy poco, descarga la última versión del servidor de Mitis y la instala sin dejar archivos temporales. Si algo falla (sin conexión, descarga cortada), ofrece «Reintentar».
-- **Actualizaciones.** Mitis busca versiones nuevas al abrirse y cada 6 horas. Si hay una, aparece un botón animado después del de Opciones; al pulsarlo, «Actualizar ahora» con «Confirmar» y «Cancelar». Al confirmar, Mitis se cierra, se actualiza y vuelve a abrirse con tus pestañas: en Windows con la ventana del instalador; en macOS (si Mitis está en una carpeta donde puedes escribir, como Aplicaciones) y en Linux con el AppImage, descargando antes la versión nueva. También en Configuración → Acerca de Mitis («Buscar ahora»).
+- **Actualizaciones.** Mitis busca versiones nuevas al abrirse y cada 6 horas. Si hay una, aparece un botón animado después del de Opciones; al pulsarlo, «Actualizar ahora» con «Confirmar» y «Cancelar». Al confirmar, Mitis se cierra, se actualiza y vuelve a abrirse con tus pestañas: en Windows, Mitis descarga el instalador de la versión nueva y lo abre en su ventana; en macOS (si Mitis está en una carpeta donde puedes escribir, como Aplicaciones) y en Linux con el AppImage, descargando antes la versión nueva. También en Configuración → Acerca de Mitis («Buscar ahora»).
 - **Informes de cierres inesperados.** Si Mitis se cierra de golpe, al volver a abrirlo avisa y guarda un informe (qué estaba pasando y, si fue una caída, dónde falló) que puedes copiar con un clic para enviarlo. También en Configuración → Desarrollo. Todo queda en tu equipo: no se envía nada.
 
 ### Cambiado

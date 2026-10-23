@@ -48,6 +48,7 @@ Updater::Updater(QObject *parent)
     // La primera, al poco de arrancar (sin estorbar al inicio); luego, cada tanto
     m_timer.setSingleShot(true);
     connect(&m_timer, &QTimer::timeout, this, [this] {
+        removeLeftovers();
         check();
         m_timer.start(CheckInterval);
     });
@@ -69,6 +70,19 @@ Updater *Updater::create(QQmlEngine *, QJSEngine *)
     return updater;
 }
 
+// Carpetas temporales de actualizaciones anteriores: en Windows queda el
+// instalador (no puede borrarse mientras se ejecuta); en macOS y Linux, si
+// algo falló a medias. A los 15 s de arrancar, el instalador ya terminó
+void Updater::removeLeftovers()
+{
+    if (m_installing)
+        return;
+    const QFileInfoList folders = QDir::temp().entryInfoList({QStringLiteral("mitis-actualizacion-*")},
+                                                              QDir::Dirs | QDir::NoDotAndDotDot);
+    for (const QFileInfo &folder : folders)
+        QDir(folder.absoluteFilePath()).removeRecursively();
+}
+
 QString Updater::server() const
 {
     // MITIS_SERVIDOR en el entorno sustituye al de la compilación (pruebas)
@@ -77,7 +91,9 @@ QString Updater::server() const
 
 QString Updater::packageKey() const
 {
-#if defined(Q_OS_MACOS)
+#if defined(Q_OS_WIN)
+    return QStringLiteral("windows");
+#elif defined(Q_OS_MACOS)
     return QStringLiteral("macos");
 #elif defined(Q_OS_LINUX)
     return qEnvironmentVariableIsEmpty("APPIMAGE") ? QString() : QStringLiteral("linux");
@@ -100,7 +116,8 @@ QString Updater::target() const
 bool Updater::canInstall() const
 {
 #ifdef Q_OS_WIN
-    return QFile::exists(QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("mitis-instalador.exe")));
+    // El instalador se instala para el usuario: no hace falta nada más
+    return m_manifest.contains(packageKey());
 #else
     const QString key = packageKey();
     const QString path = target();
@@ -161,23 +178,10 @@ void Updater::install()
     if (!canInstall() || m_available.isEmpty() || m_installing)
         return;
     qInfo("[Mitis] Actualizando a %s", qPrintable(m_available));
-#ifdef Q_OS_WIN
-    // El instalador espera a que Mitis se cierre. Se abre fuera de la
-    // carpeta de Mitis, que va a reemplazar
-    const bool started = QProcess::startDetached(
-        QDir(QCoreApplication::applicationDirPath()).filePath(QStringLiteral("mitis-instalador.exe")),
-        {QStringLiteral("--actualizar"), QString::number(QCoreApplication::applicationPid())}, QDir::tempPath());
-    if (!started) {
-        fail(QStringLiteral("No se pudo abrir el instalador de Mitis."));
-        return;
-    }
-    emit readyToRestart();
-#else
     downloadPackage();
-#endif
 }
 
-// macOS y Linux: el paquete a una carpeta temporal, comprobando su SHA-256
+// El paquete de este sistema a una carpeta temporal, comprobando su SHA-256
 void Updater::downloadPackage()
 {
     const QString key = packageKey();
@@ -248,7 +252,21 @@ void Updater::downloadPackage()
 void Updater::preparePackage(const QString &file)
 {
     const QString folder = QFileInfo(file).absolutePath();
-#ifdef Q_OS_MACOS
+#if defined(Q_OS_WIN)
+    // El instalador completo de la versión nueva: espera a que Mitis se
+    // cierre, instala sin preguntar y lo vuelve a abrir. Se queda en la
+    // carpeta temporal (está en marcha); la borra removeLeftovers()
+    const bool started = QProcess::startDetached(
+        file, {QStringLiteral("--actualizar"), QString::number(QCoreApplication::applicationPid())}, folder);
+    if (!started) {
+        QDir(folder).removeRecursively();
+        fail(QStringLiteral("No se pudo abrir el instalador de Mitis."));
+        return;
+    }
+    m_progress = 1;
+    emit progressChanged();
+    emit readyToRestart();
+#elif defined(Q_OS_MACOS)
     // Mitis.app viene en un ZIP hecho con ditto (conserva enlaces, permisos y
     // la firma): se descomprime igual
     auto *ditto = new QProcess(this);

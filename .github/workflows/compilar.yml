@@ -160,29 +160,18 @@ jobs:
           cmake -S installer -B build-instalador -G Ninja -DCMAKE_BUILD_TYPE=Release "-DMITIS_VERSION=${{ steps.version.outputs.valor }}"
           cmake --build build-instalador
 
-      # Lo que se sube al servidor de descargas: el paquete, el instalador
-      # (sin Mitis dentro: lo descarga) y version.txt
       - name: Empaquetar
         shell: pwsh
         run: >
           ./installer/empaquetar.ps1
           -Mitis build/bin/Mitis.exe
           -Instalador build-instalador/MitisInstalador.exe
-          -Version ${{ steps.version.outputs.valor }}
-          -Salida servidor
+          -Salida Mitis-${{ steps.version.outputs.valor }}-Instalador.exe
 
       - uses: actions/upload-artifact@v4
         with:
           name: mitis-windows
-          path: servidor/*
-          if-no-files-found: error
-
-      # Solo el instalador, para descargarlo directo y pasarlo (descarga
-      # Mitis del servidor: lo de releases/ debe estar subido)
-      - uses: actions/upload-artifact@v4
-        with:
-          name: mitis-instalador
-          path: servidor/MitisInstalador.exe
+          path: Mitis-*-Instalador.exe
           if-no-files-found: error
 
       # Símbolos (no se distribuyen): para leer la pila y el .dmp de los
@@ -353,7 +342,7 @@ jobs:
           if-no-files-found: warn
 
   # Todo lo del servidor de descargas en un artefacto, con version.txt (el
-  # formato está en installer/src/red.h). Se copia tal cual en releases/
+  # formato está en src/updater.h). Se copia tal cual en releases/
   servidor:
     name: Servidor de descargas
     needs: [windows, macos, linux]
@@ -375,21 +364,19 @@ jobs:
           ls -l
           # Sin alguno de estos, el servidor quedaría a medias: mejor fallar
           # aquí (un $(…) que falla dentro de echo no detiene el script)
-          for patron in MitisInstalador.exe 'Mitis-*-windows.zip' 'Mitis-*-macOS.zip'; do
+          for patron in 'Mitis-*-Instalador.exe' 'Mitis-*-macOS.zip'; do
             if ! compgen -G "$patron" > /dev/null; then
               echo "::error::Falta $patron en los artefactos de Windows y macOS"
               exit 1
             fi
           done
           suma() { sha256sum "$1" | cut -d' ' -f1; }
-          paquete=$(ls Mitis-*-windows.zip)
-          version=${paquete#Mitis-}; version=${version%-windows.zip}
+          windows=$(ls Mitis-*-Instalador.exe)
+          version=${windows#Mitis-}; version=${version%-Instalador.exe}
           {
             echo "version=$version"
-            echo "paquete=$paquete"
-            echo "sha256=$(suma "$paquete")"
-            echo "instalador=MitisInstalador.exe"
-            echo "instalador_sha256=$(suma MitisInstalador.exe)"
+            echo "windows=$windows"
+            echo "windows_sha256=$(suma "$windows")"
             macos=$(ls Mitis-*-macOS.zip)
             echo "macos=$macos"
             echo "macos_sha256=$(suma "$macos")"

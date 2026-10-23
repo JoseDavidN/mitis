@@ -41,15 +41,13 @@ Al terminar una tarea, quitarla de aquí y apuntar el cambio en `CHANGELOG.md`
 
 ## Distribución
 
-- [ ] **Servidor de descargas** (instalador que descarga y actualizaciones, desde 2026-10-23). De momento, por IP y sin cifrar: `http://100.67.58.55/mitis` (este servidor, en la red de Tailscale: solo llega a los equipos de esa red, y Tailscale cifra el tráfico).
-  - Servidor en marcha: `/srv/docker/mitis-releases` (nginx en Docker). Pendiente: subir a `releases/` el artefacto `mitis-servidor` de la versión (ver `docs/versiones.md`, «Publicar una versión»).
-  - Probar en Windows: instalar desde cero, «Actualizar» desde el instalador con Mitis ya instalado, actualizar desde Mitis (que se cierre, se actualice y se vuelva a abrir con sus pestañas), sin conexión («Reintentar») y desinstalar. Comprobar que no queda nada en la carpeta temporal.
+- [ ] **Servidor de descargas y actualizaciones** (desde 2026-10-23). De momento, por IP y sin cifrar: `http://100.67.58.55/mitis` (`/srv/docker/mitis-releases`, en la red de Tailscale: solo llega a los equipos de esa red, y Tailscale cifra el tráfico).
+  - Pendiente: subir a `releases/` el artefacto `mitis-servidor` de la versión (ver `docs/versiones.md`, «Publicar una versión»).
+  - Probar en Windows: actualizar desde Mitis (que descargue el instalador, se cierre, se actualice y se vuelva a abrir con sus pestañas) y que no quede nada en la carpeta temporal tras el siguiente arranque.
   - Probar en macOS: actualizar desde Mitis con la app en Aplicaciones (que se cierre, se cambie y se abra sin el aviso de Gatekeeper).
-  - Los Mitis instalados con el instalador anterior (0.8.0 y antes) no tienen `mitis-instalador.exe`: avisan de la versión nueva pero hay que instalarla a mano una vez.
-  - **Antes de publicarlo fuera de Tailscale:** dominio con HTTPS y paquetes firmados (por ejemplo, una firma Ed25519 de `version.txt` cuya clave pública lleve el instalador). Hoy el SHA-256 solo detecta descargas dañadas: quien controle la red o el servidor podría servir otro programa.
   - Linux: se actualiza solo el AppImage; instalado con el `PKGBUILD`, lo actualiza el sistema de paquetes (Mitis solo avisa).
+  - **Antes de publicarlo fuera de Tailscale:** dominio con HTTPS y paquetes firmados. Hoy el SHA-256 solo detecta descargas dañadas: quien controle la red o el servidor podría servir otro programa.
 
-- [x] **macOS en GitHub Actions** (desde 2026-10-22, en cada push: `.dmg` universal, Apple Silicon e Intel, con firma ad hoc): comprobar que el primer run pasa y probar el `.dmg` en un Mac de cada tipo (Gatekeeper avisará: sin firma de Apple). Con códecs, el archivo de Qt WebEngine también tiene que ser universal (`compilar-macos.sh --arquitecturas "arm64;x86_64"`).
 - [ ] Probar en GitHub Actions la compilación de Linux (AppImage): solo a mano (Run workflow → «todos»).
 - [ ] Probar el AppImage en una distribución distinta de Arch y el `PKGBUILD` con `makepkg`.
 - [ ] Firmar el instalador de Windows y la app de macOS (y notarizarla): sin firma, SmartScreen y Gatekeeper avisan al abrirlos. Requiere certificados de pago.

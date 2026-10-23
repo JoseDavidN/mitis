@@ -12,15 +12,24 @@ class QQmlEngine;
 class QJSEngine;
 
 // Actualizaciones: consulta version.txt en el servidor de descargas
-// (MITIS_SERVIDOR; formato en installer/src/red.h) al poco de arrancar y
-// cada `CheckInterval`. Si hay una versión más nueva, la interfaz avisa y,
+// (MITIS_SERVIDOR: /srv/docker/mitis-releases) al poco de arrancar y cada
+// `CheckInterval`. version.txt lleva una clave por línea (lo arma el
+// workflow, artefacto «mitis-servidor»):
+//
+//   version=0.9.0-beta
+//   windows=Mitis-0.9.0-beta-Instalador.exe     windows_sha256=…
+//   macos=Mitis-0.9.0-beta-macOS.zip             macos_sha256=…
+//   linux=Mitis-0.9.0-beta-x86_64.AppImage       linux_sha256=…   (opcional)
+//
+// (cada clave en su línea). Si hay una versión más nueva, la interfaz avisa y,
 // al aceptar, install() la prepara y emite readyToRestart: la interfaz cierra
 // Mitis (guardando la sesión) y lo que quedó en marcha lo reemplaza y lo
 // vuelve a abrir.
 //
-// - Windows: abre el instalador que queda junto a Mitis
-//   (mitis-instalador.exe --actualizar <pid>), con su ventana: espera a que
-//   Mitis se cierre, descarga e instala la versión nueva y lo abre.
+// - Windows: descarga el instalador completo de la versión nueva (clave
+//   «windows»: el mismo de siempre, con Mitis dentro), lo comprueba y lo abre
+//   con --actualizar <pid>: con su ventana, espera a que Mitis se cierre,
+//   instala sin preguntar y lo vuelve a abrir.
 // - macOS: descarga Mitis.app comprimido (clave «macos»), lo comprueba y lo
 //   descomprime en la carpeta temporal; un script espera a que Mitis se
 //   cierre, cambia la app y la abre. Necesita poder escribir donde está la
@@ -87,6 +96,7 @@ private:
     void preparePackage(const QString &file);
     void launchReplacer(const QString &replacement, const QString &folder);
     void fail(const QString &message);
+    void removeLeftovers();
 
     static constexpr int FirstCheckDelay = 15 * 1000;
     static constexpr int CheckInterval = 6 * 60 * 60 * 1000;

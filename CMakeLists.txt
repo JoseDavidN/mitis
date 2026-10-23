@@ -18,8 +18,8 @@ qt_standard_project_setup(REQUIRES 6.8)
 set(MITIS_VERSION_SUFFIX "-beta" CACHE STRING "Sufijo de la versión (-beta, vacío en las finales)")
 
 # Servidor de descargas (sin barra final): version.txt y los paquetes. Mitis
-# lo consulta para actualizarse (src/updater.*); el instalador de Windows usa
-# el mismo (installer/CMakeLists.txt). Pruebas: por IP, en la red de Tailscale
+# lo consulta para actualizarse (src/updater.*). Pruebas: por IP, en la red
+# de Tailscale (/srv/docker/mitis-releases)
 set(MITIS_SERVIDOR "http://100.67.58.55/mitis" CACHE STRING "Servidor de descargas de Mitis")
 
 # Windows: <windows.h> (memorymonitor.cpp) no debe definir min/max, y MSVC
