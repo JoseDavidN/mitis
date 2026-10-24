@@ -313,24 +313,21 @@ Window {
     // Qt WebEngine se cae si se le pide un icono (image://favicon/…) que
     // también tiene una pestaña descargada: lee la página que ya no existe.
     // Esos iconos se piden al servicio de iconos (Urls.favicon), como los
-    // accesos rápidos. retiredIcons: los de las pestañas con iconRetired
-    property var retiredIcons: ({})
+    // accesos rápidos: los de pestañas con iconRetired y los que comparten
+    // con una retirada de cualquier ventana (BrowserProfile.retiredIcons)
 
     // El icono que puede mostrar la interfaz para `tab` (BrowserTab)
     function displayIcon(tab) {
         const raw = tab ? tab.icon.toString() : ""
-        if (raw.startsWith("image://") && retiredIcons[raw] === true)
+        if (raw.startsWith("image://") && (tab.iconRetired || BrowserProfile.retiredIcons[raw] === true))
             return Urls.favicon(tab.url.toString())
         return raw
     }
+    Connections {
+        target: BrowserProfile
+        function onRetiredIconsChanged() { win.refreshIcons() }
+    }
     function refreshIcons() {
-        const retired = {}
-        for (let i = 0; i < views.count; i++) {
-            const tab = views.itemAt(i) as BrowserTab
-            if (tab && tab.iconRetired && tab.icon.toString() !== "")
-                retired[tab.icon.toString()] = true
-        }
-        retiredIcons = retired
         for (let i = 0; i < views.count; i++) {
             const tab = views.itemAt(i) as BrowserTab
             // Una restaurada sin cargar aún no tiene icono: conserva el guardado

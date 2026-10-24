@@ -5,6 +5,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ## [Sin publicar]
 
+> Mitis, más estable
+
+### Corregido
+
+- Mitis aún podía cerrarse de golpe tras llevar un rato abierto, sobre todo en Mac. Pasaba al volver a una pestaña que se había dormido para ahorrar memoria (o a otra del mismo sitio). La corrección anterior no cubría ese caso; ahora sí.
+
+## [0.10.0] - 2026-10-24
+
 > Novedades a la vista y un Mitis de cristal
 
 ### Añadido

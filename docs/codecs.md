@@ -291,6 +291,13 @@ seguridad de Chromium: no conviene quedarse mucho en una.
   Chromium necesita muchos más. El script ya sube el límite; con una versión anterior del
   script, antes de repetir: `ulimit -n 65536` en la misma terminal (o `10240` si lo
   rechaza). Continúa donde se quedó.
+- **«clang++: error: unable to execute command: Segmentation fault: 11»** (macOS): el
+  compilador se cayó en un archivo. Suele ser pasajero (memoria justa o un fallo puntual,
+  más con x86_64 en un Mac con Apple Silicon): repetir el mismo comando, con menos
+  trabajos (`--trabajos 4`); continúa donde se quedó. Si se cae **siempre en el mismo
+  archivo**, es un fallo de esa versión de Apple clang: actualizar Xcode (Xcode 16.2 trae
+  clang 1600.0.26.6) y repetir. Los archivos que se piden adjuntar (`/var/folders/…`) no
+  hacen falta.
 - **Rutas demasiado largas en Windows:** ruta de trabajo corta y `LongPathsEnabled`.
 - **Mitis no arranca con el Qt nuevo** («Cannot mix incompatible Qt library», símbolos que
   faltan): la versión del Qt base y la del archivo no coinciden.

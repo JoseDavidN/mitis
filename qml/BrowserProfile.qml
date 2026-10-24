@@ -122,6 +122,19 @@ QtObject {
     property var _awaitingFolder: []
 
     // ── Ventanas privadas ────────────────────────────────────────────
+    // Iconos del motor (image://favicon/…) que la interfaz ya no debe pedir:
+    // los de pestañas que se descargaron alguna vez, en cualquier ventana (ver
+    // BrowserTab.icon). Solo crece: un icono retirado lo sigue estando aunque
+    // se cierre su pestaña (se muestra el del servicio de iconos)
+    property var retiredIcons: ({})
+    function retireIcon(icon) {
+        if (!icon.startsWith("image://") || retiredIcons[icon] === true)
+            return
+        const copy = Object.assign({}, retiredIcons)
+        copy[icon] = true
+        retiredIcons = copy
+    }
+
     // Sin disco: cookies, caché y permisos viven solo mientras haya alguna
     // ventana privada abierta. Se crea con la primera y se descarta al
     // cerrar la última: cada ventana privada llama a retainPrivate() al

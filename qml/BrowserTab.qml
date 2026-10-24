@@ -31,15 +31,22 @@ Item {
     readonly property url url: view.url.toString() !== "" ? view.url : initialUrl
     readonly property alias title: view.title
     // Icono de la página (image://favicon/…, del motor). Qt WebEngine se cae
-    // al servir un icono que también tiene una pestaña descargada (pide el
-    // dibujo a una página que ya no existe), así que la interfaz no pide los
-    // de las pestañas con iconRetired (ver displayIcon() en Main.qml)
+    // al servir el icono de una vista que se descargó alguna vez: al
+    // descargarla le cambia la página interna por otra sin gestor de iconos
+    // (WebContentsAdapter::discard() no lo crea y undiscard() tampoco, ni
+    // al recargarse), y pedírselo es un puntero nulo. Sirve el de la primera
+    // vista con ese icono, así que basta con que otra pestaña (de cualquier
+    // ventana) lo comparta. Por eso la interfaz nunca pide un icono retirado
+    // (BrowserProfile.retiredIcons; ver displayIcon() en Main.qml)
     readonly property alias icon: view.icon
-    // Descargada o a punto de descargarse (suspend() espera un momento tras
-    // avisar, para que acabe lo que ya se pidió): su icono ya no se pide al motor
-    readonly property bool iconRetired: _discardPending
-                                        || view.lifecycleState === WebEngineView.LifecycleState.Discarded
+    // Se descargó alguna vez o está a punto (suspend() espera un momento tras
+    // avisar, para que acabe lo que ya se pidió): su icono no se vuelve a
+    // pedir al motor mientras viva la pestaña, aunque se haya reactivado
+    readonly property bool iconRetired: _discardPending || _everDiscarded
     property bool _discardPending: false
+    property bool _everDiscarded: false
+    onIconRetiredChanged: if (iconRetired) BrowserProfile.retireIcon(icon.toString())
+    onIconChanged: if (iconRetired) BrowserProfile.retireIcon(icon.toString())
     readonly property alias loading: view.loading
     readonly property alias loadProgress: view.loadProgress
     readonly property alias canGoBack: view.canGoBack
@@ -615,7 +622,8 @@ Item {
         if (view.lifecycleState !== WebEngineView.LifecycleState.Active)
             view.lifecycleState = WebEngineView.LifecycleState.Active
     }
-    // Congelar es inmediato; descargar, tras retirar el icono (iconRetired)
+    // Congelar es inmediato; descargar, tras retirar el icono (iconRetired,
+    // para siempre: ver `icon`)
     function _applyState(target) {
         if (target !== WebEngineView.LifecycleState.Discarded) {
             view.lifecycleState = target
@@ -725,6 +733,7 @@ Item {
     WebEngineView {
         id: view
         anchors.fill: parent
+        onLifecycleStateChanged: if (lifecycleState === WebEngineView.LifecycleState.Discarded) root._everDiscarded = true
         // Lo que difumina el vidrio (Glass) de los diálogos de la pestaña
         readonly property bool glassBackdrop: true
         profile: root.privateMode ? BrowserProfile.privateProfile : BrowserProfile.profile
