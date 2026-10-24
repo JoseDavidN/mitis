@@ -37,7 +37,8 @@ Al terminar una tarea, quitarla de aquí y apuntar el cambio en `CHANGELOG.md`
   - Widevine: comprobar que Mitis lo encuentra en ese equipo (Configuración → Acerca de Mitis) y que la licencia se concede. Servicios como HBO Max, Netflix o Disney+ exigen además que el navegador esté firmado para Widevine (VMP, *Verified Media Path*): Chrome, Edge y Firefox lo están; un navegador con Qt WebEngine no. Investigar si se puede firmar (por ejemplo, el servicio EVS de castlabs, que lo hace para Electron) y qué exige.
 - [ ] **Códecs propietarios (H.264, AAC) en Windows y macOS:** el Qt WebEngine oficial no los incluye; sin ellos no funcionan Spotify, Netflix ni muchos vídeos. En Arch no hace falta: el paquete de la distribución ya los trae.
   - Preparado (`docs/codecs.md`, `tools/codecs/`): scripts para compilar Qt WebEngine con `-DFEATURE_webengine_proprietary_codecs=ON` en un equipo propio (varias horas: más que el límite de GitHub Actions) y página de prueba (`prueba-codecs.html`). El workflow lo usa en lugar del Qt oficial si se definen las variables del repositorio `QT_VERSION` y `QT_CODECS_RELEASE`.
-  - Pendiente: compilarlo, publicarlo y revisar las patentes de esos códecs para los países de distribución (nota en `docs/codecs.md`).
+  - En curso (2026-10-23): compilándolo en Windows con Qt **6.11.2** (el código de Qt WebEngine 6.11.3 no está publicado; ver `docs/codecs.md`). El script de Windows ya pasó la comprobación de herramientas tras corregir dos textos que PowerShell no aceptaba.
+  - Pendiente: compilarlo también en macOS (universal: `--arquitecturas "arm64;x86_64"`), publicar los dos archivos en el mismo release, fijar `QT_VERSION=6.11.2` y `QT_CODECS_RELEASE`, y revisar las patentes de esos códecs para los países de distribución (nota en `docs/codecs.md`).
 
 ## Distribución
 

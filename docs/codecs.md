@@ -5,8 +5,16 @@ Qt WebEngine con H.264 y AAC para Windows y macOS, y cómo hacer que GitHub Acti
 en lugar del oficial.
 
 **Para hacerlo con Claude Code en un Windows:** `tools/codecs/GUIA-CLAUDE-WINDOWS.md`
-(pasos por fases, con la versión que usa ahora el workflow, **6.11.3**; los ejemplos de
-abajo dicen 6.11.2).
+(pasos por fases).
+
+**Versión: 6.11.2.** Sin códecs, el workflow usa Qt 6.11.3, pero **el código fuente de
+Qt WebEngine 6.11.3 no está publicado** (comprobado el 2026-10-23: `download.qt.io` solo
+tiene las fuentes hasta la 6.11.2 y code.qt.io no tiene la etiqueta `v6.11.3`; el
+instalador de Qt sí la da compilada). Sin código no se puede compilar con códecs: se usa
+la **6.11.2** en Windows y macOS, y con `QT_VERSION=6.11.2` («Usar en GitHub Actions»)
+el workflow instala esa misma versión en los tres sistemas. La 6.11.2 lleva parches de
+seguridad de Chromium algo más antiguos que la 6.11.3: cuando se publique el código de
+una versión más nueva, repetir con ella («Actualizar Qt»).
 
 Resumen: se compila **solo el módulo qtwebengine**, en un equipo propio, contra un Qt
 oficial de la misma versión. El resultado se empaqueta en un archivo (`.7z` en Windows,
@@ -78,6 +86,11 @@ Recursos (estimación, no medida en este proyecto: depende mucho del equipo):
   y el workflow usan `msvc2022_64`: usar 2022.
 - **SDK de Windows 11 10.0.26100.0 o posterior** (se marca en el instalador de Visual
   Studio). Qt WebEngine lo comprueba al configurar.
+- **ATL y MFC de C++** (componentes individuales del instalador de Visual Studio: «ATL de
+  C++ para las herramientas de compilación v143 más recientes» y el de MFC; IDs
+  `Microsoft.VisualStudio.Component.VC.ATL` y `Microsoft.VisualStudio.Component.VC.ATLMFC`).
+  Chromium incluye `atldef.h`: sin ATL, la configuración pasa y la compilación falla al
+  empezar («No se puede abrir el archivo incluir: 'atldef.h'»). El script lo comprueba.
 - Herramientas, por ejemplo con Chocolatey (consola de administrador):
   `choco install ninja gperf winflexbison3 7zip nodejs-lts python` y después
   `python -m pip install html5lib`. CMake acepta los `win_bison`/`win_flex` de
@@ -96,9 +109,11 @@ Recursos (estimación, no medida en este proyecto: depende mucho del equipo):
 - Herramientas con Homebrew: `brew install cmake ninja node gperf bison flex python` y
   `python3 -m pip install html5lib` (o en un entorno virtual). El `bison` de Xcode es
   demasiado viejo: el script pone delante en el `PATH` los de Homebrew.
-- Un Mac con Apple Silicon compila `arm64` (lo que usa el runner `macos-14`). Para servir
-  también a los Mac Intel hace falta un binario universal (`--arquitecturas "arm64;x86_64"`),
-  que compila Chromium dos veces.
+- Un Mac con Apple Silicon compila `arm64` por defecto. **El workflow hace un `.dmg`
+  universal** (Apple Silicon e Intel) y comprueba que Qt WebEngine traiga las dos
+  arquitecturas: el archivo con códecs también tiene que ser universal
+  (`--arquitecturas "arm64;x86_64"`), que compila Chromium dos veces. Con solo `arm64`,
+  el workflow falla en el paso «Empaquetar» de macOS.
 
 ## Qt base
 

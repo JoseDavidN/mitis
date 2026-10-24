@@ -1,7 +1,7 @@
 # Guía para Claude Code en Windows: Qt WebEngine con códecs propietarios
 
 Esta guía es para una sesión de **Claude Code en un equipo Windows** con el repositorio de
-Mitis clonado. Objetivo: preparar el entorno, compilar Qt WebEngine **6.11.3** con H.264 y
+Mitis clonado. Objetivo: preparar el entorno, compilar Qt WebEngine **6.11.2** con H.264 y
 AAC, publicarlo para que GitHub Actions genere el instalador de Mitis con códecs, y dejar
 lista la lista de pruebas del motor.
 
@@ -9,8 +9,15 @@ Para empezar, en la sesión de Claude Code en Windows:
 
 > Lee `tools/codecs/GUIA-CLAUDE-WINDOWS.md` y sigue sus pasos. Empieza por la fase 0.
 
-Contexto completo (por qué, requisitos, patentes): `docs/codecs.md`. **Ojo:** esa guía
-dice Qt 6.11.2 en los ejemplos; el workflow ahora usa **6.11.3** y es la que vale aquí.
+Contexto completo (por qué, requisitos, patentes): `docs/codecs.md`.
+
+**Por qué 6.11.2 y no 6.11.3:** el workflow usa Qt 6.11.3 sin códecs, pero el código
+fuente de Qt WebEngine 6.11.3 no se ha publicado (comprobado el 2026-10-23: ni en
+`download.qt.io` ni como etiqueta `v6.11.3` en code.qt.io; Qt solo la da compilada). Sin
+código no se puede compilar con códecs, así que se usa **6.11.2**, la última con código, y
+al terminar se fija `QT_VERSION=6.11.2` en el repositorio (fase 7) para que el workflow
+use esa misma versión. Cuando se publique el código de una versión más nueva, repetir con
+ella (ver «Actualizar Qt» en `docs/codecs.md`).
 
 ---
 
@@ -36,13 +43,13 @@ dice Qt 6.11.2 en los ejemplos; el workflow ahora usa **6.11.3** y es la que val
 
 | Dato | Valor |
 |---|---|
-| Versión de Qt | `6.11.3` (exactamente la del workflow, `QT_VERSION` en `.github/workflows/compilar.yml`) |
+| Versión de Qt | `6.11.2` (la última con el código publicado; el workflow la usará con `QT_VERSION=6.11.2`) |
 | Compilador | Visual Studio 2022, `win64_msvc2022_64` |
-| Qt base | `C:\Qt\6.11.3\msvc2022_64` |
+| Qt base | `C:\Qt\6.11.2\msvc2022_64` |
 | Carpeta de trabajo | `C:\qwe` (ruta corta: Chromium crea rutas muy largas) |
-| Paquete resultante | `C:\qwe\qtwebengine-codecs-6.11.3-windows-msvc2022_64.7z` |
+| Paquete resultante | `C:\qwe\qtwebengine-codecs-6.11.2-windows-msvc2022_64.7z` |
 | aqtinstall | desde git: `git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7` (la publicada no instala Qt 6.11+ en Windows) |
-| Release | `qt-codecs-6.11.3` |
+| Release | `qt-codecs-6.11.2` |
 
 ---
 
@@ -69,6 +76,8 @@ dice Qt 6.11.2 en los ejemplos; el workflow ahora usa **6.11.3** y es la que val
 3. Informa en una tabla: qué está, qué falta y qué versión hay. Requisitos:
    - Visual Studio 2022 (MSVC 14.36 o posterior) con «Desarrollo para el escritorio con C++».
    - SDK de Windows **10.0.26100.0 o posterior** (carpeta en `Windows Kits\10\Include`).
+   - **ATL y MFC de C++** (`atldef.h` en `<VC\Tools\MSVC\versión>\atlmfc\include`): Chromium
+     los necesita y no vienen con la carga de C++ por defecto.
    - CMake ≥ 3.19, Ninja, Python ≥ 3.8 con `html5lib`, Node.js ≥ 20 **x64**, gperf,
      winflexbison (`win_bison`, `win_flex`), 7-Zip (`7z` en el `PATH`), git, gh, pwsh.
 
@@ -76,7 +85,8 @@ dice Qt 6.11.2 en los ejemplos; el workflow ahora usa **6.11.3** y es la que val
 
 - Visual Studio 2022 o el SDK de Windows 11: se instalan con el instalador de Visual
   Studio (Modificar → «Desarrollo para el escritorio con C++» y, en Componentes
-  individuales, «SDK de Windows 11 (10.0.26100.0)»). Explica al usuario cómo hacerlo: es
+  individuales, «SDK de Windows 11 (10.0.26100.0)» y «ATL de C++ para las herramientas de
+  compilación v143 más recientes (x86 y x64)», más el de MFC). Explica al usuario cómo hacerlo: es
   una interfaz gráfica.
 - El resto, en una consola de **administrador** (el usuario la abre y ejecuta, o lo
   aprueba):
@@ -104,21 +114,21 @@ dice Qt 6.11.2 en los ejemplos; el workflow ahora usa **6.11.3** y es la que val
    ```
    Si el equipo usa otro antivirus, explica al usuario cómo añadir la exclusión.
 
-## Fase 3 — Qt base 6.11.3 (sin Qt WebEngine)
+## Fase 3 — Qt base 6.11.2 (sin Qt WebEngine)
 
 ```powershell
 python -m pip install "git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7"
-python -m aqt install-qt windows desktop 6.11.3 win64_msvc2022_64 -m qtwebchannel qtpositioning -O C:\Qt
+python -m aqt install-qt windows desktop 6.11.2 win64_msvc2022_64 -m qtwebchannel qtpositioning -O C:\Qt
 ```
 
 Comprobar:
 ```powershell
-& C:\Qt\6.11.3\msvc2022_64\bin\qmake.exe -query QT_VERSION     # debe decir 6.11.3
-Test-Path C:\Qt\6.11.3\msvc2022_64\bin\qt-cmake.bat
-Test-Path C:\Qt\6.11.3\msvc2022_64\lib\cmake\Qt6WebChannel
-Test-Path C:\Qt\6.11.3\msvc2022_64\lib\cmake\Qt6WebEngineCore   # debe ser False (sin WebEngine)
+& C:\Qt\6.11.2\msvc2022_64\bin\qmake.exe -query QT_VERSION     # debe decir 6.11.2
+Test-Path C:\Qt\6.11.2\msvc2022_64\bin\qt-cmake.bat
+Test-Path C:\Qt\6.11.2\msvc2022_64\lib\cmake\Qt6WebChannel
+Test-Path C:\Qt\6.11.2\msvc2022_64\lib\cmake\Qt6WebEngineCore   # debe ser False (sin WebEngine)
 ```
-Si `C:\Qt\6.11.3` ya existía con Qt WebEngine dentro, avisa: el script funciona, pero
+Si `C:\Qt\6.11.2` ya existía con Qt WebEngine dentro, avisa: el script funciona, pero
 conviene una instalación limpia para que no se mezclen cabeceras.
 
 ## Fase 4 — Compilar (horas)
@@ -130,11 +140,11 @@ Claude Code no hay una «x64 Native Tools Command Prompt», así que se carga co
 ```powershell
 $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
 $repo = (Get-Location).Path   # raíz del repositorio de Mitis
-cmd /c "call `"$vs\VC\Auxiliary\Build\vcvars64.bat`" && pwsh -NoProfile -File `"$repo\tools\codecs\compilar-windows.ps1`" -QtVersion 6.11.3 -QtDir C:\Qt\6.11.3\msvc2022_64 > C:\qwe\compilacion.log 2>&1"
+cmd /c "call `"$vs\VC\Auxiliary\Build\vcvars64.bat`" && pwsh -NoProfile -File `"$repo\tools\codecs\compilar-windows.ps1`" -QtVersion 6.11.2 -QtDir C:\Qt\6.11.2\msvc2022_64 > C:\qwe\compilacion.log 2>&1"
 ```
 
 - Antes de compilar, el script comprueba herramientas, descarga las fuentes
-  (`qtwebengine-everywhere-src-6.11.3.zip`, con su MD5), configura con
+  (`qtwebengine-everywhere-src-6.11.2.zip`, con su MD5), configura con
   `-DFEATURE_webengine_proprietary_codecs=ON` y **verifica en `CMakeCache.txt` que la
   opción quedó activada**. Revisa el registro tras la configuración (los primeros minutos):
   si algo falta o la opción no quedó activa, para y avisa.
@@ -151,8 +161,8 @@ cmd /c "call `"$vs\VC\Auxiliary\Build\vcvars64.bat`" && pwsh -NoProfile -File `"
 ## Fase 5 — Comprobar el resultado
 
 ```powershell
-Get-Item C:\qwe\qtwebengine-codecs-6.11.3-windows-msvc2022_64.7z | Select-Object Name, Length
-Get-Content C:\qwe\salida\mitis-codecs.txt          # debe incluir qt=6.11.3
+Get-Item C:\qwe\qtwebengine-codecs-6.11.2-windows-msvc2022_64.7z | Select-Object Name, Length
+Get-Content C:\qwe\salida\mitis-codecs.txt          # debe incluir qt=6.11.2
 Select-String -Path C:\qwe\build\CMakeCache.txt -Pattern "webengine_proprietary_codecs"
 Test-Path C:\qwe\salida\bin\Qt6WebEngineCore.dll
 Test-Path C:\qwe\salida\bin\QtWebEngineProcess.exe
@@ -167,10 +177,10 @@ Test-Path C:\qwe\salida\bin\QtWebEngineProcess.exe
    créalo solo con su «sí»:
    ```powershell
    gh repo create mitis-qt --private
-   gh release create qt-codecs-6.11.3 --repo <usuario>/mitis-qt --prerelease `
-     --title "Qt WebEngine 6.11.3 con códecs propietarios" `
+   gh release create qt-codecs-6.11.2 --repo <usuario>/mitis-qt --prerelease `
+     --title "Qt WebEngine 6.11.2 con códecs propietarios" `
      --notes "Compilado con tools/codecs/compilar-windows.ps1 (docs/codecs.md). Solo para el workflow de Mitis." `
-     C:\qwe\qtwebengine-codecs-6.11.3-windows-msvc2022_64.7z
+     C:\qwe\qtwebengine-codecs-6.11.2-windows-msvc2022_64.7z
    ```
    Repositorio privado a propósito: así las bibliotecas con H.264/AAC no quedan públicas
    (ver «Patentes y licencias» en `docs/codecs.md`).
@@ -179,8 +189,8 @@ Test-Path C:\qwe\salida\bin\QtWebEngineProcess.exe
 
 En el repositorio de Mitis (no en `mitis-qt`):
 ```powershell
-gh variable set QT_VERSION --body 6.11.3
-gh variable set QT_CODECS_RELEASE --body qt-codecs-6.11.3
+gh variable set QT_VERSION --body 6.11.2
+gh variable set QT_CODECS_RELEASE --body qt-codecs-6.11.2
 gh variable set QT_CODECS_REPO --body <usuario>/mitis-qt
 gh secret set QT_CODECS_TOKEN
 ```
@@ -226,4 +236,4 @@ errores). Ese archivo es lo que el autor lleva de vuelta a la sesión de desarro
 | Errores de rutas largas | Fase 2 hecha y carpeta `C:\qwe` |
 | `Cannot mix incompatible Qt library` al arrancar Mitis | La versión del Qt base y la del paquete no coinciden |
 | La prueba dice que no hay códecs | Comprobar que `Qt6WebEngineCore.dll` junto a `Mitis.exe` es la compilada (fecha y tamaño) y que `CMakeCache.txt` tiene la opción en `ON` |
-| `aqt` no encuentra Qt 6.11.3 | Usar el aqtinstall de git de «Datos fijos», no el de PyPI |
+| `aqt` no encuentra Qt 6.11 | Usar el aqtinstall de git de «Datos fijos», no el de PyPI |

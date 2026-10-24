@@ -62,5 +62,5 @@ Solo hay que recompilar al cambiar código C++ o `CMakeLists.txt`.
 
 ## Estado
 
-Versión 0.9.0 (beta, en desarrollo; la última publicada es la 0.8.0). Lo pendiente está en `docs/PLAN.md`; lo hecho en cada versión, en `CHANGELOG.md`. Falta Qt WebEngine con códecs propietarios para Windows y macOS (`docs/codecs.md`).
+Versión 0.9.1 (beta, en desarrollo; la última publicada es la 0.9.0). Lo pendiente está en `docs/PLAN.md`; lo hecho en cada versión, en `CHANGELOG.md`. Falta Qt WebEngine con códecs propietarios para Windows y macOS (`docs/codecs.md`).
 

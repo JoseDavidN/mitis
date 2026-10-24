@@ -285,13 +285,48 @@ Window {
         win.close()
     }
 
+    // ── Iconos de las pestañas ───────────────────────────────────────
+    // Qt WebEngine se cae si se le pide un icono (image://favicon/…) que
+    // también tiene una pestaña descargada: lee la página que ya no existe.
+    // Esos iconos se piden al servicio de iconos (Urls.favicon), como los
+    // accesos rápidos. retiredIcons: los de las pestañas con iconRetired
+    property var retiredIcons: ({})
+
+    // El icono que puede mostrar la interfaz para `tab` (BrowserTab)
+    function displayIcon(tab) {
+        const raw = tab ? tab.icon.toString() : ""
+        if (raw.startsWith("image://") && retiredIcons[raw] === true)
+            return Urls.favicon(tab.url.toString())
+        return raw
+    }
+    function refreshIcons() {
+        const retired = {}
+        for (let i = 0; i < views.count; i++) {
+            const tab = views.itemAt(i)
+            if (tab && tab.iconRetired && tab.icon.toString() !== "")
+                retired[tab.icon.toString()] = true
+        }
+        retiredIcons = retired
+        for (let i = 0; i < views.count; i++) {
+            const tab = views.itemAt(i)
+            // Una restaurada sin cargar aún no tiene icono: conserva el guardado
+            if (tab && tab.icon.toString() !== "")
+                tabs.setProperty(i, "icon", displayIcon(tab))
+        }
+    }
+    // Los image://favicon de una sesión no valen en la siguiente (y podrían
+    // coincidir con el de una pestaña descargada): se guarda el del servicio
+    function sessionIcon(icon, url) {
+        return String(icon ?? "").startsWith("image://") ? Urls.favicon(url) : (icon ?? "")
+    }
+
     function saveSession() {
         if (privateMode || closingWindow)
             return
         const list = []
         for (let i = 0; i < tabs.count; i++) {
             const tab = tabs.get(i)
-            list.push({ url: tab.url, title: tab.title, icon: tab.icon, pinned: tab.pinned })
+            list.push({ url: tab.url, title: tab.title, icon: sessionIcon(tab.icon, tab.url), pinned: tab.pinned })
         }
         Settings.setValue("Session/tabs", JSON.stringify({ current: currentIndex, tabs: list }))
     }
@@ -313,7 +348,7 @@ Window {
             const tab = saved.tabs[i]
             const url = typeof tab.url === "string" ? tab.url : ""
             const pinned = tab.pinned === true
-            tabs.append({ initialUrl: url, url: url, title: tab.title ?? "", icon: tab.icon ?? "",
+            tabs.append({ initialUrl: url, url: url, title: tab.title ?? "", icon: sessionIcon(tab.icon, url),
                           audible: false, muted: false, microphone: 0, camera: 0, pinned: pinned, lifecycle: "active",
                           deferred: (deferAll === true || i !== currentIndex) && url !== "" })
             if (pinned)
@@ -1120,7 +1155,8 @@ Window {
                     if (!win.privateMode)
                         History.updateTitle(tab.url.toString(), title)
                 }
-                onIconChanged: tabs.setProperty(index, "icon", icon.toString())
+                onIconChanged: tabs.setProperty(index, "icon", win.displayIcon(tab))
+                onIconRetiredChanged: win.refreshIcons()
                 onMutedChanged: tabs.setProperty(index, "muted", tab.muted)
                 onMicrophoneChanged: tabs.setProperty(index, "microphone", tab.microphone)
                 onCameraChanged: tabs.setProperty(index, "camera", tab.camera)
@@ -1310,7 +1346,7 @@ Window {
         y: -height - Theme.floatingMargin
         pageUrl: win.currentView && !win.showingNewTabPage ? win.currentView.url.toString() : ""
         pageTitle: win.currentView ? win.currentView.title : ""
-        pageIcon: win.currentView ? win.currentView.icon : ""
+        pageIcon: win.displayIcon(win.currentView)
         security: bottomBar.security
         onReloadRequested: if (win.currentView) win.currentView.reload()
         onSettingsRequested: section => win.openSettings(section)
@@ -1459,7 +1495,7 @@ Window {
         Behavior on opacity { NumberAnimation { duration: Theme.durationBase } }
         HoverHandler { id: playerHover }
 
-        iconSource: win.mediaView ? win.mediaView.icon : ""
+        iconSource: win.displayIcon(win.mediaView)
         title: win.media ? (win.media.artist ? win.media.title + " · " + win.media.artist
                                              : win.media.title) : ""
         playing: win.media ? win.media.playing : false

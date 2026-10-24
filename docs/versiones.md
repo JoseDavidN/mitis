@@ -22,10 +22,11 @@ Historial con este esquema (ver [CHANGELOG.md](../CHANGELOG.md)):
 | 0.6.0 | Interfaz que se oculta sola, perfil, icono y logo, mini reproductor nuevo, monitor de rendimiento, notificaciones del sistema, aviso de micrófono y cámara, instalador que también desinstala, panel del sitio, tonos de Configuración en toda la interfaz y transparencia con desenfoque (experimental) | `51bf4ba` |
 | 0.7.0 | Monitor de rendimiento con la API de dibujo, transparencia con desenfoque (experimental) en toda la interfaz, .dmg universal de macOS con su ventana y botones de macOS, GPU en macOS, pestaña vacía al descargar, rueda en Configuración | `c673816` |
 | 0.8.0 | Captura de pantalla, tonos morados de la transparencia, esquinas redondeadas (Windows 11 y macOS), listas plegadas en Configuración, nombre centrado y .dmg corregido en macOS, barras que se ocultan antes | `1f9f412` |
+| 0.9.0 | Actualizaciones desde el servidor de descargas (botón tras Opciones), informes de cierres inesperados, logo en la nueva pestaña, «Mitis» en vez de «Mitis.exe» en Windows, memoria real en el monitor de Windows | `0e8f5eb` |
 
 Las fases 0–2 van juntas en 0.2.0 porque entraron en un solo commit. Esas versiones no tienen etiqueta ni release: son anteriores al workflow de publicación. Si se quieren marcar, basta con etiquetas ligeras (`git tag v0.4.0 d6cfa89`); al subirlas no se publica nada porque esos commits no tienen `.github/workflows/`.
 
-**Versión actual: 0.9.0-beta** (en desarrollo; la 0.8.0 ya se publicó). Trae funciones nuevas (actualizaciones desde el servidor, informes de cierres): sube MENOR. Se publica al subir la etiqueta `v0.9.0`.
+**Versión actual: 0.9.1-beta** (en desarrollo; la 0.9.0 ya se publicó). Solo trae correcciones (la caída con pestañas suspendidas): sube PARCHE. Se publica al subir la etiqueta `v0.9.1`.
 
 ## Dónde vive la versión
 

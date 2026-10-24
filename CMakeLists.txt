@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(Mitis
-    VERSION 0.9.0
+    VERSION 0.9.1
     DESCRIPTION "Navegador web ligero, multiplataforma y con interfaz propia"
     LANGUAGES CXX
 )

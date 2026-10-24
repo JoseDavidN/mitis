@@ -5,6 +5,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ## [Sin publicar]
 
+### Corregido
+
+- Mitis podía cerrarse de golpe tras llevar un rato abierto (visto en macOS): al mostrar el icono de una pestaña suspendida para ahorrar memoria. Ahora sus iconos se muestran de otra forma y ya no ocurre.
+
+## [0.9.0] - 2026-10-23
+
 ### Añadido
 
 - **Actualizaciones.** Mitis busca versiones nuevas al abrirse y cada 6 horas. Si hay una, aparece un botón animado después del de Opciones; al pulsarlo, «Actualizar ahora» con «Confirmar» y «Cancelar». Al confirmar, Mitis se cierra, se actualiza y vuelve a abrirse con tus pestañas: en Windows, Mitis descarga el instalador de la versión nueva y lo abre en su ventana; en macOS (si Mitis está en una carpeta donde puedes escribir, como Aplicaciones) y en Linux con el AppImage, descargando antes la versión nueva. También en Configuración → Acerca de Mitis («Buscar ahora»).

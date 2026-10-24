@@ -27,7 +27,16 @@ Item {
     // restaurada), la dirección es la que se le pidió
     readonly property url url: view.url.toString() !== "" ? view.url : initialUrl
     readonly property alias title: view.title
+    // Icono de la página (image://favicon/…, del motor). Qt WebEngine se cae
+    // al servir un icono que también tiene una pestaña descargada (pide el
+    // dibujo a una página que ya no existe), así que la interfaz no pide los
+    // de las pestañas con iconRetired (ver displayIcon() en Main.qml)
     readonly property alias icon: view.icon
+    // Descargada o a punto de descargarse (suspend() espera un momento tras
+    // avisar, para que acabe lo que ya se pidió): su icono ya no se pide al motor
+    readonly property bool iconRetired: _discardPending
+                                        || view.lifecycleState === WebEngineView.LifecycleState.Discarded
+    property bool _discardPending: false
     readonly property alias loading: view.loading
     readonly property alias loadProgress: view.loadProgress
     readonly property alias canGoBack: view.canGoBack
@@ -174,14 +183,14 @@ Item {
         // Congelada ya no ejecuta scripts: el formulario se miró al congelarla
         // (y oculta no ha podido cambiar)
         if (view.lifecycleState === State.Frozen) {
-            view.lifecycleState = target
+            root._applyState(target)
             return
         }
         // En un mundo aparte: la página no puede interferir. Si no responde
         // (JavaScript desactivado…), no se sabe y no se suspende.
         view.runJavaScript(root._editedFormScript, WebEngineScript.ApplicationWorld, edited => {
             if (edited === false && !root.visible && view.lifecycleState < target)
-                view.lifecycleState = target
+                root._applyState(target)
         })
     }
     function goBack() {
@@ -598,8 +607,28 @@ Item {
     }
     // Una suspendida vuelve a estar activa (la descargada se recarga)
     function _wake() {
+        discardDelay.stop()
+        root._discardPending = false
         if (view.lifecycleState !== WebEngineView.LifecycleState.Active)
             view.lifecycleState = WebEngineView.LifecycleState.Active
+    }
+    // Congelar es inmediato; descargar, tras retirar el icono (iconRetired)
+    function _applyState(target) {
+        if (target !== WebEngineView.LifecycleState.Discarded) {
+            view.lifecycleState = target
+            return
+        }
+        root._discardPending = true
+        discardDelay.restart()
+    }
+    Timer {
+        id: discardDelay
+        interval: 2000
+        onTriggered: {
+            if (root._discardPending && !root.visible)
+                view.lifecycleState = WebEngineView.LifecycleState.Discarded
+            root._discardPending = false
+        }
     }
     // Restaurada sin cargar: aun sin dirección, el motor le da un proceso
     // con una página en blanco poco después de crear la vista. Se descarga en

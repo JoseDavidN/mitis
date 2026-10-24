@@ -69,14 +69,20 @@ $qtCmake = Join-Path $QtDir "bin\qt-cmake.bat"
 $qmake = Join-Path $QtDir "bin\qmake.exe"
 if (-not (Test-Path $qtCmake)) { throw "No hay Qt en $QtDir (falta bin\qt-cmake.bat)" }
 $qtInstalado = (& $qmake -query QT_VERSION).Trim()
-if ($qtInstalado -ne $QtVersion) { throw "El Qt de $QtDir es $qtInstalado, no $QtVersion: deben coincidir" }
+if ($qtInstalado -ne $QtVersion) { throw "El Qt de $QtDir es $qtInstalado, no ${QtVersion}: deben coincidir" }
 if (Test-Path (Join-Path $QtDir "bin\Qt6WebEngineCore.dll")) {
     Write-Warning "$QtDir ya tiene Qt WebEngine: mejor un Qt base sin él (docs/codecs.md, «Qt base»)"
 }
 
 $sdk = $env:WindowsSDKVersion -replace '\\', ''
 if ($sdk -and ([version]$sdk).Build -lt 26100) {
-    throw "SDK de Windows $sdk: Qt WebEngine $QtVersion pide 10.0.26100 o posterior (instalador de Visual Studio)"
+    throw "SDK de Windows ${sdk}: Qt WebEngine $QtVersion pide 10.0.26100 o posterior (instalador de Visual Studio)"
+}
+
+# Chromium usa ATL (atldef.h), que no viene con la carga de C++ por defecto:
+# sin él falla al empezar a compilar Chromium, tras la configuración
+if ($env:VCToolsInstallDir -and -not (Test-Path (Join-Path $env:VCToolsInstallDir "atlmfc\include\atldef.h"))) {
+    throw "Falta ATL de C++ en Visual Studio (atldef.h): instálalo con el instalador de Visual Studio (componentes Microsoft.VisualStudio.Component.VC.ATL y VC.ATLMFC; docs/codecs.md)"
 }
 
 # Rutas largas: aunque el trabajo vaya en una ruta corta, conviene tenerlas activas
@@ -132,7 +138,7 @@ try {
     & $qtCmake -S $fuentes -B . -G Ninja `
         -DCMAKE_BUILD_TYPE=Release `
         -DFEATURE_webengine_proprietary_codecs=ON `
-        -DFEATURE_qtpdf_build=$pdf
+        "-DFEATURE_qtpdf_build=$pdf"
     if ($LASTEXITCODE -ne 0) { throw "La configuración falló: revisa el resumen de arriba (herramientas que falten)" }
 
     # Si la opción no llegó a aplicarse, horas de compilación no servirían de nada
