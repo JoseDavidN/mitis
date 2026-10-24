@@ -105,6 +105,12 @@ if (( TRABAJOS <= 0 )); then
     (( TRABAJOS > nucleos )) && TRABAJOS=$nucleos
     (( TRABAJOS < 1 )) && TRABAJOS=1
 fi
+# macOS deja solo 256 archivos abiertos por proceso y la compilación de
+# Chromium abre muchos más a la vez («Too many open files»): se sube el límite
+# para esta terminal (hasta el máximo que permita el sistema)
+ulimit -n "$(ulimit -Hn | sed 's/unlimited/65536/')" 2>/dev/null || ulimit -n 65536 2>/dev/null || ulimit -n 10240 || true
+echo "Archivos abiertos permitidos: $(ulimit -n)"
+
 echo "Qt $QT_VERSION_OBJ en $QT_DIR · $ARQUITECTURAS · $TRABAJOS trabajos en paralelo · trabajo en $TRABAJO"
 
 # --- Fuentes ---

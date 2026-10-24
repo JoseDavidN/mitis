@@ -24,22 +24,12 @@ Item {
     implicitWidth: Theme.miniPlayerWidth
     implicitHeight: Theme.miniPlayerHeight
 
-    Rectangle {
+    Surface {
         anchors.fill: parent
         radius: height / 2
-        color: glass.active ? "transparent" : Theme.miniPlayerBg
-        border.width: 1
-        border.color: Theme.miniPlayerLine
-
-        // Vidrio esmerilado (experimental): con velo oscuro siempre, por el
-        // texto blanco
-        Glass {
-            id: glass
-            z: -1
-            anchors.fill: parent
-            radius: parent.radius
-            tint: Theme.glassTintDark
-        }
+        fill: Theme.miniPlayerBg
+        // Con el vidrio, velo oscuro siempre, por el texto blanco
+        glassTint: Theme.glassTintDark
     }
 
     // Plataforma (favicon) y nombre de lo que suena

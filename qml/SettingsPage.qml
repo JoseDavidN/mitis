@@ -14,8 +14,8 @@ FocusScope {
     id: root
 
     property bool open: false
-    // Tapa las páginas: el vidrio esmerilado (Glass) no se usa dentro
-    readonly property bool glassOpaque: true
+    // Su fondo: lo difumina el vidrio de sus tarjetas y de las listas que abre
+    readonly property Item glassBackdropItem: backdrop
 
     // Cómo dibuja la ventana: con la GPU (y qué API) o por software (lo
     // pregunta Main a C++ al primer fotograma). Lo muestra la opción de
@@ -276,8 +276,13 @@ FocusScope {
         onWheel: wheel => wheel.accepted = true
     }
 
-    ThemeBackground {
+    GlassBackdrop {
+        id: backdrop
         anchors.fill: parent
+
+        ThemeBackground {
+            anchors.fill: parent
+        }
     }
 
     FileDialog {
@@ -486,7 +491,8 @@ FocusScope {
         mipmap: true
     }
 
-    // Bordes que se funden con el fondo: en el índice y en la columna de ajustes
+    // Bordes que se funden con el fondo: en el índice y, más altos, en la
+    // columna de ajustes (los ajustes parecen salir del fondo y volver a él)
     EdgeFade {
         visible: nav.visible && !nav.atYBeginning
         x: nav.x
@@ -505,6 +511,8 @@ FocusScope {
         x: content.x - Theme.margin
         y: flick.y
         width: root.contentWidth + 2 * Theme.margin
+        height: Theme.settingsContentFadeHeight
+        steps: Theme.settingsContentFadeSteps
     }
     EdgeFade {
         visible: !flick.atYEnd
@@ -512,6 +520,8 @@ FocusScope {
         x: content.x - Theme.margin
         y: flick.y + flick.height - height
         width: root.contentWidth + 2 * Theme.margin
+        height: Theme.settingsContentFadeHeight
+        steps: Theme.settingsContentFadeSteps
     }
 
     // ── Secciones ────────────────────────────────────────────────────
@@ -698,7 +708,7 @@ FocusScope {
                 }
                 SettingRow {
                     title: "Transparencia con desenfoque (experimental)"
-                    description: "Los controles, las listas y la barra de título dejan ver la página de detrás, difuminada, con un velo morado. "
+                    description: "Toda la interfaz pasa a ser de vidrio: los controles, las listas, los avisos, los diálogos, la barra de título y las tarjetas y el buscador de la nueva pestaña y de Configuración dejan ver lo de detrás, difuminado, con un velo morado, y los fondos ganan manchas de color de la marca. "
                                  + (root.gpuRendering
                                     ? "Se dibuja con la GPU (" + root.graphicsApiName + "). Si se ven transparentes pero sin difuminar, apágala."
                                     : "No disponible: Mitis se está dibujando sin GPU (" + root.graphicsApiName + ").")
@@ -1423,13 +1433,15 @@ FocusScope {
 
         // Borde de arriba (opaco arriba) o de abajo (opaco abajo)
         property bool atTop: true
-        readonly property real step: height / Theme.settingsFadeSteps
+        // Escalones de la franja (más en las franjas altas, para que no se noten)
+        property int steps: Theme.settingsFadeSteps
+        readonly property real step: height / steps
 
         z: 2
         height: Theme.settingsFadeHeight
 
         Repeater {
-            model: Theme.settingsFadeSteps
+            model: fade.steps
 
             delegate: Item {
                 id: slice
@@ -1440,8 +1452,11 @@ FocusScope {
                 width: fade.width
                 height: Math.ceil(fade.step)
                 clip: true
-                opacity: fade.atTop ? 1 - index / Theme.settingsFadeSteps
-                                    : (index + 1) / Theme.settingsFadeSteps
+                // Curva suave (smoothstep): opaco junto al borde y se va
+                // desvaneciendo sin escalón visible hacia dentro
+                readonly property real t: fade.atTop ? 1 - (index + 0.5) / fade.steps
+                                                     : (index + 0.5) / fade.steps
+                opacity: t * t * (3 - 2 * t)
 
                 ThemeBackground {
                     x: -fade.x
@@ -1491,13 +1506,11 @@ FocusScope {
             wrapMode: Text.Wrap
         }
 
-        Rectangle {
+        Surface {
             width: parent.width
             height: card.height
             radius: Theme.radius
-            color: Theme.surfaceFloat
-            border.width: 1
-            border.color: Theme.hairline
+            fill: Theme.surfaceFloat
 
             Column {
                 id: card

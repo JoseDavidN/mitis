@@ -21,22 +21,11 @@ Item {
     opacity: shown ? 1 : 0
     Behavior on opacity { NumberAnimation { duration: Theme.durationBase } }
 
-    Rectangle {
+    Surface {
         anchors.fill: parent
         radius: Theme.radius
-        border.width: 1
-        border.color: Theme.hairline
-        gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: glass.active ? "transparent" : Theme.controlsStart }
-            GradientStop { position: 1.0; color: glass.active ? "transparent" : Theme.controlsEnd }
-        }
-        Glass {
-            id: glass
-            z: -1
-            anchors.fill: parent
-            radius: parent.radius
-        }
+        fillStart: Theme.controlsStart
+        fillEnd: Theme.controlsEnd
     }
 
     Row {

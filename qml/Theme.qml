@@ -219,6 +219,9 @@ QtObject {
     // difuminado (como Apple)
     readonly property int glassBlur: 48
     readonly property real glassSaturation: 0.3
+    // Manchas de color de la marca en el fondo de las páginas propias
+    // (GlassAurora), para que el vidrio tenga algo que difuminar
+    readonly property real glassAuroraOpacity: dark ? 0.32 : 0.22
     // Velo encima de lo difuminado: un morado de la marca, en tres tonos a
     // elegir en Configuración (Settings.glassTone: lavanda, violeta,
     // profundo). En los temas oscuros, sobre oscuro; en el Claro, tonos
@@ -279,6 +282,11 @@ QtObject {
     readonly property int ntpSearchHeight: 48
     readonly property int ntpSectionSpacing: 40
     readonly property int ntpNewsTwoColumnsWidth: 560
+    // Pestaña de novedades tras actualizar: columna, punto de cada cambio y
+    // espacio entre grupos
+    readonly property int releaseNotesMaxWidth: 640
+    readonly property int releaseNotesDotSize: 6
+    readonly property int releaseNotesGroupSpacing: 28
     readonly property int tileSize: 56
     readonly property int tileWidth: 84
     readonly property int tileIconSize: 22
@@ -299,6 +307,9 @@ QtObject {
     // franja y escalones en que se reparte (sin shaders: funciona sin GPU)
     readonly property int settingsFadeHeight: 40
     readonly property int settingsFadeSteps: 10
+    // Fundido de la columna de ajustes: más alto, como si salieran del fondo
+    readonly property int settingsContentFadeHeight: 96
+    readonly property int settingsContentFadeSteps: 16
     readonly property int settingsHeaderHeight: 64
     readonly property int settingsSectionSpacing: 32
     readonly property int settingsRowHeight: 60
@@ -347,8 +358,10 @@ QtObject {
     readonly property int miniPlayerButtonSize: 26
     readonly property int miniPlayerIconSize: 18
     readonly property real miniPlayerHoverScale: 1.18
-    // Descarga actual: panel, barra de progreso y anillo del botón
+    // Panel de descargas, barra de progreso y anillo del botón
     readonly property int downloadPanelWidth: 340
+    // Con muchas descargas a la vez, el panel se desplaza a partir de esta altura
+    readonly property int downloadPanelMaxHeight: 320
     // Panel de memoria (desarrollo): ancho y cada cuánto vuelve a medir (ms)
     readonly property int memoryPanelWidth: 360
     readonly property int memoryPanelRefresh: 2000
@@ -382,6 +395,10 @@ QtObject {
     // Pestaña del borde inferior con los controles ocultos (ControlsTab)
     readonly property int controlsTabHeight: 22
     readonly property int controlsTabMaxWidth: 280
+    // Ancho de cada lado curvo de la pestaña (relieve del borde) y cuánto se
+    // tensa su curva (0,5: S simétrica; más, más redondeada arriba y abajo)
+    readonly property int controlsTabSlope: 34
+    readonly property real controlsTabCurve: 0.55
 
     // ── Tipografía ───────────────────────────────────────────────────
     readonly property int fontSizeHeading: 24

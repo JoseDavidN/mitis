@@ -2,7 +2,7 @@ import QtQuick
 
 // Botón con texto, en píldora. `primary` es la acción principal de un
 // diálogo: degradado de marca y texto onBrand. `danger` (sin primary) es una
-// acción arriesgada y secundaria: texto en danger y borde en danger al pasar.
+// acción arriesgada y secundaria: texto en danger. Sin borde.
 Item {
     id: root
 
@@ -23,9 +23,6 @@ Item {
         radius: height / 2
         visible: !root.primary
         color: root.hovered ? Theme.tintActive : Theme.tintHover
-        border.width: 1
-        border.color: root.danger && root.hovered ? Theme.danger
-                    : root.hovered ? Theme.hairlineHover : Theme.hairline
         Behavior on color { ColorAnimation { duration: Theme.durationFast } }
     }
 

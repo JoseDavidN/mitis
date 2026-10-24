@@ -25,7 +25,7 @@ Se eligen en Configuración → Apariencia e idioma (`Settings.theme`) y cambian
 - **Oscuro y morado de serie.** Nocturno: fondo casi negro (`#07050d`) con resplandor violeta; la marca es el degradado violeta → rosa (`#a855f7 → #ec4899`). Además hay un tema Oscuro neutro y uno Claro.
 - **El color nunca se escribe en un componente.** Todo sale de `qml/Theme.qml`. Un `"#hex"` o un `Qt.rgba(...)` fuera de `Theme.qml` es un error.
 - **La interfaz flota sobre la página.** Arriba, una barra de título fina que se oculta sola (aparece al llevar el ratón al borde superior); abajo, controles sueltos (botones y campo de dirección) sin barra de fondo. Cada control lleva su propia superficie y borde, sin sombra.
-- **Ligero.** Nada de desenfoque (`blur`) ni efectos que obliguen a re-renderizar la página: Mitis prioriza RAM y GPU. Las superficies imitan el "glass" con alfa alto en lugar de borronear lo de detrás.
+- **Ligero.** Nada de desenfoque (`blur`) ni efectos que obliguen a re-renderizar la página: Mitis prioriza RAM y GPU. Las superficies imitan el "glass" con alfa alto en lugar de borronear lo de detrás. (La única excepción es el vidrio experimental, opcional y apagado por defecto: ver `Glass`.)
 - **Un tema = un juego de tokens.** Los componentes no saben qué tema está activo; solo leen `Theme`.
 
 ---
@@ -72,7 +72,7 @@ Los fondos de la interfaz usan siempre **tonos oscuros** de la marca. El degrada
 
 ### Sombras
 
-**Mitis no usa sombras.** Las superficies se separan de la página por su relleno oscuro y un borde fino (`hairline`); el hover se marca con tinte y borde, no con halo.
+**Mitis no usa sombras ni bordes en sus superficies.** Controles, botones, campos, listas, tooltips, avisos y tarjetas se separan de la página solo por su relleno (`Surface`, sin borde); el hover se marca con tinte y escala, no con borde ni halo. El único borde de un control es el anillo de foco (`focusRing`) del campo de dirección y de buscar en la página mientras se escribe (el buscador de la nueva pestaña no lo lleva). Los `hairline*` quedan para separadores y detalles pequeños (casillas, interruptores, chips).
 
 ### Tinta (texto e iconos)
 
@@ -217,21 +217,21 @@ Window (bgBase, sin marco)
 ### `IconButton` — botón flotante
 - Relleno por defecto: el degradado `controlsStart → controlsEnd` (los tonos de Configuración), también en los botones sueltos (cerrar Configuración, fondo de la nueva pestaña…). La barra inferior le pasa a cada uno su tramo del degradado compartido.
 - `icon` (nombre de `assets/icons/`, tamaño `iconSize`) o, si no, `glyph` (texto corto: el contador de pestañas) en `fontSizeIcon` (12) y `fontWeightIcon` (ExtraBold, redondeado en Nunito), centrado por la forma de los caracteres (`TextMetrics.tightBoundingRect`), no por su caja.
-- Círculo de `buttonSize`, relleno degradado `fillStart → fillEnd` (por defecto `surfaceFloat` plano), borde `hairline`.
-- Hover: tinte `tintHover`, borde `hairlineHover`, escala `hoverScale`, icono `ink`.
+- Círculo de `buttonSize`, relleno degradado `fillStart → fillEnd` (por defecto `surfaceFloat` plano), sin borde.
+- Hover: tinte `tintHover`, escala `hoverScale`, icono `ink`.
 - Pulsado: tinte `tintActive`, escala `pressScale`.
 - `danger: true` (cerrar): al pasar por encima el fondo pasa a `dangerStrong` y el icono a `onBrand`.
 - `flat: true`: solo el icono en reposo; al pasar por encima aparece el círculo con `tintActive` (o `dangerStrong` si es `danger`). Se usa en la barra de título y dentro de las listas.
 - Desactivado: icono `inkDisabled`.
 
 ### `Tooltip` — qué hace un control
-- Fondo `surfacePopup`, borde `hairlineStrong`, radio `radiusSmall`, relleno `tooltipPaddingX` × `tooltipPaddingY`, texto `fontSizeSmall`.
+- Fondo `surfacePopup`, sin borde, radio `radiusSmall`, relleno `tooltipPaddingX` × `tooltipPaddingY`, texto `fontSizeSmall`.
 - Dos partes: la acción en `ink` y, si tiene, el atajo en `inkMuted` (`Atrás  Alt+←`).
 - Siempre en una sola línea. Aparece tras `tooltipDelay` (1 s), con fundido `durationFast`; se oculta al pulsar. Encima del control; debajo en la barra de título (`below`). Nunca se sale de la ventana.
 - **Todo botón de solo icono lleva tooltip.** En `IconButton`: `tooltip`, `shortcut` y `tooltipBelow`. El texto es un verbo o sustantivo corto en español; el atajo, el mismo que define `Main.qml`.
 
 ### `FindBar` — buscar en la página
-- Píldora flotante de `findBarWidth` × `controlHeight`, **centrada bajo la barra de título** (a `floatingMargin`), con el degradado `controlsStart → controlsEnd` de los controles y borde `hairline` (`focusRing` con el foco en el campo).
+- Píldora flotante de `findBarWidth` × `controlHeight`, **centrada bajo la barra de título** (a `floatingMargin`), con el degradado `controlsStart → controlsEnd` de los controles, sin borde (anillo `focusRing` con el foco en el campo).
 - Contenido: icono de búsqueda (`brandLight1` con foco), campo sin fondo, contador en `inkMuted` ("2 de 7") o "Sin coincidencias" en `danger`, y tres `IconButton` planos: anterior, siguiente, cerrar. Sus tooltips salen hacia abajo.
 - Aparece con fundido (`durationBase`) y un pequeño desplazamiento desde arriba.
 - Busca mientras se escribe. Intro: siguiente; Mayús+Intro: anterior; Esc: cerrar (el teclado vuelve a la página y se quita el resaltado).
@@ -261,14 +261,14 @@ Window (bgBase, sin marco)
 - Cifras: «123 MB», o «1,2 GB» desde 1024 MB; «3 % · 120 MB» (CPU y memoria); porcentajes con un decimal por debajo de 10 («0,4 %»). La CPU es del equipo entero (100 % = todos los núcleos).
 
 ### `ZoomIndicator` — zoom de la pestaña
-- Píldora de `controlHeight` **arriba a la derecha**, bajo la barra de título (a `floatingMargin` de ella y `margin` del borde), con el degradado de los controles y borde `hairline`.
+- Píldora de `controlHeight` **arriba a la derecha**, bajo la barra de título (a `floatingMargin` de ella y `margin` del borde), con el degradado de los controles, sin borde.
 - Contenido: `IconButton` plano "−", el porcentaje (`ink`, DemiBold, ancho fijo `zoomLabelWidth` para que no baile), "+" y, si no está al 100 %, un separador `line` y "Restablecer" (`inkSecondary`, `ink` al pasar por encima).
 - Aparece (fundido y desplazamiento, `durationBase`) con cada cambio de zoom de la pestaña activa; se queda `zoomIndicatorHold` (2 s) desde el último cambio y se cierra solo. Con el ratón encima no se cierra; al salir vuelve a contar. Cambiar de pestaña no lo muestra.
 - Pasos de Chrome: 25, 33, 50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200, 250, 300, 400, 500 %. Atajos: Ctrl + `+` / `=` / `+` numérico, Ctrl + `-`, Ctrl + `0`. El zoom es de la pestaña y se mantiene al navegar dentro de ella.
 
 ### `ControlsTab` — controles inferiores ocultos
 - Los controles inferiores se ocultan solos `controlsHold` (2 s) después de dejar de usarlos (ratón encima, escribiendo en la dirección o con una lista suya abierta los mantiene), con el fundido y desplazamiento de la pantalla completa. Al abrir Mitis se ven y se ocultan a los 2 s. No vuelven al pasar por el borde inferior ni al desplazar la página. En la página de nueva pestaña no se ocultan (no hay página que tapar).
-- Ocultos, en el centro del borde inferior queda una pestaña de `controlsTabHeight` y como mucho `controlsTabMaxWidth`, redondeada solo arriba (`radiusSmall`), con el degradado de los controles y borde `hairline` (`hairlineHover` al pasar): el título de la página en `fontSizeSmall` `inkSecondary` (`ink` al pasar). Al pasar el ratón, los controles vuelven. No en pantalla completa ni con Configuración.
+- Ocultos, en el centro del borde inferior queda un **relieve** que sale del borde, de `controlsTabHeight` de alto y, en su parte plana, como mucho `controlsTabMaxWidth`: cada lado es una curva en S de `controlsTabSlope` de ancho (tensión `controlsTabCurve`), horizontal abajo, donde se funde con el borde, y horizontal arriba; sin borde, con el degradado de los controles (`SurfaceShape`, que también lleva el vidrio): el título de la página en `fontSizeSmall` `inkSecondary` (`ink` al pasar). Al pasar el ratón, los controles vuelven. No en pantalla completa ni con Configuración.
 
 ### Aviso de micrófono y cámara (icono de la ventana)
 - Lo dibuja `CaptureIndicator` (C++), no QML: el icono de Mitis con un círculo rojo (`dangerStrong` de Nocturno, fijo en todos los temas) abajo a la derecha, del 62 % del icono, con el símbolo blanco `microphone`, `camera` o `camera-microphone` (desde 20 px; a 16 px solo el círculo).
@@ -279,7 +279,7 @@ Window (bgBase, sin marco)
 - Solo para contenido para escuchar o ver (música, vídeos, streaming). Las llamadas y reuniones no lo usan: una página con cámara, micrófono o pantalla capturándose, o con una conexión WebRTC que recibe audio o vídeo, no informa de nada (`media.js`), y una pestaña que empieza a sonar solo se lleva el mini reproductor si tiene algo que reproducir.
 - Solo cuando suena **otra** pestaña: en la que reproduce no hace falta (está su propio reproductor), salvo con Configuración abierta encima.
 - **Tamaño fijo** (`miniPlayerWidth` × `miniPlayerHeight`: 270 × 34, el mismo alto que el campo de dirección): no crece con el título, que se acorta con "…".
-- **Negro en todos los temas** (como la paleta de DevTools): píldora `miniPlayerBg` con borde `miniPlayerLine`; título en `miniPlayerInkSoft` (`miniPlayerInk` al pasar por encima).
+- **Negro en todos los temas** (como la paleta de DevTools): píldora `miniPlayerBg` sin borde; título en `miniPlayerInkSoft` (`miniPlayerInk` al pasar por encima).
 - A la izquierda, el **favicon de la plataforma** que suena (YouTube, Spotify, Apple Music…), atenuado en pausa. Si no hay favicon, el icono `music` (`miniPlayerInk` sonando, `miniPlayerInkSoft` en pausa). Título `título · artista` si la página da artista; clic en él: ir a la pestaña que suena.
 - **Botones sin fondo ni borde** (anterior, reproducir/pausa, siguiente), de `miniPlayerButtonSize`: solo el icono, relleno y redondeado (`media-previous`, `media-play`, `media-pause`, `media-next`), de `miniPlayerIconSize` y blanco (`miniPlayerInk`). Al pasar el ratón, el icono se funde (`durationBase`) a un degradado diagonal `miniPlayerHoverStart → miniPlayerHoverEnd` (el de la marca, fijo en todos los temas) y crece suavemente a `miniPlayerHoverScale` (`durationBase`, `OutCubic`); al pulsar, `pressScale`. "Siguiente" se desactiva (35 % de opacidad) si la página no lo ofrece. El degradado lo pinta `IconProvider` (`Icon.colorEnd`), sin shaders.
 ### Pestaña con sonido
@@ -327,7 +327,7 @@ Window (bgBase, sin marco)
 - Minimalista y en una columna centrada de hasta `ntpMaxWidth`: logo, buscador, accesos rápidos, noticias. Se desplaza si no cabe.
 - **Fondo:** el del tema (`ThemeBackground`, compartido con Configuración), un radial `bgGlow → bgMid → bgBase` desde arriba a la izquierda (como StartCode). Con imagen propia, la imagen a pantalla completa (recortada, decodificada al tamaño de la pantalla para no gastar RAM) y encima un velo `backgroundScrim`.
 - **Logo:** el completo de Mitis (oscuro o claro según el tema), `ntpLogoWidth` de ancho, centrado sobre el buscador a `ntpLogoSpacing`.
-- **Buscador:** píldora de `ntpSearchHeight`, `surfaceFloat`, texto `fontSizeLarge`, icono de búsqueda; borde `focusRing` con foco. Tiene el foco al abrir una pestaña nueva.
+- **Buscador:** píldora de `ntpSearchHeight`, `surfaceFloat`, texto `fontSizeLarge`, icono de búsqueda (en `brandLight1` con el foco); sin borde ni anillo de foco. Tiene el foco al abrir una pestaña nueva.
 - **Accesos rápidos:** cuadros de `tileSize` con el favicon del sitio (`tileIconSize`) sobre un círculo `faviconBackdrop` de `tileIconBackdrop` (muchos favicons son negros y desaparecerían sobre el fondo oscuro), y el nombre debajo en `inkSecondary`. Sin favicon, la inicial del sitio en `brandLight1`. Los favicons vienen del servicio de iconos de DuckDuckGo y quedan en la caché en disco. La ✕ para quitar aparece al pasar por encima. Hasta `quickLinksMax`; el último cuadro es "Añadir".
 - **Noticias:** encabezado con icono `news` en `brandLight1`, tarjetas `NewsCard` (titular de hasta dos líneas en `ink`, fuente y antigüedad en `inkMuted`), en dos columnas desde `ntpNewsTwoColumnsWidth`.
 - **Botones de fondo** arriba a la derecha: cambiar (abre el selector de archivos) y quitar (solo con imagen propia). Lo mismo está en Configuración → Nueva pestaña.
@@ -335,7 +335,7 @@ Window (bgBase, sin marco)
 ### Diálogos (`QuickLinkEditor`)
 - `Popup` modal centrado, ancho `dialogWidth`, fondo `PopupBackground`, velo `backgroundScrim` detrás.
 - Título en `fontSizeTitle` DemiBold, campos `FormField` (fondo `tintSunken`, radio `radiusSmall`, borde `focusRing` con foco), botones `TextButton` abajo a la derecha: cancelar primero, la acción principal (`primary`, degradado de marca) al final.
-- `TextButton` con `danger` (sin `primary`): acción arriesgada y secundaria. Mismo fondo que un botón normal, texto en `danger` y, al pasar por encima, borde en `danger`.
+- `TextButton` con `danger` (sin `primary`): acción arriesgada y secundaria. Mismo fondo que un botón normal (sin borde, como todos) y texto en `danger`.
 - Las filas clicables de un `Popup` sobre la página usan `TapHandler` con `gesturePolicy: TapHandler.ReleaseWithinBounds` (agarre exclusivo): con la política por defecto, lo que hay debajo (una noticia, un acceso rápido de la nueva pestaña) recibe también el clic.
 
 ### `SettingsPage` — Configuración
@@ -346,7 +346,7 @@ Window (bgBase, sin marco)
 - **Índice** a la izquierda, de `settingsNavWidth`, solo si la página mide al menos `settingsNavBreakpoint`. Es una lista con su propio desplazamiento que ocupa como mucho `settingsNavHeightRatio` (40 %) del alto; sigue a la sección a la vista y la mantiene en su tercio central (`durationSlow`). una fila de `popupRowHeight` por sección (icono `inkMuted` y nombre DemiBold `inkSecondary`; hover `tintHover`). La sección a la vista: fondo `tintActive`, barra `markerWidth` con el degradado de marca, icono `brandLight1` y nombre Bold `ink`. Pulsar una fila desplaza hasta la sección (`durationSlow`, `easeOut`); al desplazarse, el índice sigue a la sección a la vista.
 - **Logo completo de Mitis** al pie de la ventana, centrado en la columna del índice, de `settingsMitisLogoWidth` (180) de ancho y `settingsSectionSpacing` sobre el borde inferior: `mitis-logo-dark.png` en los temas oscuros y `mitis-logo-light.png` en el Claro. Siempre visible: en una ventana baja, el índice se acorta (y se desplaza) para dejarle sitio.
 - **«by StartCode»** al final de la columna de ajustes, centrado: «by» en `fontSizeSmall` `inkMuted` y el logo de StartCode de `settingsLogoWidth` (80) × la mitad, al 70 % de opacidad (100 % con el ratón encima, `durationFast`). Sin fondo: `startcode.png` (claro) en los temas oscuros y `startcode-light.png` (tinta del Claro `#1d1631` y su violeta `#7c3aed`, sacado de `startcode.png` cambiando sus dos colores) en el Claro.
-- **Bordes que se funden:** el índice y la columna de ajustes desvanecen lo que llega a su borde de arriba o de abajo (solo si hay más contenido por ese lado). Franjas de `settingsFadeHeight` hechas de `settingsFadeSteps` escalones del propio fondo del tema con opacidad creciente hacia el borde (`EdgeFade`), sin shaders.
+- **Bordes que se funden:** el índice y la columna de ajustes desvanecen lo que llega a su borde de arriba o de abajo (solo si hay más contenido por ese lado). En la columna de ajustes la franja es más alta (`settingsContentFadeHeight`, `settingsContentFadeSteps` escalones): los ajustes parecen salir del fondo y volver a él. Franjas (en el índice, de `settingsFadeHeight` y `settingsFadeSteps` escalones) hechas de escalones del propio fondo del tema con opacidad creciente hacia el borde en curva suave (`EdgeFade`), sin shaders.
 - **Columna** de hasta `settingsMaxWidth`; índice y columna van juntos y centrados. Entre secciones, `settingsSectionSpacing`. Cada sección: icono `brandLight1` y título `fontSizeLarge` Bold `ink`, una nota opcional en `fontSizeSmall` `inkSecondary` y una tarjeta (`surfaceFloat`, borde `hairline`, `radius`) con los ajustes.
 - **Fila de ajuste:** al menos `settingsRowHeight`; título `fontSize` DemiBold `ink` y descripción `fontSizeSmall` `inkMuted` a la izquierda (con icono opcional `inkSoft` delante), controles (`TextButton`, `Toggle`, `Chip`) a la derecha. Entre filas, separador `line` con margen `margin`. Estados en píldora: borde y texto Bold `ok` («Disponible») o `warn` («No disponible»), alto `buttonSizeSmall`.
 - **Elección única en filas** (`OptionRow`, «Al iniciar»): título y descripción con un `RadioMark` a la derecha; toda la fila se pulsa (hover `tintHover`), la elegida con fondo `tintActive` y título Bold.
@@ -430,17 +430,20 @@ Window (bgBase, sin marco)
 - Los tipos de `accept` (`image/*`, `.pdf`…) se convierten en el filtro «Archivos admitidos (*.png *.jpg…)», con «Todos los archivos (*)» como alternativa.
 
 ### `AddressBar` — campo de dirección
-- Píldora de `controlHeight`, relleno degradado `fillStart → fillEnd`, borde `hairline`.
+- Píldora de `controlHeight`, relleno degradado `fillStart → fillEnd`, sin borde.
 - **Dos modos:**
   - **Reposo** (sin foco, también tras Enter o Escape): muestra el **título corto** de la página en `inkStrong`, centrado, y el campo se encoge a ese texto más `margin + spacing` a cada lado (`compactWidth`). En páginas web, a la izquierda, el botón del sitio (ver «Botón y panel del sitio»). Hover: tinte `tintHover`, borde `hairlineHover` y cursor de mano.
-  - **Escribiendo** (con foco): ocupa todo el hueco entre los grupos de botones, muestra la dirección seleccionada, el icono de búsqueda en `brandLight1` y el borde `focusRing`.
+  - **Escribiendo** (con foco): ocupa todo el hueco entre los grupos de botones, muestra la dirección seleccionada, el icono de búsqueda en `brandLight1` y el anillo `focusRing`.
 - El cambio de ancho se anima con `durationBase` y `easeOut`. Los botones acompañan al campo: la separación entre ellos (`2 × spacing`) es la misma en ambos modos y todo el grupo queda centrado.
 - **Título corto:** se corta en el primer guion separado por espacios (` - `, ` – `, ` — `) y se descarta lo que sigue. Los guiones dentro de una palabra no cortan. Sin título, se muestra el dominio; sin dirección, "Buscar" en `inkMuted`. Si aun así no cabe, termina en "…".
 - Progreso de carga: línea de `progressHeight` con el degradado de marca en el borde inferior, dentro del radio.
 
 ### `Glass` — vidrio esmerilado (experimental)
 - **Siempre opcional:** apagada por defecto y no forma parte del diseño de Mitis; el aspecto normal (los tonos de Configuración en cada tema) es el que vale. Lo enciende Configuración → Apariencia, «Transparencia con desenfoque (experimental)» (`Settings.glassEffect`, apagada por defecto; `Theme.glassEnabled`). La fila dice si la ventana se dibuja con la GPU y con qué API (OpenGL, Direct3D 11/12, Vulkan, Metal); sin GPU, el interruptor está desactivado.
-- En todo lo que flota sobre la página: barra de título, campo de dirección y botones de abajo, pestaña del borde, mini reproductor, buscar en la página, zoom, aviso de pantalla completa, listas desplegables, diálogos sobre la página y tooltips. No dentro de Configuración (la tapa: `glassOpaque`) ni en lo que está dentro de las páginas (nueva pestaña).
+- **En toda la interfaz**, a través de `Surface` (el fondo de los controles y tarjetas): barra de título, campo de dirección y botones, pestaña del borde, mini reproductor, buscar en la página, zoom, avisos (`Notice`, pantalla completa), listas desplegables, diálogos de las páginas, tooltips, barras de la captura de pantalla; y en las páginas propias, el buscador, los accesos rápidos y las noticias de la nueva pestaña, las tarjetas de Configuración y las de las novedades.
+- **Qué se difumina:** el fondo más cercano (`GlassBackdrop`): en la nueva pestaña, Configuración y novedades, su propio fondo (con la imagen propia, si la hay); en los diálogos de una pestaña, la web; en los controles de la ventana, las páginas; en las listas desplegables, `Main.glassBackdrop` (Configuración si está abierta; si no, las páginas).
+- **Fondos:** con el vidrio, `ThemeBackground` añade `GlassAurora`: tres manchas radiales de `brand1`, `brand2` y `brandLight1` (opacidad `glassAuroraOpacity`), para que el vidrio tenga color que difuminar.
+- **Aislado para poder quitarlo:** todo lleva «Glass» en el nombre (`Glass`, `GlassBackdrop`, `GlassAurora`, `glass*` de Theme y Settings) y solo `Surface`, `SurfaceShape` y `ThemeBackground` lo usan. Quitarlo: en `Surface` y `SurfaceShape`, el hijo `Glass` (y la máscara de `SurfaceShape`) y los `glass.active ?`; en `ThemeBackground`, `GlassAurora`; cambiar `GlassBackdrop` por `Item` (o dejarlo, es un Item); borrar esos archivos, la fila de Configuración y las claves de Settings.
 - Copia el trozo de página que tapa el control a media resolución (`ShaderEffectSource` con `sourceRect`), lo difumina (`MultiEffect`, `glassBlur` 48 px, `glassSaturation` 0,3) y lo recorta con la forma del control. Encima, un velo **morado** (`glassTint`), en tres tonos a elegir (Configuración → Apariencia → «Tono del velo», `Settings.glassTone`): lavanda `#c084fc` al 18 %, violeta `#7c3aed` al 30 % y profundo `#2a1352` al 55 % en los temas oscuros (`glassTintsDark`); en el Claro, lilas claros (`glassTintsLight`). El mini reproductor, de texto blanco, usa siempre el de los oscuros (`glassTintDark`). El relleno propio del control pasa a transparente; el borde se mantiene.
 - Sin GPU (backend software) no hay shaders: no se dibuja y el control queda opaco como siempre. En el servidor de desarrollo (Chromium sin GPU) la copia del contenido de la página sale vacía: falta confirmar que con una GPU real sí se copia (ver `docs/PLAN.md`).
 
@@ -471,21 +474,28 @@ Window (bgBase, sin marco)
 - **Anillo de progreso** (`ProgressRing`): con el panel cerrado y la descarga en curso, un arco de `progressRingWidth` sobre el borde del botón, desde arriba en el sentido del reloj, en `brandLight1` sobre una pista `tintActive`, que avanza con el porcentaje. Sin total conocido, un arco de `progressIndeterminateSpan` gira (`durationSpin`). En pausa, el arco en `inkMuted` y quieto. Aparece con fundido (`durationBase`) y acompaña la escala del botón al pasar por encima o pulsar.
 - Se dibuja con `QtQuick.Shapes` (`PathAngleArc`; `CurveRenderer` para bordes suaves con Qt 6.6+), sin efectos de GPU ni sombras. Un trazo de `ShapePath` no admite degradado: por eso el color plano de marca.
 
+### `ReleaseNotesPage` — novedades tras actualizar
+- En su propia pestaña («Novedades de Mitis», icono de Mitis), sobre el fondo del tema (`ThemeBackground`); los controles inferiores no se ocultan, como en la nueva pestaña.
+- Columna centrada de hasta `releaseNotesMaxWidth`: logo completo (`ntpLogoWidth`), título en `fontSizeHeading` Bold `ink` y «Versión x.y.z» en `fontSizeTitle` `inkSecondary`.
+- Un grupo por sección del CHANGELOG («Nuevo», «Cambios», «Correcciones», «Ya no está»), separados `releaseNotesGroupSpacing`: encabezado como el de Configuración (icono `brandLight1`, `fontSizeLarge` Bold) y tarjeta `surfaceFloat` sin borde; cada cambio con un punto de `releaseNotesDotSize` con el degradado de marca y el texto en `ink` (Markdown: negrita y código).
+- Al final, `TextButton` `primary` «Entendido», que cierra la pestaña.
+
 ### Botón de actualizar (`UpdateButton`) y `UpdatePopup`
 - Solo con una versión nueva de Mitis (`Updates.available`), **después de Opciones** y solo en la ventana principal. Recibe su tramo del degradado con `tone(x)`, como los demás.
 - Es un `IconButton` `update` encendido (icono en `brandLight1`) dentro de un **anillo de `updateRingWidth` con el degradado de marca** `brand1 → brand2` (un círculo con el degradado detrás del botón, que asoma por el borde). El anillo acompaña la escala del botón al pasar por encima o pulsar.
 - **Pulso** para que se note: un aro de `updateRingWidth` en `brandLight1` crece de 1 a `updatePulseScale` mientras se desvanece (`updatePulseDuration`, `OutCubic`), espera `updatePulsePause` y repite. Sin sombras ni efectos de GPU.
 - Pulsarlo abre o cierra `UpdatePopup`: `Popup` hacia arriba anclado al botón (borde derecho alineado, `floatingMargin`), ancho `updatePopupWidth`, fondo `PopupBackground`, relleno `margin`, fundido `durationFast`. Título «Actualizar ahora» en `ink` DemiBold; debajo, en `fontSizeSmall` `inkMuted`, qué pasará (o el avance de la descarga, o el error en `danger`); abajo a la derecha, `TextButton` «Cancelar» (cierra el popup) y `primary` «Confirmar» (o «Reintentar»). Mientras se descarga no se cierra al pulsar fuera.
 
-### `DownloadPanel` — descarga actual
+### `DownloadPanel` — descargas en curso
 - `Popup` hacia arriba anclado al botón de descargas (borde derecho alineado, `floatingMargin` de separación), ancho `downloadPanelWidth`, fondo `PopupBackground`, relleno `margin`. Fundido `durationFast`. No toma el foco del teclado (se abre solo mientras se navega). Se cierra con su ✕ o pulsando fuera.
-- Muestra **solo la descarga más reciente** (`Downloads.currentId`):
-  - Arriba: icono de estado (`downloads` en `brandLight1` en curso, `inkMuted` en pausa o cancelada; `download-done` en `ok`; `download-failed` en `danger`), nombre del archivo en `ink` DemiBold acortado por el centro con «…» (conserva la extensión) y un `IconButton` plano `close` («Cerrar»).
+- Muestra **todas las descargas de la tanda**: las que siguen en curso y las que terminaron desde que se abrió, la más reciente arriba, separadas `margin`. Con muchas, la lista se desplaza a partir de `downloadPanelMaxHeight`.
+  - Cabecera en `fontSizeSmall` DemiBold `inkSecondary`: «Descargando 2 archivos», «Descargando 1 archivo» o «Descarga(s) terminada(s)», y un `IconButton` plano `close` («Cerrar»).
+  - Cada fila: icono de estado (`downloads` en `brandLight1` en curso, `inkMuted` en pausa o cancelada; `download-done` en `ok`; `download-failed` en `danger`) y nombre del archivo en `ink` DemiBold acortado por el centro con «…» (conserva la extensión).
   - `ProgressBar` (en curso, en pausa y completa): `downloadBarHeight`, pista `tintActive`, relleno con el degradado de marca `brand1 → brand2`; sin total conocido, un tramo de `progressIndeterminateSpan` recorre la pista (`durationIndeterminate`).
-  - Estado en `fontSizeSmall` `inkSecondary`: «3,2 MB de 10 MB» (solo lo recibido sin total), «… · En pausa», «Completada · 10 MB», «Cancelada»; «Error: …» en `danger`.
-  - En curso, a la derecha del estado: `IconButton` planos de `buttonSizeSmall` pausar/reanudar (`pause`/`play`) y cancelar (`download-cancel`, `danger`).
-  - Terminada: `TextButton` «Abrir carpeta» y «Abrir» (`primary`: abre o ejecuta el archivo), alineados a la derecha.
-- **Ciclo:** se abre solo al empezar una descarga. Al terminar (bien, con error o cancelada) se vuelve a abrir aunque se hubiera cerrado y se queda `downloadPanelHold` (10 s); luego se cierran el panel y el botón. Con el ratón encima no se cierra; al salir vuelve a contar. Reabrirlo con el botón durante esa espera reinicia la cuenta. Si empieza otra descarga mientras tanto, el panel pasa a la nueva y el botón se queda. Si al cerrarse queda otra descarga en curso, el botón se queda con ella.
+  - Estado en `fontSizeSmall`: «3,2 MB de 10 MB» (solo lo recibido sin total), «… · En pausa», «Cancelada» en `inkSecondary`; «Completada · 10 MB» en `ok`; «Error: …» en `danger`.
+  - A la derecha del estado, `IconButton` planos de `buttonSizeSmall`: en curso, pausar/reanudar (`pause`/`play`) y cancelar (`download-cancel`, `danger`); terminada, abrir la carpeta (`folder`) y abrir el archivo (`open-file`).
+- **Ciclo:** se abre solo al empezar cada descarga y al terminar cada una (aunque se hubiera cerrado), para que se vea cuál terminó. Cuando ya no queda ninguna en curso, se queda `downloadPanelHold` (10 s); luego se cierra, olvida las terminadas y el botón desaparece. Con el ratón encima no se cierra; al salir vuelve a contar. Reabrirlo con el botón durante esa espera reinicia la cuenta. Si empieza otra mientras tanto, se añade arriba y la cuenta se para.
+- El **anillo del botón** (panel cerrado) suma las que siguen en curso: lo recibido entre el total de todas (indeterminado si alguna no lo dice), en `inkMuted` si están todas en pausa.
 - `ProgressBar` (`value` 0..1, `indeterminate`) es reutilizable.
 
 ### Listas desplegables (`TabsPopup`, `OptionsPopup`)
@@ -541,7 +551,7 @@ Dos modos independientes. Con cualquiera de ellos la ventana pasa a pantalla com
 - **De ventana** (**F11**, alterna): se ocultan la barra de título y los controles inferiores (con el mini reproductor); la página ocupa todo. Al llevar el ratón a la franja inferior (`fullscreenRevealEdge`, 4 px) los controles aparecen flotando (fundido y desplazamiento, `durationBase`) y se esconden al alejarse de ellos. Siguen visibles mientras se escribe en la dirección (Ctrl+L los muestra) o hay una lista suya abierta. La búsqueda y el zoom funcionan igual, pegados al borde superior.
   - Sale solo con **F11**: Esc queda para la página y las listas (cerrar un diálogo web, una lista o la búsqueda no debe sacar de la pantalla completa).
   - Un vídeo puede entrar en pantalla completa de página desde F11; al salir de ella se vuelve a F11. F11 durante la de página sale de las dos.
-- **Aviso** (`FullscreenHint`): al entrar, una píldora centrada arriba (a `floatingMargin`) de `controlHeight`, degradado `controlsStart → controlsEnd`, borde `hairline` y texto `ink`: «Pulsa Esc para salir de la pantalla completa» (página) o «Pulsa F11 para salir de la pantalla completa» (ventana). Aparece con fundido y desplazamiento (`durationBase`), se queda `fullscreenHintHold` (3 s) y se desvanece. No recibe clics. Desaparece al salir.
+- **Aviso** (`FullscreenHint`): al entrar, una píldora centrada arriba (a `floatingMargin`) de `controlHeight`, degradado `controlsStart → controlsEnd`, sin borde, y texto `ink`: «Pulsa Esc para salir de la pantalla completa» (página) o «Pulsa F11 para salir de la pantalla completa» (ventana). Aparece con fundido y desplazamiento (`durationBase`), se queda `fullscreenHintHold` (3 s) y se desvanece. No recibe clics. Desaparece al salir.
 
 ---
 

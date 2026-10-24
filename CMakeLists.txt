@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(Mitis
-    VERSION 0.9.1
+    VERSION 0.10.0
     DESCRIPTION "Navegador web ligero, multiplataforma y con interfaz propia"
     LANGUAGES CXX
 )
@@ -150,6 +150,13 @@ qt_add_resources(mitis "scripts"
     FILES assets/scripts/media.js assets/scripts/devtools.js assets/scripts/drm.js assets/scripts/google.js
 )
 
+# Cambios de cada versión: la pestaña de novedades tras actualizarse
+# (Updates.takeReleaseNotes) lee la sección de la versión, en :/CHANGELOG.md
+qt_add_resources(mitis "changelog"
+    PREFIX "/"
+    FILES CHANGELOG.md
+)
+
 # Fuente de la interfaz: Nunito (SIL OFL: assets/fonts/OFL.txt), en :/fonts
 qt_add_resources(mitis "fonts"
     PREFIX "/fonts"
@@ -169,6 +176,10 @@ set(MITIS_QML_FILES
     qml/AddressBar.qml
     qml/SiteInfoPopup.qml
     qml/Glass.qml
+    qml/GlassBackdrop.qml
+    qml/GlassAurora.qml
+    qml/Surface.qml
+    qml/SurfaceShape.qml
     qml/ScreenshotOverlay.qml
     qml/TabsPopup.qml
     qml/OptionsPopup.qml
@@ -209,6 +220,7 @@ set(MITIS_QML_FILES
     qml/Notice.qml
     qml/UpdateButton.qml
     qml/UpdatePopup.qml
+    qml/ReleaseNotesPage.qml
     qml/DevToolsWindow.qml
     qml/ProtectedContentNotice.qml
     qml/PageDialog.qml

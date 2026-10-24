@@ -13,12 +13,10 @@ Item {
 
     implicitHeight: content.implicitHeight + 2 * Theme.margin
 
-    Rectangle {
+    Surface {
         anchors.fill: parent
         radius: Theme.radius
-        color: Theme.surfaceFloat
-        border.width: 1
-        border.color: hover.hovered ? Theme.hairlineHover : Theme.hairline
+        fill: Theme.surfaceFloat
 
         Rectangle {
             anchors.fill: parent

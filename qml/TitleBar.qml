@@ -5,7 +5,7 @@ import QtQuick.Window
 // Barra de título de Mitis: marca a la izquierda y controles de ventana
 // a la derecha. Se arrastra para mover la ventana y con doble clic se
 // maximiza o restaura.
-Rectangle {
+Surface {
     id: root
 
     required property Window window
@@ -35,18 +35,8 @@ Rectangle {
     implicitHeight: Theme.titleBarHeight
 
     // Violeta oscuro a la izquierda, rosa oscuro a la derecha
-    gradient: Gradient {
-        orientation: Gradient.Horizontal
-        GradientStop { position: 0.0; color: glass.active ? "transparent" : Theme.titleBarStart }
-        GradientStop { position: 1.0; color: glass.active ? "transparent" : Theme.titleBarEnd }
-    }
-
-    // Vidrio esmerilado (experimental): la página difuminada debajo
-    Glass {
-        id: glass
-        z: -1
-        anchors.fill: parent
-    }
+    fillStart: Theme.titleBarStart
+    fillEnd: Theme.titleBarEnd
 
     // Separador inferior
     Rectangle {

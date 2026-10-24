@@ -501,7 +501,7 @@ Item {
     }
 
     // ── Barra de arriba: qué hacer y atajos ──────────────────────────
-    Rectangle {
+    Surface {
         id: topBar
         visible: root.mode === "hover" || root.mode === "drag" || root.mode === "selected"
         anchors.horizontalCenter: parent.horizontalCenter
@@ -509,9 +509,7 @@ Item {
         width: topRow.implicitWidth + 2 * Theme.margin
         height: Theme.controlHeight + Theme.spacing
         radius: height / 2
-        color: Theme.surfacePopup
-        border.width: 1
-        border.color: Theme.hairlineStrong
+        fill: Theme.surfacePopup
 
         Row {
             id: topRow
@@ -557,15 +555,13 @@ Item {
     }
 
     // ── Acciones bajo la selección ───────────────────────────────────
-    Rectangle {
+    Surface {
         id: actions
         visible: root.mode === "selected" && root.selection !== null
         width: actionRow.implicitWidth + 2 * Theme.margin
         height: Theme.controlHeight + Theme.spacing
         radius: height / 2
-        color: Theme.surfacePopup
-        border.width: 1
-        border.color: Theme.hairlineStrong
+        fill: Theme.surfacePopup
         // Debajo de la selección; si no cabe, dentro de ella, abajo
         x: Math.max(Theme.margin, Math.min(root.width - width - Theme.margin,
                                            frame.x + frame.width / 2 - width / 2))
@@ -610,16 +606,14 @@ Item {
     }
 
     // ── Capturando y aviso final ─────────────────────────────────────
-    Rectangle {
+    Surface {
         visible: root.mode === "capturing" || root.mode === "done"
         anchors.horizontalCenter: parent.horizontalCenter
         y: Theme.margin * 2
         width: noticeText.implicitWidth + 2 * Theme.margin
         height: Theme.controlHeight
         radius: height / 2
-        color: Theme.surfacePopup
-        border.width: 1
-        border.color: Theme.hairlineStrong
+        fill: Theme.surfacePopup
 
         Text {
             id: noticeText

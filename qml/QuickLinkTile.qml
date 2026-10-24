@@ -22,15 +22,13 @@ Item {
 
     readonly property bool hovered: hover.hovered
 
-    Rectangle {
+    Surface {
         id: tile
         anchors.horizontalCenter: parent.horizontalCenter
         width: Theme.tileSize
         height: Theme.tileSize
         radius: Theme.radius
-        color: Theme.surfaceFloat
-        border.width: 1
-        border.color: root.hovered ? Theme.hairlineHover : Theme.hairline
+        fill: Theme.surfaceFloat
         scale: tap.pressed ? Theme.pressScale : (root.hovered ? Theme.hoverScale : 1)
 
         Behavior on scale {

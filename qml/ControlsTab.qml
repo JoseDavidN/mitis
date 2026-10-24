@@ -1,7 +1,7 @@
 import QtQuick
 
-// Pestaña del borde inferior cuando los controles están ocultos: una
-// protuberancia pequeña, centrada, con el título de la página. Al pasar el
+// Pestaña del borde inferior cuando los controles están ocultos: un relieve
+// pequeño que sale del borde, centrado, con el título de la página. Al pasar el
 // ratón por encima, los controles vuelven (`hovered`, lo atiende Main).
 Item {
     id: root
@@ -9,38 +9,30 @@ Item {
     property string title: ""
     readonly property bool hovered: hover.hovered
 
+    // Los lados son curvas suaves de `controlsTabSlope` de ancho que salen del
+    // borde de la ventana: el título va en la parte plana de arriba
     implicitWidth: Math.min(Theme.controlsTabMaxWidth, label.implicitWidth + 2 * Theme.margin)
+                   + 2 * Theme.controlsTabSlope
     implicitHeight: Theme.controlsTabHeight
 
-    // Redondeada solo arriba: un rectángulo redondeado que se sale por abajo
-    Item {
+    // Un relieve del borde inferior: cada lado sube en una S (horizontal
+    // abajo, donde se funde con el borde, y horizontal arriba), sin bordes
+    SurfaceShape {
         anchors.fill: parent
-        clip: true
-
-        Rectangle {
-            width: parent.width
-            height: parent.height + radius
-            radius: Theme.radiusSmall
-            border.width: 1
-            border.color: root.hovered ? Theme.hairlineHover : Theme.hairline
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: glass.active ? "transparent" : Theme.controlsStart }
-                GradientStop { position: 1.0; color: glass.active ? "transparent" : Theme.controlsEnd }
-            }
-            Glass {
-                id: glass
-                z: -1
-                anchors.fill: parent
-                radius: parent.radius
-            }
+        fillStart: Theme.controlsStart
+        fillEnd: Theme.controlsEnd
+        path: {
+            const w = width, h = height, s = Theme.controlsTabSlope
+            const k = s * Theme.controlsTabCurve
+            return `M 0 ${h} C ${k} ${h} ${s - k} 0 ${s} 0 L ${w - s} 0 `
+                 + `C ${w - s + k} 0 ${w - k} ${h} ${w} ${h} Z`
         }
     }
 
     Text {
         id: label
         anchors.centerIn: parent
-        width: Math.min(implicitWidth, root.width - 2 * Theme.margin)
+        width: Math.min(implicitWidth, root.width - 2 * (Theme.margin + Theme.controlsTabSlope))
         text: root.title !== "" ? root.title : "Mitis"
         color: root.hovered ? Theme.ink : Theme.inkSecondary
         font.pixelSize: Theme.fontSizeSmall

@@ -38,6 +38,9 @@ Window {
     // (Glass) y Configuración con Window.window.graphicsApi. Se pregunta a C++
     // (EngineBridge): GraphicsInfo de QML da «desconocido» demasiado tiempo
     property string graphicsApi: ""
+    // Lo que difumina el vidrio de lo que no está sobre un fondo propio (las
+    // listas desplegables): la Configuración, si está abierta, o las páginas
+    readonly property Item glassBackdrop: settingsOpen ? settingsPage.glassBackdropItem : pages
     onFrameSwapped: {
         if (graphicsApi !== "")
             return
@@ -171,8 +174,29 @@ Window {
                    && links.length === 0) {
             openNewTabPage()
         }
+        // Primera vez tras actualizarse: las novedades, en su pestaña
+        if (!privateMode)
+            openReleaseNotes(Updates.takeReleaseNotes(afterUpdate))
         openLinks(links)
     }
+
+    // ── Novedades tras actualizar ────────────────────────────────────
+    // Una pestaña sin dirección con ReleaseNotesPage encima (como la de nueva
+    // pestaña). No se guarda en la sesión ni en las cerradas: solo se ve
+    // esta vez
+    property var releaseNotes: null
+
+    function openReleaseNotes(notes) {
+        if (!notes || !notes.groups)
+            return
+        releaseNotes = notes
+        tabs.append({ initialUrl: "", url: "", title: "Novedades de Mitis", icon: "qrc:/branding/mitis.png",
+                      audible: false, muted: false, microphone: 0, camera: 0, pinned: false, lifecycle: "active",
+                      deferred: false, special: "notes" })
+        currentIndex = tabs.count - 1
+    }
+
+    readonly property bool showingReleaseNotes: currentView !== null && currentView.special === "notes"
 
     // ── Enlaces de fuera (navegador predeterminado) ──────────────────
     // Cada uno en una pestaña nueva al final, como Chrome (en la de nueva
@@ -302,13 +326,13 @@ Window {
     function refreshIcons() {
         const retired = {}
         for (let i = 0; i < views.count; i++) {
-            const tab = views.itemAt(i)
+            const tab = views.itemAt(i) as BrowserTab
             if (tab && tab.iconRetired && tab.icon.toString() !== "")
                 retired[tab.icon.toString()] = true
         }
         retiredIcons = retired
         for (let i = 0; i < views.count; i++) {
-            const tab = views.itemAt(i)
+            const tab = views.itemAt(i) as BrowserTab
             // Una restaurada sin cargar aún no tiene icono: conserva el guardado
             if (tab && tab.icon.toString() !== "")
                 tabs.setProperty(i, "icon", displayIcon(tab))
@@ -324,11 +348,17 @@ Window {
         if (privateMode || closingWindow)
             return
         const list = []
+        let current = 0
         for (let i = 0; i < tabs.count; i++) {
             const tab = tabs.get(i)
+            // La de novedades no vuelve
+            if (tab.special !== "")
+                continue
+            if (i <= currentIndex)
+                current = list.length
             list.push({ url: tab.url, title: tab.title, icon: sessionIcon(tab.icon, tab.url), pinned: tab.pinned })
         }
-        Settings.setValue("Session/tabs", JSON.stringify({ current: currentIndex, tabs: list }))
+        Settings.setValue("Session/tabs", JSON.stringify({ current: current, tabs: list }))
     }
 
     // false si no había nada que restaurar. Con `deferAll`, ni la que estaba
@@ -350,7 +380,7 @@ Window {
             const pinned = tab.pinned === true
             tabs.append({ initialUrl: url, url: url, title: tab.title ?? "", icon: sessionIcon(tab.icon, url),
                           audible: false, muted: false, microphone: 0, camera: 0, pinned: pinned, lifecycle: "active",
-                          deferred: (deferAll === true || i !== currentIndex) && url !== "" })
+                          deferred: (deferAll === true || i !== currentIndex) && url !== "", special: "" })
             if (pinned)
                 pinnedCount++
         }
@@ -499,7 +529,7 @@ Window {
         const address = target ? target.toString() : ""
         tabs.insert(at, { initialUrl: address, url: address, title: "", icon: "",
                           audible: false, muted: false, microphone: 0, camera: 0, pinned: false, lifecycle: "active",
-                          deferred: false })
+                          deferred: false, special: "" })
         if (activate !== false)
             currentIndex = at
         else if (at <= currentIndex)
@@ -702,6 +732,7 @@ Window {
 
     // Una pestaña sin dirección muestra la página de nueva pestaña
     readonly property bool showingNewTabPage: currentView !== null && currentView.url.toString() === ""
+                                              && currentView.special === ""
 
     // ── Configuración ────────────────────────────────────────────────
     // Página sobre las pestañas (no es una pestaña): mientras está abierta,
@@ -726,8 +757,8 @@ Window {
             currentView.focusPage()
     }
 
-    // La página de la pestaña activa está tapada (nueva pestaña o Configuración)
-    readonly property bool pageHidden: showingNewTabPage || settingsOpen
+    // La página de la pestaña activa está tapada (nueva pestaña, novedades o Configuración)
+    readonly property bool pageHidden: showingNewTabPage || showingReleaseNotes || settingsOpen
 
     // ── Buscar en la página ──────────────────────────────────────────
     // Pestaña en la que se está buscando (la barra se cierra al cambiar de pestaña)
@@ -861,7 +892,7 @@ Window {
     // En la nueva pestaña no se ocultan: no hay página que tapar
     readonly property bool controlsShown: !settingsOpen && (immersive
         ? !pageFullScreen && (controlsInUse || revealHover.hovered)
-        : controlsAwake || showingNewTabPage)
+        : controlsAwake || showingNewTabPage || showingReleaseNotes)
 
     onImmersiveChanged: {
         if (immersive) {
@@ -1057,7 +1088,8 @@ Window {
 
         currentUrl: win.currentView ? win.currentView.url : ""
         pageTitle: win.showingNewTabPage ? "Nueva pestaña"
-                                         : (win.currentView ? win.currentView.title : "")
+                 : win.showingReleaseNotes ? "Novedades de Mitis"
+                 : (win.currentView ? win.currentView.title : "")
         canGoBack: win.currentView ? win.currentView.canGoBack : false
         canGoForward: win.currentView ? win.currentView.canGoForward : false
         loading: win.currentView ? win.currentView.loading : false
@@ -1112,7 +1144,7 @@ Window {
     Item {
         id: pages
         // Lo que se ve difuminado a través de los controles (Glass)
-        objectName: "mitisBackdrop"
+        readonly property bool glassBackdrop: true
         // Desde el borde superior: la barra de título flota encima
         anchors.top: parent.top
         anchors.left: parent.left
@@ -1129,6 +1161,7 @@ Window {
                 required property int index
                 required initialUrl
                 required deferred
+                required special
 
                 readonly property bool current: index === win.currentIndex
 
@@ -1148,14 +1181,23 @@ Window {
                 }
                 Component.onCompleted: if (current) win.currentView = tab
 
-                onUrlChanged: tabs.setProperty(index, "url", url.toString())
+                onUrlChanged: {
+                    tabs.setProperty(index, "url", url.toString())
+                    // Escribir una dirección en la de novedades la convierte en una normal
+                    if (special !== "" && url.toString() !== "") {
+                        special = ""
+                        tabs.setProperty(index, "special", "")
+                    }
+                }
                 onPageLoaded: win.recordVisit(tab)
                 onTitleChanged: {
+                    if (special !== "")
+                        return
                     tabs.setProperty(index, "title", title)
                     if (!win.privateMode)
                         History.updateTitle(tab.url.toString(), title)
                 }
-                onIconChanged: tabs.setProperty(index, "icon", win.displayIcon(tab))
+                onIconChanged: if (special === "") tabs.setProperty(index, "icon", win.displayIcon(tab))
                 onIconRetiredChanged: win.refreshIcons()
                 onMutedChanged: tabs.setProperty(index, "muted", tab.muted)
                 onMicrophoneChanged: tabs.setProperty(index, "microphone", tab.microphone)
@@ -1257,6 +1299,14 @@ Window {
                 win.currentView.focusPage()
             }
         }
+
+        // Novedades tras actualizar, sobre su pestaña
+        ReleaseNotesPage {
+            anchors.fill: parent
+            visible: win.showingReleaseNotes
+            notes: win.releaseNotes
+            onCloseRequested: win.closeTab(win.currentIndex)
+        }
     }
 
     // Configuración: sobre las pestañas y los controles inferiores
@@ -1295,7 +1345,7 @@ Window {
         id: filePicker
     }
 
-    // Descarga actual: se abre sola al empezar y al terminar una descarga
+    // Descargas en curso: se abre solo al empezar y al terminar cada una
     DownloadPanel {
         id: downloadPanel
         parent: bottomBar.downloadsButton

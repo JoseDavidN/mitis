@@ -23,4 +23,9 @@ Shape {
         PathLine { x: 0; y: root.height }
         PathLine { x: 0; y: 0 }
     }
+
+    // Transparencia experimental: manchas de color para el vidrio
+    GlassAurora {
+        anchors.fill: parent
+    }
 }

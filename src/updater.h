@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QString>
 #include <QTimer>
+#include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 
 class QNetworkAccessManager;
@@ -75,6 +76,12 @@ public:
     // Prepara la actualización; al estar lista, readyToRestart
     Q_INVOKABLE void install();
     Q_INVOKABLE void dismiss();
+    // Novedades de esta versión (su sección de CHANGELOG.md, en los
+    // recursos), solo la primera vez que se piden tras actualizarse; si no,
+    // vacío. `updated`: la versión anterior cerró Mitis para actualizarse
+    // (Session/restoreOnce), por si no dejó apuntada su versión (las
+    // anteriores a la 0.9.1). Claves: title, version, groups ([{ name, items }])
+    Q_INVOKABLE QVariantMap takeReleaseNotes(bool updated);
 
     // <0, 0 o >0: 0.8.1 < 0.8.2; 0.9.0-beta < 0.9.0
     static int compareVersions(const QString &a, const QString &b);
@@ -104,6 +111,8 @@ private:
     QNetworkAccessManager *m_network = nullptr;
     QTimer m_timer;
     QHash<QString, QString> m_manifest; // version.txt
+    QString m_previousVersion; // la del arranque anterior ("" si no se sabe)
+    bool m_notesTaken = false;
     QString m_available;
     QString m_error;
     bool m_checking = false;

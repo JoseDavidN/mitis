@@ -40,22 +40,11 @@ Item {
         onTriggered: root.shown = false
     }
 
-    Rectangle {
+    Surface {
         anchors.fill: parent
         radius: height / 2
-        border.width: 1
-        border.color: Theme.hairline
-        gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: glass.active ? "transparent" : Theme.controlsStart }
-            GradientStop { position: 1.0; color: glass.active ? "transparent" : Theme.controlsEnd }
-        }
-        Glass {
-            id: glass
-            z: -1
-            anchors.fill: parent
-            radius: parent.radius
-        }
+        fillStart: Theme.controlsStart
+        fillEnd: Theme.controlsEnd
     }
 
     Text {

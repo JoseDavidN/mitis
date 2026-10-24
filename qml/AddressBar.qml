@@ -162,27 +162,15 @@ TextField {
     // Fondo: el relleno del tema o, con el vidrio activo, la página
     // difuminada con su velo gris (Glass, debajo)
     background: Item {
-        Rectangle {
+        Surface {
             id: field
             anchors.fill: parent
             radius: height / 2
-            border.width: 1
-            border.color: root.editing ? Theme.focusRing
-                                       : (fieldHover.hovered ? Theme.hairlineHover : Theme.hairline)
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: glass.active ? "transparent" : root.fillStart }
-                GradientStop { position: 1.0; color: glass.active ? "transparent" : root.fillEnd }
-            }
-
-            Behavior on border.color { ColorAnimation { duration: Theme.durationFast } }
-
-            Glass {
-                id: glass
-                z: -1
-                anchors.fill: parent
-                radius: parent.radius
-            }
+            // Sin borde; mientras se escribe, el anillo de foco
+            border.width: root.editing ? 1 : 0
+            border.color: Theme.focusRing
+            fillStart: root.fillStart
+            fillEnd: root.fillEnd
 
             // Realce al pasar por encima
             Rectangle {

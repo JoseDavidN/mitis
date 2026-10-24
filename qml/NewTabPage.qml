@@ -49,25 +49,30 @@ Item {
     onVisibleChanged: if (visible) News.refreshIfStale()
 
     // ── Fondo ────────────────────────────────────────────────────────
-    // Del tema
-    ThemeBackground {
+    // Lo que difumina el vidrio de las tarjetas y el buscador
+    GlassBackdrop {
         anchors.fill: parent
-    }
 
-    // Imagen propia, decodificada al tamaño de la pantalla (no al de la foto)
-    Image {
-        id: wallpaper
-        anchors.fill: parent
-        source: Settings.newTabBackground
-        sourceSize: Qt.size(Screen.width, Screen.height)
-        fillMode: Image.PreserveAspectCrop
-        asynchronous: true
-        visible: status === Image.Ready
-    }
-    Rectangle {
-        anchors.fill: parent
-        visible: wallpaper.visible
-        color: Theme.backgroundScrim
+        // Del tema
+        ThemeBackground {
+            anchors.fill: parent
+        }
+
+        // Imagen propia, decodificada al tamaño de la pantalla (no al de la foto)
+        Image {
+            id: wallpaper
+            anchors.fill: parent
+            source: Settings.newTabBackground
+            sourceSize: Qt.size(Screen.width, Screen.height)
+            fillMode: Image.PreserveAspectCrop
+            asynchronous: true
+            visible: status === Image.Ready
+        }
+        Rectangle {
+            anchors.fill: parent
+            visible: wallpaper.visible
+            color: Theme.backgroundScrim
+        }
     }
 
     FileDialog {
@@ -127,18 +132,12 @@ Item {
                     selectByMouse: true
 
                     // Mismo degradado que el campo de dirección y los controles
-                    background: Rectangle {
+                    background: Surface {
                         radius: height / 2
-                        gradient: Gradient {
-                            orientation: Gradient.Horizontal
-                            GradientStop { position: 0.0; color: Theme.controlsStart }
-                            GradientStop { position: 1.0; color: Theme.controlsEnd }
-                        }
-                        border.width: 1
-                        border.color: search.activeFocus ? Theme.focusRing
-                                                         : (searchHover.hovered ? Theme.hairlineHover : Theme.hairline)
-                        Behavior on border.color { ColorAnimation { duration: Theme.durationFast } }
-
+                        fillStart: Theme.controlsStart
+                        fillEnd: Theme.controlsEnd
+                        // Sin borde ni anillo de foco: el icono de búsqueda
+                        // en brandLight1 ya dice que tiene el foco
                         Icon {
                             anchors.left: parent.left
                             anchors.leftMargin: Theme.margin + Theme.spacing / 2
@@ -149,7 +148,6 @@ Item {
                     }
 
                     HoverHandler {
-                        id: searchHover
                         cursorShape: Qt.IBeamCursor
                     }
 

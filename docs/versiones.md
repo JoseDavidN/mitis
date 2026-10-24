@@ -23,10 +23,13 @@ Historial con este esquema (ver [CHANGELOG.md](../CHANGELOG.md)):
 | 0.7.0 | Monitor de rendimiento con la API de dibujo, transparencia con desenfoque (experimental) en toda la interfaz, .dmg universal de macOS con su ventana y botones de macOS, GPU en macOS, pestaña vacía al descargar, rueda en Configuración | `c673816` |
 | 0.8.0 | Captura de pantalla, tonos morados de la transparencia, esquinas redondeadas (Windows 11 y macOS), listas plegadas en Configuración, nombre centrado y .dmg corregido en macOS, barras que se ocultan antes | `1f9f412` |
 | 0.9.0 | Actualizaciones desde el servidor de descargas (botón tras Opciones), informes de cierres inesperados, logo en la nueva pestaña, «Mitis» en vez de «Mitis.exe» en Windows, memoria real en el monitor de Windows | `0e8f5eb` |
+| 0.9.1 | Corrige la caída con pestañas suspendidas (iconos de pestañas descargadas) | `e22e038` |
 
 Las fases 0–2 van juntas en 0.2.0 porque entraron en un solo commit. Esas versiones no tienen etiqueta ni release: son anteriores al workflow de publicación. Si se quieren marcar, basta con etiquetas ligeras (`git tag v0.4.0 d6cfa89`); al subirlas no se publica nada porque esos commits no tienen `.github/workflows/`.
 
-**Versión actual: 0.9.1-beta** (en desarrollo; la 0.9.0 ya se publicó). Solo trae correcciones (la caída con pestañas suspendidas): sube PARCHE. Se publica al subir la etiqueta `v0.9.1`.
+**Versión actual: 0.10.0-beta** (en desarrollo; la 0.9.1 ya tiene commit y se da por publicada). Trae funciones nuevas (pestaña de novedades, vidrio en toda la interfaz): sube MENOR. Se publica al subir la etiqueta `v0.10.0`.
+
+**Regla:** una versión con commit ya está desplegada. Lo siguiente que se haga va en una versión nueva, subida según lo que traiga (MENOR con funciones nuevas, PARCHE con solo correcciones), y su sección del CHANGELOG se escribe en lenguaje claro para quien no sabe de tecnología: es lo que se ve en la pestaña de novedades.
 
 ## Dónde vive la versión
 
@@ -46,6 +49,7 @@ Una sola fuente: `project(Mitis VERSION x.y.z)` en `CMakeLists.txt`. Nunca se es
 - Cada cambio que note quien usa Mitis se apunta en **«Sin publicar»** en el mismo commit que lo introduce, en la sección que toque: **Añadido**, **Cambiado**, **Corregido**, **Eliminado**.
 - Se escribe para usuarios: qué cambia al usar Mitis, no cómo está hecho. Los cambios internos sin efecto visible no se apuntan.
 - Las notas de cada release de GitHub son la sección de su versión en `CHANGELOG.md`.
+- **Pestaña de novedades:** al arrancar por primera vez tras actualizarse, Mitis abre una pestaña con la sección de su versión (la de «Sin publicar» si aún no tiene la suya): un título, la versión y los cambios. El título es una línea `> Título` justo debajo del encabezado de la versión (si falta, «Mitis se ha actualizado»). Es la única vez que se ve: escribir los cambios pensando en esa pestaña.
 
 ## Publicar una versión
 

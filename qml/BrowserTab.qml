@@ -21,6 +21,9 @@ Item {
     property bool deferred: false
     // De una ventana privada: usa el perfil sin disco. Solo al crearla.
     property bool privateMode: false
+    // Página propia de Mitis que muestra esta pestaña, sin dirección ni web
+    // ("notes": novedades tras actualizar; "" en las demás). La pone Main.qml
+    property string special: ""
 
     // ── Estado de la página ──────────────────────────────────────────
     // Hasta que el motor empieza a cargar (o mientras espera, si es una
@@ -722,6 +725,8 @@ Item {
     WebEngineView {
         id: view
         anchors.fill: parent
+        // Lo que difumina el vidrio (Glass) de los diálogos de la pestaña
+        readonly property bool glassBackdrop: true
         profile: root.privateMode ? BrowserProfile.privateProfile : BrowserProfile.profile
         // Visor de PDF integrado (también lo esperan algunos sitios: un
         // navegador sin él parece un motor embebido)

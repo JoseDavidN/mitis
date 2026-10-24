@@ -11,6 +11,7 @@
 #include <QProcess>
 #include <QQmlEngine>
 #include <QRegularExpression>
+#include <QSettings>
 #include <QSharedPointer>
 #include <QTemporaryDir>
 #include <QUrl>
@@ -40,11 +41,20 @@ else
     nohup "$destino" >/dev/null 2>&1 &
 fi
 )sh";
+
+const QString LastVersionKey = QStringLiteral("Updates/lastVersion");
+const QString DefaultNotesTitle = QStringLiteral("Mitis se ha actualizado");
 }
 
 Updater::Updater(QObject *parent)
     : QObject(parent)
 {
+    // Versión del arranque anterior: si es más antigua, Mitis se ha
+    // actualizado (y enseña sus novedades)
+    QSettings settings;
+    m_previousVersion = settings.value(LastVersionKey).toString();
+    settings.setValue(LastVersionKey, QCoreApplication::applicationVersion());
+
     // La primera, al poco de arrancar (sin estorbar al inicio); luego, cada tanto
     m_timer.setSingleShot(true);
     connect(&m_timer, &QTimer::timeout, this, [this] {
@@ -328,6 +338,70 @@ void Updater::dismiss()
 {
     m_dismissed = true;
     emit changed();
+}
+
+QVariantMap Updater::takeReleaseNotes(bool updated)
+{
+    const QString current = QCoreApplication::applicationVersion();
+    const bool newer = m_previousVersion.isEmpty() ? updated
+                                                   : compareVersions(current, m_previousVersion) > 0;
+    if (m_notesTaken || !newer)
+        return {};
+    m_notesTaken = true;
+
+    QFile file(QStringLiteral(":/CHANGELOG.md"));
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        return {};
+    const QStringList lines = QString::fromUtf8(file.readAll()).split(u'\n');
+
+    // La sección de esta versión («## [0.9.1] - fecha», sin la etapa -beta)
+    // o, en una compilación sin publicar, «## [Sin publicar]»
+    const auto find = [&lines](const QString &name) {
+        const QString heading = QStringLiteral("## [") + name + u']';
+        for (qsizetype i = 0; i < lines.size(); ++i) {
+            if (lines[i].startsWith(heading))
+                return i;
+        }
+        return qsizetype(-1);
+    };
+    qsizetype start = find(current.section(u'-', 0, 0));
+    if (start < 0)
+        start = find(QStringLiteral("Sin publicar"));
+    if (start < 0)
+        return {};
+
+    // «> Título» bajo el encabezado (opcional), «### Grupo» y «- cambio»
+    // (un cambio puede seguir en las líneas sangradas de debajo)
+    QString title;
+    QVariantList groups;
+    QString group;
+    QStringList items;
+    const auto flush = [&] {
+        if (!items.isEmpty())
+            groups.append(QVariantMap{ { QStringLiteral("name"), group }, { QStringLiteral("items"), items } });
+        items.clear();
+    };
+    for (qsizetype i = start + 1; i < lines.size(); ++i) {
+        const QString line = lines[i].trimmed();
+        if (lines[i].startsWith(QLatin1String("## ")))
+            break;
+        if (line.startsWith(QLatin1String("### "))) {
+            flush();
+            group = line.mid(4).trimmed();
+        } else if (line.startsWith(QLatin1String("> ")) && title.isEmpty() && group.isEmpty()) {
+            title = line.mid(2).trimmed();
+        } else if (line.startsWith(QLatin1String("- "))) {
+            items.append(line.mid(2).trimmed());
+        } else if (!line.isEmpty() && !items.isEmpty() && lines[i].startsWith(u' ')) {
+            items.last() += u' ' + line;
+        }
+    }
+    flush();
+    if (groups.isEmpty())
+        return {};
+    return { { QStringLiteral("title"), title.isEmpty() ? DefaultNotesTitle : title },
+             { QStringLiteral("version"), current },
+             { QStringLiteral("groups"), groups } };
 }
 
 int Updater::compareVersions(const QString &a, const QString &b)

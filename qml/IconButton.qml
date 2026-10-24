@@ -38,8 +38,6 @@ Item {
         anchors.fill: parent
         radius: width / 2
         color: "transparent"
-        border.width: root.flat && !root.hovered ? 0 : 1
-        border.color: root.hovered && !root.danger ? Theme.hairlineHover : Theme.hairline
         scale: root.pressed ? Theme.pressScale : (root.hovered ? Theme.hoverScale : 1.0)
 
         Behavior on scale {
@@ -51,24 +49,12 @@ Item {
         }
 
         // Relleno
-        Rectangle {
+        Surface {
             visible: !root.flat
             anchors.fill: parent
             radius: parent.radius
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: glass.active ? "transparent" : root.fillStart }
-                GradientStop { position: 1.0; color: glass.active ? "transparent" : root.fillEnd }
-            }
-        }
-
-        // Vidrio esmerilado (experimental): solo en los botones con relleno
-        Glass {
-            id: glass
-            z: -1
-            anchors.fill: parent
-            radius: parent.radius
-            visible: active && !root.flat
+            fillStart: root.fillStart
+            fillEnd: root.fillEnd
         }
 
         // Peligro (cerrar): rosa al pasar por encima

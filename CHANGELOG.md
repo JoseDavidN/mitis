@@ -1,13 +1,34 @@
 # Cambios en Mitis
 
 Todos los cambios que notará quien usa Mitis, versión a versión.
-Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); las versiones siguen el esquema de [docs/versiones.md](docs/versiones.md).
+Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); las versiones siguen el esquema de [docs/versiones.md](docs/versiones.md). La línea `> …` bajo una versión es el título de su pestaña de novedades.
 
 ## [Sin publicar]
 
+> Novedades a la vista y un Mitis de cristal
+
+### Añadido
+
+- Cada vez que Mitis se actualice, la primera vez que lo abras verás una pestaña como esta, con lo nuevo de la versión. Solo aparece esa vez; ciérrala con «Entendido».
+
+### Cambiado
+
+- El aspecto de cristal (Configuración → Apariencia, «Transparencia con desenfoque», en pruebas) llega a todo Mitis: además de los botones y la barra de arriba, ahora también los avisos, las ventanas que piden permiso o confirmación, el buscador, los accesos rápidos y las noticias de la nueva pestaña, y las tarjetas de Configuración. Los fondos ganan unos toques de color para que el efecto luzca. Sigue siendo opcional y viene apagado.
+- La pestañita que queda abajo cuando los botones se esconden tiene ahora forma de relieve: sale del borde con curvas suaves, sin esquinas ni bordes marcados.
+- Los botones, el buscador, el reproductor, los avisos, las listas y las tarjetas ya no tienen borde: se ven más limpios. Al escribir una dirección o buscar dentro de una página sigue apareciendo un contorno de color para que sepas dónde estás escribiendo; el buscador de la nueva pestaña va sin él.
+- En Configuración, los ajustes de la derecha se desvanecen más suavemente arriba y abajo al desplazarlos, como si salieran del fondo.
+
 ### Corregido
 
-- Mitis podía cerrarse de golpe tras llevar un rato abierto (visto en macOS): al mostrar el icono de una pestaña suspendida para ahorrar memoria. Ahora sus iconos se muestran de otra forma y ya no ocurre.
+- Si empezabas una descarga mientras otra seguía bajando, la anterior desaparecía del panel de descargas y no había forma de saber cuándo terminaba. Ahora el panel muestra todas a la vez, cada una con su avance; las que terminan se quedan en la lista como «Completada», con sus botones para abrir el archivo o la carpeta, y el círculo del botón de descargas muestra el avance de todas juntas.
+
+## [0.9.1] - 2026-10-23
+
+> Mitis, más estable
+
+### Corregido
+
+- Mitis podía cerrarse de golpe después de llevar un rato abierto, sobre todo en Mac, cuando tenías muchas pestañas abiertas. Ya no ocurre.
 
 ## [0.9.0] - 2026-10-23
 

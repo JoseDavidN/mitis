@@ -287,6 +287,10 @@ seguridad de Chromium: no conviene quedarse mucho en una.
   (`Tool gperf is required`, `Python3 html5lib is missing`…). Instalarla y repetir.
 - **Sin memoria** (compilador que muere, `out of memory`, el equipo se congela): repetir
   con menos trabajos (`-Trabajos 4` / `--trabajos 4`); continúa donde se quedó.
+- **«Too many open files» en macOS:** macOS deja abrir pocos archivos a la vez (256) y
+  Chromium necesita muchos más. El script ya sube el límite; con una versión anterior del
+  script, antes de repetir: `ulimit -n 65536` en la misma terminal (o `10240` si lo
+  rechaza). Continúa donde se quedó.
 - **Rutas demasiado largas en Windows:** ruta de trabajo corta y `LongPathsEnabled`.
 - **Mitis no arranca con el Qt nuevo** («Cannot mix incompatible Qt library», símbolos que
   faltan): la versión del Qt base y la del archivo no coinciden.
