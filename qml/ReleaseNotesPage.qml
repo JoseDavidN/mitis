@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import Mitis.Core
 
 // Novedades de la versión instalada: título, versión y la lista de cambios
 // (Updates.takeReleaseNotes, de CHANGELOG.md). Se ve en su propia pestaña
@@ -50,7 +51,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     width: Theme.ntpLogoWidth
                     height: width * implicitHeight / Math.max(1, implicitWidth)
-                    source: Theme.dark ? "qrc:/branding/mitis-logo-dark.png" : "qrc:/branding/mitis-logo-light.png"
+                    source: Colors.dark ? "qrc:/branding/mitis-logo-dark.png" : "qrc:/branding/mitis-logo-light.png"
                     fillMode: Image.PreserveAspectFit
                     smooth: true
                     mipmap: true
@@ -63,7 +64,7 @@ Item {
                     width: parent.width
                     horizontalAlignment: Text.AlignHCenter
                     text: root.notes ? root.notes.title : ""
-                    color: Theme.ink
+                    color: Colors.ink
                     font.pixelSize: Theme.fontSizeHeading
                     font.weight: Font.Bold
                     wrapMode: Text.Wrap
@@ -72,7 +73,7 @@ Item {
                     width: parent.width
                     horizontalAlignment: Text.AlignHCenter
                     text: root.notes ? "Versión " + root.notes.version : ""
-                    color: Theme.inkSecondary
+                    color: Colors.inkSecondary
                     font.pixelSize: Theme.fontSizeTitle
                 }
             }
@@ -96,12 +97,12 @@ Item {
                         Icon {
                             anchors.verticalCenter: parent.verticalCenter
                             name: group.info.icon
-                            color: Theme.brandLight1
+                            color: Colors.brandLight1
                         }
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: group.info.name
-                            color: Theme.ink
+                            color: Colors.ink
                             font.pixelSize: Theme.fontSizeLarge
                             font.weight: Font.Bold
                         }
@@ -111,7 +112,7 @@ Item {
                         width: parent.width
                         height: items.height
                         radius: Theme.radius
-                        fill: Theme.surfaceFloat
+                        fill: Colors.surfaceFloat
 
                         Column {
                             id: items
@@ -142,8 +143,8 @@ Item {
                                         radius: width / 2
                                         gradient: Gradient {
                                             orientation: Gradient.Horizontal
-                                            GradientStop { position: 0.0; color: Theme.brand1 }
-                                            GradientStop { position: 1.0; color: Theme.brand2 }
+                                            GradientStop { position: 0.0; color: Colors.brand1 }
+                                            GradientStop { position: 1.0; color: Colors.brand2 }
                                         }
                                     }
                                     Text {
@@ -153,7 +154,7 @@ Item {
                                         anchors.right: parent.right
                                         text: change.modelData
                                         textFormat: Text.MarkdownText
-                                        color: Theme.ink
+                                        color: Colors.ink
                                         font.pixelSize: Theme.fontSize
                                         wrapMode: Text.Wrap
                                     }

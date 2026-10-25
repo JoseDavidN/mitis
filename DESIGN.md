@@ -6,15 +6,18 @@ El tema por defecto, **Nocturno**, sale del tema oscuro de StartCode Panel (`/sr
 
 ### Temas
 
-Se eligen en Configuración → Apariencia e idioma (`Settings.theme`) y cambian al momento: cada token de color de `Theme` es un enlace a la paleta del tema en uso (`Theme.palettes`). Las tres paletas tienen las mismas claves. Las tablas de tokens de abajo dan los valores de Nocturno.
+Se eligen en Configuración → Apariencia e idioma (`Settings.theme`) y cambian al momento: cada token de color es un enlace a la paleta del tema en uso (`Theme.palettes`). Las paletas tienen las mismas claves. Las tablas de tokens de abajo dan los valores de Nocturno.
+
+**Los componentes leen los colores con `Colors`** (`Colors.ink`, `Colors.bgBase`…: propiedad adjunta de `Mitis.Core`, `src/themecolors.*`), no con `Theme`: `Colors` da los de la ventana en la que está cada elemento, que en las **ventanas privadas** son siempre los de la paleta `privado` (no se elige en Configuración). Medidas, tipografía, movimiento y lo que no depende de la ventana siguen en `Theme`.
 
 | Tema | Clave | Carácter | Fondo · tinta · acento |
 |---|---|---|---|
 | Nocturno (de serie) | `nocturno` | Violeta y rosa sobre negro morado | `#07050d` · `#f4f1ff` · `#a855f7 → #ec4899` |
 | Oscuro | `oscuro` | Grises neutros y azul, como el modo oscuro de Chrome; barra de título y controles planos, sin degradado de color | `#202124` · `#e8eaed` · `#1a73e8` (marca), `#8ab4f8` (acento claro) |
 | Claro | `claro` | Fondos claros con la marca violeta/rosa; bordes y tintes en negro con alfa | `#f7f5fb` · `#1d1631` · `#9333ea → #db2777`, acento `#7c3aed` |
+| Privado (solo ventanas privadas) | `privado` | Negro mate de arriba abajo, sin el morado de la marca ni brillos: fondos casi planos, acentos en gris claro y botones principales en gris oscuro; sin vidrio | `#0a0a0a` · `#ececec` · `#3a3a3a → #2b2b2b`, acento `#d4d4d4` |
 
-- `Theme.dark` dice si el tema es oscuro. Con él se fija `Application.styleHints.colorScheme` (diálogos del sistema). Las páginas web con versión oscura (`prefers-color-scheme`) siguen al tema desde el próximo arranque: lo fija `main.cpp` con `--blink-settings=preferredColorScheme` (Qt WebEngine no deja cambiarlo en marcha ni hace caso de `colorScheme`).
+- `Colors.dark` dice si la paleta de la ventana es oscura (logos claros u oscuros); `Theme.dark`, si lo es el tema elegido. Con él se fija `Application.styleHints.colorScheme` (diálogos del sistema). Las páginas web con versión oscura (`prefers-color-scheme`) siguen al tema desde el próximo arranque: lo fija `main.cpp` con `--blink-settings=preferredColorScheme` (Qt WebEngine no deja cambiarlo en marcha ni hace caso de `colorScheme`).
 - Un tema nuevo: otra entrada en `Theme.themes` y en `Theme.palettes`, con todas las claves. Nada más cambia.
 - La paleta de DevTools, las medidas, la tipografía y el movimiento son iguales en todos los temas.
 
@@ -186,7 +189,7 @@ Window (bgBase, sin marco)
 | `minimize`, `maximize`, `restore` | `minus`, `square`, `copy` | Controles de ventana |
 | `search` | `search` | Campo de dirección al escribir; sección «Búsqueda» de Configuración (también en lugar del favicon de un buscador que no carga) |
 | `screenshot` | `scan` | Captura de pantalla (panel del sitio y su barra) |
-| `site-secure`, `site-insecure`, `share-mail`, `expand` | `lock`, `lock-open`, `mail`, `chevron-down` | Panel del sitio: conexión segura / no segura (también en el campo de dirección), enviar por correo y desplegar el certificado |
+| `site-secure`, `site-insecure`, `expand` | `lock`, `lock-open`, `chevron-down` | Panel del sitio: conexión segura / no segura (también en el campo de dirección) y desplegar el certificado |
 | `bookmarks`, `bookmark-add`, `bookmark` | `star`, `bookmark-plus`, `bookmark` | Botón y lista de marcadores (`bookmark`, también en las sugerencias de la barra de dirección) |
 | `options` | `ellipsis` | Botón de opciones |
 | `new-tab`, `reopen` | `plus`, `undo-2` | Lista de pestañas: nueva y reabrir cerrada (`reopen`, también en Historial y en «Al iniciar» de Configuración) |
@@ -211,6 +214,7 @@ Window (bgBase, sin marco)
 | `camera`, `microphone`, `camera-microphone`, `screen`, `location`, `notifications`, `clipboard`, `fonts` | `camera`, `mic`, `video`, `monitor`, `map-pin`, `bell`, `clipboard`, `type` | Diálogo de permisos: qué pide el sitio |
 | `protected-content` | `monitor-play` | Aviso de que falta Widevine (contenido protegido) |
 | `suspended` | `moon` | Lista de pestañas: pestaña suspendida |
+| `keyboard` | `keyboard` | Configuración: sección Atajos de teclado |
 | `memory`, `performance` | `memory-stick`, `gauge` | Monitor de rendimiento (y su entrada del menú de opciones); sección «Rendimiento» de Configuración |
 | `devtools`, `inspect` | `code-xml`, `scan-search` | Ventana de herramientas de desarrollo (etiqueta «DevTools») y sección «Desarrollo» de Configuración; «Inspeccionar» del menú contextual |
 
@@ -362,6 +366,7 @@ Window (bgBase, sin marco)
 - **Fila de ajuste:** al menos `settingsRowHeight`; título `fontSize` DemiBold `ink` y descripción `fontSizeSmall` `inkMuted` a la izquierda (con icono opcional `inkSoft` delante), controles (`TextButton`, `Toggle`, `Chip`) a la derecha. Entre filas, separador `line` con margen `margin`. Estados en píldora: borde y texto Bold `ok` («Disponible») o `warn` («No disponible»), alto `buttonSizeSmall`.
 - **Elección única en filas** (`OptionRow`, «Al iniciar»): título y descripción con un `RadioMark` a la derecha; toda la fila se pulsa (hover `tintHover`), la elegida con fondo `tintActive` y título Bold.
 - **Opciones en píldoras** (`ChoiceRow`: zoom, idiomas): título y descripción arriba y debajo los `Chip`, que saltan de línea si no caben. En los idiomas se marcan varios; la descripción dice el orden.
+- **Atajos de teclado** (por páginas, para que la sección no se alargue): arriba, un `Chip` por grupo (Pestañas, Navegar, Buscar y zoom, Ventana y herramientas; el de la página a la vista, elegido) y a la derecha `back` / `forward` planos de `buttonSizeSmall` con «2 de 4» en `fontSizeSmall` `inkMuted` (la flecha sin más páginas, al 35 %). Debajo, solo los atajos del grupo (`ShortcutRow`, de `pageRowHeight`, 6 por grupo para que todas las páginas midan lo mismo): qué hace en `fontSize` `ink` (y cuándo funciona en `fontSizeSmall` `inkMuted`) y a la derecha cada tecla dibujada: alto `buttonSizeSmall`, ancho mínimo igual, `radiusSmall`, fondo `tintHover`, borde `hairline`, texto `fontSizeSmall` DemiBold `inkSecondary`. Varias combinaciones, separadas por «o» (`inkMuted`). Las teclas con su nombre del teclado: «Mayús», flechas `←` `→`; en macOS, `⌘` `⌥` `⇧` `⇥`.
 - **Permisos guardados** (`SitePermissionRow`, de `pageRowHeight`): icono del permiso `inkSoft`, sitio DemiBold `ink` y «Ubicación · Permitido» en `inkMuted` (`warn` si es «Bloqueado»); ✕ plana para olvidarlo, visible al pasar.
 - **Sitios con anuncios permitidos** (`AllowedSiteRow`, como `SitePermissionRow`): icono `blocker` `inkSoft`, sitio DemiBold `ink` y «Anuncios y rastreadores permitidos» en `warn`; ✕ plana «Volver a bloquear», visible al pasar.
 - **Acción con confirmación** («Restablecer la configuración»): el primer clic cambia la descripción por la pregunta y muestra «Cancelar» junto al botón `danger`.
@@ -371,13 +376,14 @@ Window (bgBase, sin marco)
   - Al iniciar: continuar donde lo dejaste, pestaña nueva o una página (dirección en `FormField` y «Usar la página actual»).
   - Apariencia e idioma: tema (`ThemeTile`: una tarjeta de `themeTileWidth` por tema, con su vista previa de `themeTilePreviewHeight` dibujada con los colores de ese tema —barra de título, una tarjeta con texto, los controles con el acento—; borde `hairline`, `hairlineHover` al pasar y 2 px `focusRing` en el elegido; debajo el nombre, Bold `ink` con `check` `brandLight1` si está elegido), zoom de las páginas, modo oscuro en las páginas, idiomas de las páginas.
   - Búsqueda; Nueva pestaña (imagen de fondo: elegir o quitar).
-  - Privacidad: cookies de terceros, borrar cookies y caché al cerrar, no rastrear, ocultar la IP local.
+  - Privacidad: cookies de terceros, borrar cookies y caché al cerrar, no rastrear, ocultar la IP local y DNS cifrado (`ChoiceRow` Desactivado / Automático / Siempre; si no está desactivado, otra con el servidor y su descripción; si lo elegido no es lo que usa Mitis desde que arrancó, una fila con icono `reload` «Se aplicará al volver a abrir Mitis»).
   - Anuncios y rastreadores: bloquear (`Toggle`), estado de las listas («335.043 reglas, del 22 de octubre…», con lo bloqueado en la sesión) y «Actualizar ahora», quitar el rastreo de los enlaces, «Permitir en <sitio>» (el de la pestaña activa) y la lista de sitios permitidos.
   - Seguridad: conexiones seguras, ventanas emergentes, JavaScript.
   - Permisos de sitios: «Preguntar» / «Bloquear» (`Chip`) por tipo y, debajo, lo decidido para cada sitio.
   - Contenido: imágenes, reproducción automática.
   - Borrar datos de navegación; Descargas (carpeta y preguntar dónde guardar).
   - Rendimiento: suspender las pestañas que no usas (`ChoiceRow`: 15 min, 30 min, 1 hora, 2 horas, Nunca).
+  - Atajos de teclado: los de la ventana, por grupos y un grupo a la vez (ver «Atajos de teclado» arriba).
   - Desarrollo: dos `Toggle` independientes. «Herramientas de desarrollo» («Inspeccionar» y F12; al apagarlo se cierran las ventanas de DevTools abiertas) y «Monitor de rendimiento» (muestra el panel; Shift+Esc lo oculta o lo vuelve a mostrar).
   - Acerca de Mitis (versión, Chromium, Widevine) y restablecer la configuración.
 
@@ -407,7 +413,9 @@ Window (bgBase, sin marco)
 - Al escribir, una lista sobre el campo (mismo ancho, `PopupBackground`, separada `floatingMargin`), que no se queda el foco. Hasta 6 filas de `popupRowHeight`: icono `bookmark` o `history` (`inkMuted`; `brandLight1` en la elegida), título en `ink` (hasta el 60 % del ancho) y la dirección sin esquema en `fontSizeSmall` `inkMuted`. La elegida con las flechas: `tintActive` y título DemiBold.
 
 ### Ventana privada
-- Otra ventana como la principal. En la barra de título, junto al nombre, una píldora de `logoSize` de alto: borde `brandLight1`, fondo `tintActive`, icono `private` y «Privada» en `fontSizeSmall` Bold `brandLight1`. El título de la ventana termina en «Mitis (ventana privada)».
+- Otra ventana como la principal, con la paleta `privado` (negro mate) en todo: barra de título, controles, listas, diálogos y nueva pestaña. Sin vidrio. En la barra de título, junto al nombre, una píldora de `logoSize` de alto: borde `brandLight1`, fondo `tintActive`, icono `private` y «Privada» en `fontSizeSmall` Bold `brandLight1`. El título de la ventana termina en «Mitis (ventana privada)».
+- Sin camino a Configuración: Opciones no tiene perfil, historial ni Configuración; el panel del sitio, sin «Permisos de sitios» y con «Protección contra rastreadores» siempre activa (sin interruptor, «Siempre activa en las ventanas privadas»).
+- Nueva pestaña: sin imagen de fondo ni sus botones, accesos rápidos sin añadir ni quitar, y bajo el buscador un aviso (icono `private` en `brandLight1` y texto `fontSizeSmall` `inkSecondary`, del ancho del buscador): qué se borra al cerrar y que la privacidad está siempre activa.
 
 ### `Toggle` — interruptor
 - Pista de `toggleWidth` × `toggleHeight`, totalmente redonda. Apagado: `tintHover` (`tintActive` al pasar), borde `hairline` y bola `inkSoft`. Encendido: degradado de marca (aparece con un fundido `durationFast`) y bola `onBrand`. La bola, separada `toggleKnobInset` del borde, se desliza en `durationBase` con `easeInOut`. Con foco de teclado, borde `focusRing`; Espacio lo cambia.
@@ -471,7 +479,7 @@ Window (bgBase, sin marco)
   - Sitio: favicon, dominio en `fontSizeTitle` Bold `ink` y título de la página en `fontSizeSmall` `inkMuted`. Separador `line`.
   - **Conexión**: fila con icono de color (`ok` segura, `warn` no segura, `danger` certificado aceptado), título DemiBold y explicación en `fontSizeSmall` `inkMuted`. Si es https, pulsarla despliega el certificado (icono `expand` girado 180°): «Verificado por» (organización y nombre del emisor), «Emitido para», «Válido» (del … al …) y «Protocolo», cada uno con etiqueta `inkMuted` y valor DemiBold `ink` en `fontSizeSmall`; los problemas, en `danger`. Mientras llega, «Comprobando el certificado…». Lo consulta C++ con su propia conexión TLS al sitio (solo al desplegar, se guarda durante la sesión).
   - **Protección contra rastreadores**: icono `blocker` en `ok` (activa) o `inkMuted`, si está activada en este sitio («Activada en este sitio» / «Desactivada en este sitio»; sin contador) y un `Toggle` que la quita o la pone solo en este sitio (lista «Permitidos» del bloqueador) y recarga la página. Con el bloqueador apagado en Configuración, sin interruptor.
-  - Separador y acciones (`PopupAction`): «Añadir a marcadores» / «Quitar de marcadores» (Ctrl+D), «Copiar enlace» (pasa a «Enlace copiado» `siteInfoCopiedHold`), «Enviar por correo» (`mailto:`) y «Permisos de sitios» (Configuración).
+  - Separador y acciones (`PopupAction`): «Añadir a marcadores» / «Quitar de marcadores» (Ctrl+D), «Copiar enlace» (pasa a «Enlace copiado» `siteInfoCopiedHold`), y «Permisos de sitios» (Configuración).
 
 ### `BottomBar` — degradado compartido
 - Todos los controles (de atrás a opciones) se leen como una sola pieza de color: `controlsStart` a la izquierda, `controlsEnd` a la derecha. El degradado se reparte sobre el **ancho del grupo**, no de la ventana, así que el botón de atrás siempre lleva el tono claro (`bgGlow`) y el de opciones el oscuro (`bgMid`), con el campo grande o pequeño.
@@ -549,7 +557,7 @@ Window (bgBase, sin marco)
 
 ### `TitleBar`
 - **Esquinas de la ventana:** redondeadas como las del sistema en Windows 11 (DWM) y macOS (radio 10, curva continua, con la sombra del sistema); rectas maximizada o en pantalla completa. En Linux, las que ponga el gestor de ventanas (`src/windowstyle.*`).
-- **macOS:** cerrar, minimizar y zoom como en el sistema, a la izquierda (`macControls`): círculos de `macDotSize` (12) separados `macDotSpacing` (8) en los colores de Apple (`macClose` `#ff5f57`, `macMinimize` `#febc2e`, `macZoom` `#28c840`) con borde `macDotBorder`; con la ventana inactiva, `macDotInactive` (vuelven a su color al pasar el ratón por el grupo). Al pasar por el grupo, los tres muestran su símbolo (`close`, `minimize`, `maximize`/`restore`) en `macDotSymbol`. El nombre de Mitis va centrado en la barra, como el título de las ventanas de macOS, y el avatar a la derecha. En Windows y Linux, los `IconButton` planos de siempre a la derecha.
+- **macOS:** cerrar, minimizar y zoom como en el sistema, a la izquierda (`macControls`): círculos de `macDotSize` (12) separados `macDotSpacing` (8) en los colores de Apple (`macClose` `#ff5f57`, `macMinimize` `#febc2e`, `macZoom` `#28c840`) con borde `macDotBorder`; con la ventana inactiva, `macDotInactiveDark` o `macDotInactiveLight` según `Colors.dark` de su ventana (vuelven a su color al pasar el ratón por el grupo). Al pasar por el grupo, los tres muestran su símbolo (`close`, `minimize`, `maximize`/`restore`) en `macDotSymbol`. El nombre de Mitis va centrado en la barra, como el título de las ventanas de macOS, y el avatar a la derecha. En Windows y Linux, los `IconButton` planos de siempre a la derecha.
 - Fondo con el degradado `titleBarStart → titleBarEnd` (los tonos de Configuración). Nada de colores de marca vivos como fondo.
 - A la izquierda, el nombre de Mitis tal como va en el logo, sin el icono, de `titleBarLogoHeight` (17) de alto (la barra mantiene su `titleBarHeight`): `mitis-wordmark-dark.png` en los temas oscuros y `mitis-wordmark-light.png` en el Claro. Detrás, las píldoras «Beta» y «Privada».
 - Los controles de ventana son `IconButton` con `flat: true`: solo iconos; el círculo aparece al pasar por encima.

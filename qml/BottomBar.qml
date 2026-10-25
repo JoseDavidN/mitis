@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 
 // Controles inferiores: botones y campo de dirección independientes que
 // flotan sobre la página, sin barra de fondo. Los huecos entre ellos dejan
@@ -61,8 +62,8 @@ Item {
     // Color del degradado compartido en la posición x del grupo
     function tone(x) {
         const t = cluster.width > 0 ? Math.max(0, Math.min(1, x / cluster.width)) : 0
-        const a = Theme.controlsStart
-        const b = Theme.controlsEnd
+        const a = Colors.controlsStart
+        const b = Colors.controlsEnd
         return Qt.rgba(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t,
                        a.b + (b.b - a.b) * t, a.a + (b.a - a.a) * t)
     }
@@ -217,7 +218,7 @@ Item {
                 indeterminate: downloadsSlot.downloading && downloadsSlot.download.state === "progress"
                                && !(downloadsSlot.download.total > 0)
                 color: downloadsSlot.downloading && downloadsSlot.download.state === "paused"
-                       ? Theme.inkMuted : Theme.brandLight1
+                       ? Colors.inkMuted : Colors.brandLight1
             }
         }
 

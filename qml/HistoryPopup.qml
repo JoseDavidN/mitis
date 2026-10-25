@@ -97,7 +97,7 @@ Popup {
                 anchors.leftMargin: Theme.margin
                 anchors.verticalCenter: parent.verticalCenter
                 text: "Historial"
-                color: Theme.ink
+                color: Colors.ink
                 font.pixelSize: Theme.fontSizeTitle
                 font.weight: Font.DemiBold
             }
@@ -120,7 +120,7 @@ Popup {
             id: separatorTop
             width: parent.width
             height: 1
-            color: Theme.hairline
+            color: Colors.hairline
         }
 
         Text {
@@ -130,7 +130,7 @@ Popup {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: "Aún no hay historial"
-            color: Theme.inkMuted
+            color: Colors.inkMuted
             font.pixelSize: Theme.fontSize
         }
 
@@ -163,7 +163,7 @@ Popup {
         Rectangle {
             width: parent.width
             height: 1
-            color: Theme.hairline
+            color: Colors.hairline
         }
 
         PopupAction {

@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 
 // Aviso de certificado inválido de una pestaña (BrowserTab.certificateErrorRequested).
 // La opción segura, «Volver», es la principal y la de Enter y Esc; «Continuar
@@ -55,7 +56,7 @@ PageDialog {
     Text {
         width: parent.width
         text: root.error ? root.error.reason : ""
-        color: Theme.inkMuted
+        color: Colors.inkMuted
         font.pixelSize: Theme.fontSizeSmall
         wrapMode: Text.Wrap
         textFormat: Text.PlainText

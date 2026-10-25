@@ -17,7 +17,10 @@ class ContentBlocker;
 class RequestInterceptor : public QWebEngineUrlRequestInterceptor
 {
 public:
-    explicit RequestInterceptor(ContentBlocker *blocker, QObject *parent = nullptr);
+    // `strict`: el de las ventanas privadas, con todo lo de privacidad
+    // siempre activo (bloqueador sin sitios permitidos, sin parámetros de
+    // rastreo, DNT y https), sin mirar Configuración
+    explicit RequestInterceptor(ContentBlocker *blocker, bool strict = false, QObject *parent = nullptr);
 
     void interceptRequest(QWebEngineUrlRequestInfo &info) override;
 
@@ -38,6 +41,7 @@ public:
 
 private:
     ContentBlocker *m_blocker;
+    const bool m_strict;
 
     // Hosts subidos a https cuya carga aún no ha terminado bien
     QSet<QString> m_upgraded;

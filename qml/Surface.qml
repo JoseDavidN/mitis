@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 
 // Fondo de un control o una tarjeta de Mitis: relleno del tema (un color,
 // `fill`, o un degradado horizontal, `fillStart` → `fillEnd`) y radio, sin
@@ -7,8 +8,8 @@ import QtQuick
 // interfaz pasa por aquí.
 //
 // Uso:
-//     Surface { radius: Theme.radius; fill: Theme.surfaceFloat }
-//     Surface { fillStart: Theme.controlsStart; fillEnd: Theme.controlsEnd }
+//     Surface { radius: Theme.radius; fill: Colors.surfaceFloat }
+//     Surface { fillStart: Colors.controlsStart; fillEnd: Colors.controlsEnd }
 Rectangle {
     id: root
 

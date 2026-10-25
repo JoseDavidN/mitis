@@ -58,9 +58,10 @@ FilterEngine::Type filterType(QWebEngineUrlRequestInfo::ResourceType type)
 
 }
 
-RequestInterceptor::RequestInterceptor(ContentBlocker *blocker, QObject *parent)
+RequestInterceptor::RequestInterceptor(ContentBlocker *blocker, bool strict, QObject *parent)
     : QWebEngineUrlRequestInterceptor(parent)
     , m_blocker(blocker)
+    , m_strict(strict)
 {
 }
 
@@ -85,12 +86,12 @@ void RequestInterceptor::interceptRequest(QWebEngineUrlRequestInfo &info)
 
     // Anuncios y rastreadores. La página que abre el usuario solo se bloquea
     // si una lista lo pide expresamente ($document: sitios de estafas…)
-    if (m_blocker->shouldBlock(url, mainFrame ? url : info.firstPartyUrl(), filterType(info.resourceType()))) {
+    if (m_blocker->shouldBlock(url, mainFrame ? url : info.firstPartyUrl(), filterType(info.resourceType()), m_strict)) {
         info.block(true);
         return;
     }
 
-    if (doNotTrack) {
+    if (doNotTrack || m_strict) {
         info.setHttpHeader("DNT", "1");
         info.setHttpHeader("Sec-GPC", "1");
     }
@@ -99,9 +100,9 @@ void RequestInterceptor::interceptRequest(QWebEngineUrlRequestInfo &info)
     // página https ya los sube o bloquea el propio motor. Sin parámetros de
     // rastreo y, si es http, por https: todo en una sola redirección.
     if (mainFrame && info.requestMethod() == "GET") {
-        QUrl target = m_blocker->withoutTrackingParams(url);
+        QUrl target = m_blocker->withoutTrackingParams(url, m_strict);
         const QString host = url.host();
-        if (httpsUpgrade && url.scheme() == QLatin1String("http") && !isLocalHost(host)
+        if ((httpsUpgrade || m_strict) && url.scheme() == QLatin1String("http") && !isLocalHost(host)
             && !m_httpAllowed.contains(host)) {
             target.setScheme(QStringLiteral("https"));
             if (url.port() == 80)

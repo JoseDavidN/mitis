@@ -79,12 +79,9 @@ Mejoras propuestas tras revisar el código; se irán eligiendo. Al elegir una, p
 - [ ] **Ajustes por sitio** en Configuración: el zoom, los permisos y los sitios
   permitidos en el bloqueador, en una lista para revisarlos y quitarlos.
 - [ ] **Buscar entre las pestañas abiertas** desde la lista de pestañas.
-- [ ] **Lista de atajos de teclado** (Configuración o la tecla `?`).
 
 ### Ajustes
 
-- [ ] **DNS cifrado** (DNS sobre HTTPS) en Privacidad: `QWebEngineGlobalSettings::setDnsMode`
-  (Qt 6.5+), antes de crear los perfiles.
 - [ ] **Aceleración por hardware** (activar o desactivar; `--disable-gpu` al arrancar, como
   las demás opciones de `setupChromiumFlags()`): para pantallas negras o parpadeos con
   controladores de gráficos problemáticos.

@@ -35,8 +35,8 @@ Surface {
     implicitHeight: Theme.titleBarHeight
 
     // Violeta oscuro a la izquierda, rosa oscuro a la derecha
-    fillStart: Theme.titleBarStart
-    fillEnd: Theme.titleBarEnd
+    fillStart: Colors.titleBarStart
+    fillEnd: Colors.titleBarEnd
 
     // Separador inferior
     Rectangle {
@@ -44,7 +44,7 @@ Surface {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         height: 1
-        color: Theme.hairlineSoft
+        color: Colors.hairlineSoft
     }
 
     // Zona de arrastre: los botones quedan por encima y no la activan
@@ -109,7 +109,7 @@ Surface {
             height: Theme.titleBarLogoHeight
             width: height * implicitWidth / Math.max(1, implicitHeight)
             anchors.verticalCenter: parent.verticalCenter
-            source: Theme.dark ? "qrc:/branding/mitis-wordmark-dark.png" : "qrc:/branding/mitis-wordmark-light.png"
+            source: Colors.dark ? "qrc:/branding/mitis-wordmark-dark.png" : "qrc:/branding/mitis-wordmark-light.png"
             fillMode: Image.PreserveAspectFit
             smooth: true
             mipmap: true
@@ -121,15 +121,15 @@ Surface {
             width: betaText.width + 2 * Theme.spacing
             height: Theme.logoSize
             radius: height / 2
-            color: Theme.tintActive
+            color: Colors.tintActive
             border.width: 1
-            border.color: Theme.hairlineStrong
+            border.color: Colors.hairlineStrong
 
             Text {
                 id: betaText
                 anchors.centerIn: parent
                 text: "Beta"
-                color: Theme.inkSecondary
+                color: Colors.inkSecondary
                 font.pixelSize: Theme.fontSizeSmall
                 font.weight: Font.Bold
             }
@@ -141,9 +141,9 @@ Surface {
             width: privateRow.width + 2 * Theme.spacing
             height: Theme.logoSize
             radius: height / 2
-            color: Theme.tintActive
+            color: Colors.tintActive
             border.width: 1
-            border.color: Theme.brandLight1
+            border.color: Colors.brandLight1
 
             Row {
                 id: privateRow
@@ -154,12 +154,12 @@ Surface {
                     anchors.verticalCenter: parent.verticalCenter
                     name: "private"
                     size: Theme.iconSizeSmall
-                    color: Theme.brandLight1
+                    color: Colors.brandLight1
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Privada"
-                    color: Theme.brandLight1
+                    color: Colors.brandLight1
                     font.pixelSize: Theme.fontSizeSmall
                     font.weight: Font.Bold
                 }
@@ -261,7 +261,7 @@ Surface {
         Rectangle {
             anchors.fill: parent
             radius: width / 2
-            color: dot.Window.active || dot.groupHovered ? dot.tone : Theme.macDotInactive
+            color: dot.Window.active || dot.groupHovered ? dot.tone : (Colors.dark ? Theme.macDotInactiveDark : Theme.macDotInactiveLight)
             border.width: 1
             border.color: Theme.macDotBorder
         }

@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 
 // Diálogo de una pestaña: lo que una página pide al usuario (alert, permiso,
 // certificado…). Se declara dentro del delegado BrowserTab de Main.qml y
@@ -22,7 +23,7 @@ FocusScope {
     property string message: ""
     // Icono junto al título (assets/icons); "" sin icono
     property string iconName: ""
-    // Aviso serio (certificados): icono y título en Theme.danger
+    // Aviso serio (certificados): icono y título en Colors.danger
     property bool danger: false
     // Ancho de la tarjeta; los avisos largos pueden pedir más
     property int cardWidth: Theme.dialogWidth
@@ -62,7 +63,7 @@ FocusScope {
     // Velo: tapa la página para que no reciba clics, rueda ni hover
     Rectangle {
         anchors.fill: parent
-        color: Theme.backgroundScrim
+        color: Colors.backgroundScrim
     }
     MouseArea {
         anchors.fill: parent
@@ -94,12 +95,12 @@ FocusScope {
                     anchors.verticalCenter: parent.verticalCenter
                     visible: root.iconName !== ""
                     name: root.iconName
-                    color: root.danger ? Theme.danger : Theme.brandLight1
+                    color: root.danger ? Colors.danger : Colors.brandLight1
                 }
                 Text {
                     width: parent.width - (root.iconName !== "" ? Theme.iconSize + parent.spacing : 0)
                     text: root.title
-                    color: root.danger ? Theme.danger : Theme.ink
+                    color: root.danger ? Colors.danger : Colors.ink
                     font.pixelSize: Theme.fontSizeTitle
                     font.weight: Font.DemiBold
                     wrapMode: Text.Wrap
@@ -110,7 +111,7 @@ FocusScope {
                 width: parent.width
                 visible: root.message !== ""
                 text: root.message
-                color: Theme.inkSoft
+                color: Colors.inkSoft
                 font.pixelSize: Theme.fontSize
                 wrapMode: Text.Wrap
                 // Los mensajes de las páginas son texto, nunca HTML

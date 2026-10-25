@@ -13,6 +13,7 @@
 #include <QTranslator>
 #include <QtQml/qqmlextensionplugin.h>
 #include <QtWebEngineCore/qtwebenginecoreglobal.h>
+#include <QtWebEngineCore/qwebengineglobalsettings.h>
 #include <QtWebEngineQuick/qtwebenginequickglobal.h>
 
 #include "crashreporter.h"
@@ -22,6 +23,7 @@
 #include "links.h"
 #include "updater.h"
 #include "networkfactory.h"
+#include "settings.h"
 #include "widevine.h"
 
 // Tipos de C++ para QML (Settings…): módulo Mitis.Core, enlazado estático
@@ -104,6 +106,31 @@ void setupChromiumFlags()
     qputenv("QTWEBENGINE_CHROMIUM_FLAGS", user.isEmpty() ? flags : flags + ' ' + user);
 }
 
+// DNS cifrado (Configuración → Privacidad): el motor lo toma al crear el
+// primer perfil, así que solo cambia al volver a arrancar. Solo las páginas:
+// la red de la interfaz (noticias, actualizaciones, listas del bloqueador)
+// usa el DNS del sistema
+void setupSecureDns()
+{
+    const Settings settings;
+    const QString mode = settings.secureDns();
+    const QString provider = settings.secureDnsProvider();
+    QWebEngineGlobalSettings::DnsMode dns;
+    if (mode != QLatin1String("off")) {
+        dns.secureMode = mode == QLatin1String("secure") ? QWebEngineGlobalSettings::SecureDnsMode::SecureOnly
+                                                         : QWebEngineGlobalSettings::SecureDnsMode::SecureWithFallback;
+        dns.serverTemplates = { Settings::secureDnsTemplate(provider) };
+    }
+    if (!QWebEngineGlobalSettings::setDnsMode(dns)) {
+        qWarning("DNS cifrado: el motor no aceptó %s", qPrintable(provider));
+        Settings::setSecureDnsStarted(QStringLiteral("off"));
+        return;
+    }
+    Settings::setSecureDnsStarted(mode == QLatin1String("off") ? mode : mode + u':' + provider);
+    if (mode != QLatin1String("off"))
+        qInfo("DNS cifrado (%s): %s", qPrintable(mode), qPrintable(Settings::secureDnsTemplate(provider)));
+}
+
 // El motor se queda con el proveedor y lo destruye con él. La fábrica de
 // red y el puente con el motor web no: son uno para toda la vida de la app
 // (en --dev hay un motor QML nuevo en cada recarga)
@@ -157,6 +184,7 @@ int main(int argc, char *argv[])
 
     // Perfiles del navegador y bloqueador: antes que la interfaz, que los usa,
     // y destruidos después de ella (ver el final)
+    setupSecureDns();
     auto *bridge = new EngineBridge(widevinePath);
 
     // La interfaz (motor QML o recargador); se destruye a mano al salir

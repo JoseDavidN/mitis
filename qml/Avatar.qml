@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 
 // Avatar del perfil: la foto recortada en círculo o, sin foto, la inicial del
 // nombre sobre el color elegido (Theme.avatarColors). Sin nombre ni foto,
@@ -29,7 +30,7 @@ Item {
         visible: !root.hasPhoto && root.name !== ""
         anchors.centerIn: parent
         text: root.name.charAt(0).toUpperCase()
-        color: Theme.onBrand
+        color: Colors.onBrand
         font.pixelSize: Math.round(root.size * 0.45)
         font.weight: Font.Bold
     }
@@ -38,7 +39,7 @@ Item {
         anchors.centerIn: parent
         name: "profile"
         size: Math.round(root.size * 0.6)
-        color: Theme.onBrand
+        color: Colors.onBrand
     }
 
     // Solo para saber el tamaño de la foto (y si carga); no se dibuja

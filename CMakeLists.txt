@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(Mitis
-    VERSION 0.12.0
+    VERSION 0.13.0
     DESCRIPTION "Navegador web ligero, multiplataforma y con interfaz propia"
     LANGUAGES CXX
 )
@@ -116,6 +116,8 @@ qt_add_qml_module(mitiscore
         src/navigationgestures.cpp
         src/printing.h
         src/printing.cpp
+        src/themecolors.h
+        src/themecolors.cpp
 )
 # Deslizar entre páginas: el ajuste del sistema (src/navigationgestures_mac.mm)
 if(APPLE)
@@ -126,7 +128,7 @@ endif()
 # El registro de tipos generado incluye "settings.h" sin ruta
 target_include_directories(mitiscore PRIVATE src)
 target_compile_definitions(mitiscore PRIVATE MITIS_SERVIDOR="${MITIS_SERVIDOR}")
-target_link_libraries(mitiscore PRIVATE Qt6::Sql Qt6::Network Qt6::Gui Qt6::Svg Qt6::Pdf Qt6::PrintSupport)
+target_link_libraries(mitiscore PRIVATE Qt6::Sql Qt6::Network Qt6::Gui Qt6::Quick Qt6::Svg Qt6::Pdf Qt6::PrintSupport)
 
 # Iconos SVG (Lucide, ISC: assets/icons/LICENSE), empaquetados en :/icons
 file(GLOB MITIS_ICON_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" CONFIGURE_DEPENDS assets/icons/*.svg)

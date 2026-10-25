@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
+import Mitis.Core
 
 // Menú contextual de la página (clic derecho). Recibe la descripción neutral
 // de BrowserTab.contextMenuRequested y decide qué opciones mostrar; quien lo
@@ -206,14 +207,14 @@ Popup {
                     anchors.leftMargin: Theme.spacing
                     anchors.rightMargin: Theme.spacing
                     height: 1
-                    color: Theme.line
+                    color: Colors.line
                 }
 
                 Rectangle {
                     visible: !entryItem.separator
                     anchors.fill: parent
                     radius: Theme.radiusSmall
-                    color: entryItem.available && root.current === entryItem.index ? Theme.tintHover : "transparent"
+                    color: entryItem.available && root.current === entryItem.index ? Colors.tintHover : "transparent"
                     Behavior on color { ColorAnimation { duration: Theme.durationFast } }
                 }
 
@@ -224,7 +225,7 @@ Popup {
                     anchors.leftMargin: Theme.margin
                     anchors.verticalCenter: parent.verticalCenter
                     name: entryItem.modelData.icon ?? ""
-                    color: entryItem.available ? Theme.inkSoft : Theme.inkDisabled
+                    color: entryItem.available ? Colors.inkSoft : Colors.inkDisabled
                 }
 
                 Text {
@@ -235,7 +236,7 @@ Popup {
                     anchors.rightMargin: Theme.margin
                     anchors.verticalCenter: parent.verticalCenter
                     text: entryItem.modelData.label ?? ""
-                    color: entryItem.available ? Theme.ink : Theme.inkDisabled
+                    color: entryItem.available ? Colors.ink : Colors.inkDisabled
                     font.pixelSize: Theme.fontSize
                     elide: Text.ElideRight
                 }
@@ -247,7 +248,7 @@ Popup {
                     anchors.rightMargin: Theme.margin
                     anchors.verticalCenter: parent.verticalCenter
                     text: entryItem.modelData.shortcut ?? ""
-                    color: entryItem.available ? Theme.inkMuted : Theme.inkDisabled
+                    color: entryItem.available ? Colors.inkMuted : Colors.inkDisabled
                     font.pixelSize: Theme.fontSizeSmall
                 }
 

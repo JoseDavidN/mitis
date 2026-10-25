@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Effects
+import Mitis.Core
 
 // Vidrio esmerilado (experimental, Configuración → Apariencia): lo que hay
 // detrás del control, difuminado, con un velo morado encima, recortado con la
@@ -41,7 +42,8 @@ Item {
     readonly property bool gpu: graphicsApi !== "" ? graphicsApi !== "software"
                               : GraphicsInfo.api !== GraphicsInfo.Software && GraphicsInfo.api !== GraphicsInfo.Unknown
     readonly property Item backdrop: Theme.glassEnabled && gpu && Window.window && root.parent ? findBackdrop() : null
-    readonly property bool active: Theme.glassEnabled && gpu && backdrop !== null
+    // Nunca en las ventanas privadas: su negro mate no lleva brillos
+    readonly property bool active: Theme.glassEnabled && gpu && backdrop !== null && !Colors.privateWindow
 
     // El fondo que se ve detrás de este control, o null
     function findBackdrop() {

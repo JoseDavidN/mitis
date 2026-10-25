@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 
 // Indicador de zoom: aparece arriba a la derecha al cambiar el zoom, se
 // queda `Theme.zoomIndicatorHold` y se cierra solo. Mientras el ratón está
@@ -44,8 +45,8 @@ Item {
     Surface {
         anchors.fill: parent
         radius: height / 2
-        fillStart: Theme.controlsStart
-        fillEnd: Theme.controlsEnd
+        fillStart: Colors.controlsStart
+        fillEnd: Colors.controlsEnd
     }
 
     Row {
@@ -73,7 +74,7 @@ Item {
             width: Theme.zoomLabelWidth
             horizontalAlignment: Text.AlignHCenter
             text: Math.round(root.zoom * 100) + " %"
-            color: Theme.ink
+            color: Colors.ink
             font.pixelSize: Theme.fontSize
             font.weight: Font.DemiBold
         }
@@ -97,7 +98,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             width: 1
             height: Theme.buttonSizeSmall - Theme.spacing
-            color: Theme.line
+            color: Colors.line
         }
         Text {
             visible: Math.abs(root.zoom - 1) > 0.001
@@ -105,7 +106,7 @@ Item {
             leftPadding: Theme.spacing / 2
             rightPadding: Theme.spacing
             text: "Restablecer"
-            color: resetHover.hovered ? Theme.ink : Theme.inkSecondary
+            color: resetHover.hovered ? Colors.ink : Colors.inkSecondary
             font.pixelSize: Theme.fontSizeSmall
 
             HoverHandler {

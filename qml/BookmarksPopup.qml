@@ -70,7 +70,7 @@ Popup {
             id: separator
             width: parent.width
             height: 1
-            color: Theme.hairline
+            color: Colors.hairline
         }
 
         FormField {
@@ -88,7 +88,7 @@ Popup {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: Bookmarks.items.length === 0 ? "Aún no hay marcadores" : "Ningún marcador coincide"
-            color: Theme.inkMuted
+            color: Colors.inkMuted
             font.pixelSize: Theme.fontSize
         }
 

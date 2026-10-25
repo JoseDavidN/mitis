@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 
 // Fila de acción de una lista desplegable: icono, texto y atajo opcional.
 // Uso: PopupAction { icon: "new-tab"; text: "Nueva pestaña"; shortcut: "Ctrl+T" }
@@ -18,7 +19,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: Theme.radiusSmall
-        color: hover.hovered ? Theme.tintHover : "transparent"
+        color: hover.hovered ? Colors.tintHover : "transparent"
         Behavior on color { ColorAnimation { duration: Theme.durationFast } }
     }
 
@@ -28,7 +29,7 @@ Item {
         anchors.leftMargin: Theme.margin
         anchors.verticalCenter: parent.verticalCenter
         name: root.icon
-        color: Theme.inkSoft
+        color: Colors.inkSoft
     }
 
     Text {
@@ -38,7 +39,7 @@ Item {
         anchors.rightMargin: Theme.spacing
         anchors.verticalCenter: parent.verticalCenter
         text: root.text
-        color: Theme.ink
+        color: Colors.ink
         font.pixelSize: Theme.fontSize
         elide: Text.ElideRight
     }
@@ -49,7 +50,7 @@ Item {
         anchors.rightMargin: Theme.margin
         anchors.verticalCenter: parent.verticalCenter
         text: root.shortcut
-        color: Theme.inkMuted
+        color: Colors.inkMuted
         font.pixelSize: Theme.fontSizeSmall
     }
 

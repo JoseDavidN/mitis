@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 
 // Botón base de Mitis: flotante y redondeado, con un icono SVG (`icon`)
 // o un texto corto (`glyph`, p. ej. el contador de pestañas).
@@ -22,8 +23,8 @@ Item {
     // de un degradado mayor (ver BottomBar)
     // Por defecto, el degradado de los controles (los tonos de Configuración);
     // la barra inferior le pasa a cada botón su tramo del degradado compartido
-    property color fillStart: Theme.controlsStart
-    property color fillEnd: Theme.controlsEnd
+    property color fillStart: Colors.controlsStart
+    property color fillEnd: Colors.controlsEnd
 
     signal clicked()
 
@@ -61,7 +62,7 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: parent.radius
-            color: Theme.dangerStrong
+            color: Colors.dangerStrong
             opacity: root.danger && root.hovered ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: Theme.durationFast } }
         }
@@ -72,14 +73,14 @@ Item {
             anchors.fill: parent
             radius: parent.radius
             // Sin superficie propia, el plano necesita un tinte más marcado
-            color: root.pressed || (root.flat && root.hovered) ? Theme.tintActive
-                                : (root.hovered ? Theme.tintHover : "transparent")
+            color: root.pressed || (root.flat && root.hovered) ? Colors.tintActive
+                                : (root.hovered ? Colors.tintHover : "transparent")
         }
 
-        readonly property color tint: !root.enabled ? Theme.inkDisabled
-                                    : root.highlighted ? Theme.brandLight1
-                                    : (root.hovered ? (root.danger ? Theme.onBrand : Theme.ink)
-                                                    : Theme.inkSoft)
+        readonly property color tint: !root.enabled ? Colors.inkDisabled
+                                    : root.highlighted ? Colors.brandLight1
+                                    : (root.hovered ? (root.danger ? Colors.onBrand : Colors.ink)
+                                                    : Colors.inkSoft)
 
         Icon {
             visible: root.icon !== ""

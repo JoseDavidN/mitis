@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 
 // Aviso al entrar en pantalla completa («Pulsa Esc para salir…»): píldora
 // con el estilo de los controles, centrada arriba. Se queda
@@ -43,15 +44,15 @@ Item {
     Surface {
         anchors.fill: parent
         radius: height / 2
-        fillStart: Theme.controlsStart
-        fillEnd: Theme.controlsEnd
+        fillStart: Colors.controlsStart
+        fillEnd: Colors.controlsEnd
     }
 
     Text {
         id: label
         anchors.centerIn: parent
         text: root.text
-        color: Theme.ink
+        color: Colors.ink
         font.pixelSize: Theme.fontSize
     }
 }

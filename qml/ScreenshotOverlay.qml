@@ -416,7 +416,7 @@ Item {
         height: root.focusRect.height
         color: Theme.screenshotHoverFill
         border.width: Theme.screenshotBorder
-        border.color: Theme.brandLight1
+        border.color: Colors.brandLight1
         radius: Theme.radiusSmall
     }
 
@@ -435,7 +435,7 @@ Item {
             anchors.fill: parent
             color: "transparent"
             border.width: Theme.screenshotBorder
-            border.color: Theme.brandLight1
+            border.color: Colors.brandLight1
         }
         MouseArea {
             anchors.fill: parent
@@ -481,9 +481,9 @@ Item {
                 radius: width / 2
                 x: frame.width * modelData.fx - width / 2
                 y: frame.height * modelData.fy - height / 2
-                color: Theme.onBrand
+                color: Colors.onBrand
                 border.width: Theme.screenshotBorder
-                border.color: Theme.brandLight1
+                border.color: Colors.brandLight1
 
                 MouseArea {
                     anchors.fill: parent
@@ -509,7 +509,7 @@ Item {
         width: topRow.implicitWidth + 2 * Theme.margin
         height: Theme.controlHeight + Theme.spacing
         radius: height / 2
-        fill: Theme.surfacePopup
+        fill: Colors.surfacePopup
 
         Row {
             id: topRow
@@ -519,14 +519,14 @@ Item {
             Icon {
                 anchors.verticalCenter: parent.verticalCenter
                 name: "screenshot"
-                color: Theme.brandLight1
+                color: Colors.brandLight1
             }
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.mode === "selected"
                       ? "Ajusta los bordes; llévalos al borde de la ventana para ampliar"
                       : "Elige una sección o arrastra para seleccionar un área"
-                color: Theme.ink
+                color: Colors.ink
                 font.pixelSize: Theme.fontSize
             }
             TextButton {
@@ -561,7 +561,7 @@ Item {
         width: actionRow.implicitWidth + 2 * Theme.margin
         height: Theme.controlHeight + Theme.spacing
         radius: height / 2
-        fill: Theme.surfacePopup
+        fill: Colors.surfacePopup
         // Debajo de la selección; si no cabe, dentro de ella, abajo
         x: Math.max(Theme.margin, Math.min(root.width - width - Theme.margin,
                                            frame.x + frame.width / 2 - width / 2))
@@ -582,7 +582,7 @@ Item {
                       ? Math.round(root.selection.w * root.zoom * root.dpr) + " × "
                         + Math.round(root.selection.h * root.zoom * root.dpr) + " px"
                       : ""
-                color: Theme.inkSecondary
+                color: Colors.inkSecondary
                 font.pixelSize: Theme.fontSizeSmall
                 rightPadding: Theme.spacing
             }
@@ -613,13 +613,13 @@ Item {
         width: noticeText.implicitWidth + 2 * Theme.margin
         height: Theme.controlHeight
         radius: height / 2
-        fill: Theme.surfacePopup
+        fill: Colors.surfacePopup
 
         Text {
             id: noticeText
             anchors.centerIn: parent
             text: root.mode === "capturing" ? "Capturando…" : root.notice
-            color: Theme.ink
+            color: Colors.ink
             font.pixelSize: Theme.fontSize
         }
     }

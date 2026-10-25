@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
+import Mitis.Core
 
 // Lista desplegable de pestañas abiertas: favicon, título y botones de fijar,
 // sonido y cerrar. Las suspendidas (para ahorrar memoria) salen atenuadas y
@@ -220,7 +221,7 @@ Popup {
             Icon {
                 name: "search"
                 size: Theme.iconSizeSmall
-                color: filterField.activeFocus ? Theme.brandLight1 : Theme.inkMuted
+                color: filterField.activeFocus ? Colors.brandLight1 : Colors.inkMuted
                 x: Theme.margin
                 anchors.verticalCenter: parent.verticalCenter
             }
@@ -279,7 +280,7 @@ Popup {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: "Ninguna pestaña coincide"
-            color: Theme.inkMuted
+            color: Colors.inkMuted
             font.pixelSize: Theme.fontSize
         }
 
@@ -392,8 +393,8 @@ Popup {
                 radius: height / 2
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
-                    GradientStop { position: 0.0; color: Theme.brand1 }
-                    GradientStop { position: 1.0; color: Theme.brand2 }
+                    GradientStop { position: 0.0; color: Colors.brand1 }
+                    GradientStop { position: 1.0; color: Colors.brand2 }
                 }
             }
 
@@ -446,7 +447,7 @@ Popup {
                     width: parent.width
                     height: 1
                     y: Theme.spacing / 2
-                    color: Theme.line
+                    color: Colors.line
                 }
 
                 Item {
@@ -462,16 +463,16 @@ Popup {
                         visible: row.lifted
                         anchors.fill: parent
                         radius: Theme.radiusSmall
-                        color: Theme.surfacePopup
+                        color: Colors.surfacePopup
                         border.width: 1
-                        border.color: Theme.hairline
+                        border.color: Colors.hairline
                     }
 
                     Rectangle {
                         anchors.fill: parent
                         radius: Theme.radiusSmall
-                        color: row.current || row.lifted ? Theme.tintActive
-                                                         : (row.hovered || row.highlighted ? Theme.tintHover : "transparent")
+                        color: row.current || row.lifted ? Colors.tintActive
+                                                         : (row.hovered || row.highlighted ? Colors.tintHover : "transparent")
                         Behavior on color { ColorAnimation { duration: Theme.durationFast } }
 
                         // Marca de la pestaña activa
@@ -484,8 +485,8 @@ Popup {
                             anchors.leftMargin: Theme.markerWidth
                             anchors.verticalCenter: parent.verticalCenter
                             gradient: Gradient {
-                                GradientStop { position: 0.0; color: Theme.brand1 }
-                                GradientStop { position: 1.0; color: Theme.brand2 }
+                                GradientStop { position: 0.0; color: Colors.brand1 }
+                                GradientStop { position: 1.0; color: Colors.brand2 }
                             }
                         }
                     }
@@ -510,7 +511,7 @@ Popup {
                         anchors.rightMargin: Theme.spacing
                         anchors.verticalCenter: parent.verticalCenter
                         text: row.title || row.url.toString() || "Nueva pestaña"
-                        color: row.current ? Theme.ink : row.suspended ? Theme.inkMuted : Theme.inkSecondary
+                        color: row.current ? Colors.ink : row.suspended ? Colors.inkMuted : Colors.inkSecondary
                         font.pixelSize: Theme.fontSize
                         elide: Text.ElideRight
                     }
@@ -532,7 +533,7 @@ Popup {
                                 anchors.centerIn: parent
                                 name: "suspended"
                                 size: Theme.iconSizeSmall
-                                color: Theme.inkMuted
+                                color: Colors.inkMuted
                             }
                             HoverHandler { id: suspendedHover }
                             Tooltip {
@@ -553,7 +554,7 @@ Popup {
                                 name: row.microphone > 0 && row.camera > 0 ? "camera-microphone"
                                     : row.camera > 0 ? "camera" : "microphone"
                                 size: Theme.iconSizeSmall
-                                color: row.microphone === 2 || row.camera === 2 ? Theme.dangerStrong : Theme.inkMuted
+                                color: row.microphone === 2 || row.camera === 2 ? Colors.dangerStrong : Colors.inkMuted
                             }
                             HoverHandler { id: captureHover }
                             Tooltip {
@@ -650,7 +651,7 @@ Popup {
             id: separator
             width: parent.width
             height: 1
-            color: Theme.hairline
+            color: Colors.hairline
         }
 
         Column {

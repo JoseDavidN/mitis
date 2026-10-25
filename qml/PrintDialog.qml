@@ -160,7 +160,7 @@ FocusScope {
     // Velo: tapa la página para que no reciba clics, rueda ni hover
     Rectangle {
         anchors.fill: parent
-        color: Theme.backgroundScrim
+        color: Colors.backgroundScrim
     }
     MouseArea {
         anchors.fill: parent
@@ -186,7 +186,7 @@ FocusScope {
             anchors.right: options.left
             anchors.margins: Theme.spacing
             radius: Theme.radius
-            color: Theme.tintHover
+            color: Colors.tintHover
             clip: true
 
             // Solo con un PDF que mostrar: al cerrar se suelta (y su memoria)
@@ -239,7 +239,7 @@ FocusScope {
                 anchors.centerIn: parent
                 visible: root._rendering && preview.pageCount === 0
                 text: "Preparando la vista previa…"
-                color: Theme.inkSecondary
+                color: Colors.inkSecondary
                 font.pixelSize: Theme.fontSize
             }
         }
@@ -263,12 +263,12 @@ FocusScope {
                 Icon {
                     anchors.verticalCenter: parent.verticalCenter
                     name: "print"
-                    color: Theme.brandLight1
+                    color: Colors.brandLight1
                 }
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Imprimir"
-                    color: Theme.ink
+                    color: Colors.ink
                     font.pixelSize: Theme.fontSizeTitle
                     font.weight: Font.DemiBold
                 }
@@ -276,7 +276,7 @@ FocusScope {
                     anchors.verticalCenter: parent.verticalCenter
                     visible: preview.pageCount > 0
                     text: preview.pageCount === 1 ? "1 hoja" : preview.pageCount + " hojas"
-                    color: Theme.inkMuted
+                    color: Colors.inkMuted
                     font.pixelSize: Theme.fontSizeSmall
                 }
             }
@@ -335,7 +335,7 @@ FocusScope {
                             width: Theme.zoomLabelWidth
                             horizontalAlignment: Text.AlignHCenter
                             text: root.copies
-                            color: Theme.ink
+                            color: Colors.ink
                             font.pixelSize: Theme.fontSize
                             font.weight: Font.DemiBold
                         }
@@ -406,7 +406,7 @@ FocusScope {
                     width: parent.width
                     visible: root._error !== "" || root._printing
                     text: root._printing ? "Enviando a la impresora…" : root._error
-                    color: root._printing ? Theme.inkSecondary : Theme.danger
+                    color: root._printing ? Colors.inkSecondary : Colors.danger
                     font.pixelSize: Theme.fontSizeSmall
                     wrapMode: Text.Wrap
                 }
@@ -434,7 +434,7 @@ FocusScope {
         topPadding: Theme.spacing
         bottomPadding: Theme.spacing / 2
         leftPadding: Theme.spacing
-        color: Theme.inkSecondary
+        color: Colors.inkSecondary
         font.pixelSize: Theme.fontSizeSmall
         font.weight: Font.DemiBold
     }
@@ -452,7 +452,7 @@ FocusScope {
         Rectangle {
             anchors.fill: parent
             radius: Theme.radius
-            color: lineHover.hovered ? Theme.tintHover : "transparent"
+            color: lineHover.hovered ? Colors.tintHover : "transparent"
         }
         RadioMark {
             id: mark
@@ -469,7 +469,7 @@ FocusScope {
             anchors.rightMargin: Theme.spacing
             anchors.verticalCenter: parent.verticalCenter
             text: line.label
-            color: Theme.ink
+            color: Colors.ink
             font.pixelSize: Theme.fontSize
             elide: Text.ElideRight
         }
@@ -499,7 +499,7 @@ FocusScope {
             anchors.rightMargin: Theme.spacing
             anchors.verticalCenter: parent.verticalCenter
             text: toggleLine.label
-            color: Theme.ink
+            color: Colors.ink
             font.pixelSize: Theme.fontSize
             elide: Text.ElideRight
         }

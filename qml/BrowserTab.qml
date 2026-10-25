@@ -587,7 +587,8 @@ Item {
     // aplica al crearse el documento.
     function _applyCosmetics(address) {
         // qmllint disable unqualified
-        const css = MitisEngine.cosmeticCss(address)
+        // En las ventanas privadas, siempre (sin mirar Configuración)
+        const css = MitisEngine.cosmeticCss(address, root.privateMode)
         // qmllint enable unqualified
         const scripts = view.userScripts
         for (const old of scripts.find("mitis-cosmetic"))
@@ -803,7 +804,8 @@ Item {
         settings.javascriptCanOpenWindows: !Settings.blockPopups
         settings.playbackRequiresUserGesture: !Settings.autoplay
         settings.forceDarkMode: Settings.darkPages
-        settings.webRTCPublicInterfacesOnly: Settings.hideLocalIp
+        // Ventanas privadas: privacidad siempre activa
+        settings.webRTCPublicInterfacesOnly: Settings.hideLocalIp || root.privateMode
         // Precarga de páginas: también los nombres de dominio de los enlaces
         // (el resto, preload.js); nunca en ventanas privadas
         settings.dnsPrefetchEnabled: Settings.preloadPages && !root.privateMode
@@ -839,9 +841,9 @@ Item {
             // respuesta vacía…) se vuelve a pedir por http (ver RequestInterceptor)
             // qmllint disable unqualified
             if (loadingInfo.status === WebEngineView.LoadSucceededStatus)
-                MitisEngine.confirmHttps(loadingInfo.url)
+                MitisEngine.confirmHttps(loadingInfo.url, root.privateMode)
             if (loadingInfo.status === WebEngineView.LoadFailedStatus
-                    && MitisEngine.takeHttpsFallback(loadingInfo.url)) {
+                    && MitisEngine.takeHttpsFallback(loadingInfo.url, root.privateMode)) {
                 view.url = loadingInfo.url.toString().replace(/^https:/, "http:")
                 return
             }
@@ -900,7 +902,7 @@ Item {
             // Página subida a https por Mitis (no la pidió así el usuario):
             // sin aviso, se rechaza y la carga fallida vuelve a http
             // qmllint disable unqualified
-            if (MitisEngine.isHttpsUpgrade(error.url)) {
+            if (MitisEngine.isHttpsUpgrade(error.url, root.privateMode)) {
                 error.rejectCertificate()
                 return
             }
@@ -1018,9 +1020,11 @@ Item {
                 permission.reset()
                 return
             }
-            // Cámara y micrófono los recuerda BrowserProfile (el motor no)
+            // Cámara y micrófono los recuerda BrowserProfile (el motor no);
+            // en las ventanas privadas, nunca: ni se usan ni se guardan
             const origin = permission.origin.toString()
-            const media = kind === "camera" || kind === "microphone" || kind === "cameraMicrophone"
+            const media = !root.privateMode
+                && (kind === "camera" || kind === "microphone" || kind === "cameraMicrophone")
             const saved = media ? BrowserProfile.mediaPermission(origin, kind) : undefined
             if (saved !== undefined) {
                 saved ? permission.grant() : permission.deny()
@@ -1029,7 +1033,7 @@ Item {
             root.permissionRequested({
                 kind: kind,
                 origin: origin,
-                remembered: media || permission.isPersistent(type),
+                remembered: !root.privateMode && (media || permission.isPersistent(type)),
                 grant: () => {
                     if (media)
                         BrowserProfile.setMediaPermission(origin, kind, true)

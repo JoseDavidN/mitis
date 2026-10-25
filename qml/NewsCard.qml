@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 
 // Noticia de la página de nueva pestaña: titular (hasta dos líneas) y,
 // debajo, la fuente y su antigüedad.
@@ -16,12 +17,12 @@ Item {
     Surface {
         anchors.fill: parent
         radius: Theme.radius
-        fill: Theme.surfaceFloat
+        fill: Colors.surfaceFloat
 
         Rectangle {
             anchors.fill: parent
             radius: parent.radius
-            color: hover.hovered ? Theme.tintHover : "transparent"
+            color: hover.hovered ? Colors.tintHover : "transparent"
             Behavior on color { ColorAnimation { duration: Theme.durationFast } }
         }
     }
@@ -37,7 +38,7 @@ Item {
         Text {
             width: parent.width
             text: root.title
-            color: Theme.ink
+            color: Colors.ink
             font.pixelSize: Theme.fontSize
             wrapMode: Text.WordWrap
             maximumLineCount: 2
@@ -46,7 +47,7 @@ Item {
         Text {
             width: parent.width
             text: root.source !== "" ? root.source + " · " + root.age : root.age
-            color: Theme.inkMuted
+            color: Colors.inkMuted
             font.pixelSize: Theme.fontSizeSmall
             elide: Text.ElideRight
         }

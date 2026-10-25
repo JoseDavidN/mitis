@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 
 // Botón con texto, en píldora. `primary` es la acción principal de un
 // diálogo: degradado de marca y texto onBrand. `danger` (sin primary) es una
@@ -22,7 +23,7 @@ Item {
         anchors.fill: parent
         radius: height / 2
         visible: !root.primary
-        color: root.hovered ? Theme.tintActive : Theme.tintHover
+        color: root.hovered ? Colors.tintActive : Colors.tintHover
         Behavior on color { ColorAnimation { duration: Theme.durationFast } }
     }
 
@@ -32,15 +33,15 @@ Item {
         visible: root.primary
         gradient: Gradient {
             orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: Theme.brand1 }
-            GradientStop { position: 1.0; color: Theme.brand2 }
+            GradientStop { position: 0.0; color: Colors.brand1 }
+            GradientStop { position: 1.0; color: Colors.brand2 }
         }
 
         // Realce al pasar por encima
         Rectangle {
             anchors.fill: parent
             radius: parent.radius
-            color: root.hovered ? Theme.tintActive : "transparent"
+            color: root.hovered ? Colors.tintActive : "transparent"
         }
     }
 
@@ -48,7 +49,7 @@ Item {
         id: label
         anchors.centerIn: parent
         text: root.text
-        color: root.primary ? Theme.onBrand : root.danger ? Theme.danger : Theme.ink
+        color: root.primary ? Colors.onBrand : root.danger ? Colors.danger : Colors.ink
         font.pixelSize: Theme.fontSize
         font.weight: root.primary ? Font.DemiBold : Font.Normal
     }

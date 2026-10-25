@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import Mitis.Core
 
 // Buscar en la página (Ctrl+F): píldora flotante centrada bajo la barra de
 // título. Busca mientras se escribe; Intro va a la siguiente coincidencia,
@@ -61,9 +62,9 @@ Item {
         anchors.fill: parent
         radius: height / 2
         border.width: field.activeFocus ? 1 : 0
-        border.color: Theme.focusRing
-        fillStart: Theme.controlsStart
-        fillEnd: Theme.controlsEnd
+        border.color: Colors.focusRing
+        fillStart: Colors.controlsStart
+        fillEnd: Colors.controlsEnd
     }
 
     Icon {
@@ -73,7 +74,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         name: "search"
         size: Theme.iconSizeSmall
-        color: field.activeFocus ? Theme.brandLight1 : Theme.inkMuted
+        color: field.activeFocus ? Colors.brandLight1 : Colors.inkMuted
     }
 
     TextField {
@@ -85,11 +86,11 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         leftPadding: Theme.spacing / 2
         rightPadding: 0
-        color: Theme.ink
+        color: Colors.ink
         placeholderText: "Buscar en la página"
-        placeholderTextColor: Theme.inkMuted
-        selectionColor: Theme.selection
-        selectedTextColor: Theme.ink
+        placeholderTextColor: Colors.inkMuted
+        selectionColor: Colors.selection
+        selectedTextColor: Colors.ink
         font.pixelSize: Theme.fontSize
         selectByMouse: true
         background: null
@@ -120,7 +121,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         visible: field.text !== ""
         text: root.noMatches ? "Sin coincidencias" : root.active + " de " + root.matches
-        color: root.noMatches ? Theme.danger : Theme.inkMuted
+        color: root.noMatches ? Colors.danger : Colors.inkMuted
         font.pixelSize: Theme.fontSizeSmall
     }
 

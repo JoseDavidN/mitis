@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
+import Mitis.Core
 
 // Listado de descargas (menú de opciones → Descargas): la más reciente
 // arriba, con su progreso y acciones. Lee y actúa sobre el singleton Downloads.
@@ -95,7 +96,7 @@ Popup {
                 anchors.leftMargin: Theme.margin
                 anchors.verticalCenter: parent.verticalCenter
                 text: "Descargas"
-                color: Theme.ink
+                color: Colors.ink
                 font.pixelSize: Theme.fontSizeTitle
                 font.weight: Font.DemiBold
             }
@@ -106,7 +107,7 @@ Popup {
                 anchors.rightMargin: Theme.margin
                 anchors.verticalCenter: parent.verticalCenter
                 text: "Limpiar"
-                color: clearHover.hovered ? Theme.ink : Theme.inkSecondary
+                color: clearHover.hovered ? Colors.ink : Colors.inkSecondary
                 font.pixelSize: Theme.fontSizeSmall
                 Behavior on color { ColorAnimation { duration: Theme.durationFast } }
 
@@ -125,7 +126,7 @@ Popup {
             id: separator
             width: parent.width
             height: 1
-            color: Theme.hairline
+            color: Colors.hairline
         }
 
         Text {
@@ -135,7 +136,7 @@ Popup {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: "Aún no hay descargas"
-            color: Theme.inkMuted
+            color: Colors.inkMuted
             font.pixelSize: Theme.fontSize
         }
 
@@ -165,7 +166,7 @@ Popup {
                 Rectangle {
                     anchors.fill: parent
                     radius: Theme.radiusSmall
-                    color: row.hovered ? Theme.tintHover : "transparent"
+                    color: row.hovered ? Colors.tintHover : "transparent"
                     Behavior on color { ColorAnimation { duration: Theme.durationFast } }
                 }
 
@@ -175,7 +176,7 @@ Popup {
                     anchors.leftMargin: Theme.margin
                     anchors.verticalCenter: parent.verticalCenter
                     name: "file"
-                    color: row.done || row.active ? Theme.inkSoft : Theme.inkMuted
+                    color: row.done || row.active ? Colors.inkSoft : Colors.inkMuted
                 }
 
                 Column {
@@ -189,7 +190,7 @@ Popup {
                     Text {
                         width: parent.width
                         text: row.model.fileName
-                        color: row.done || row.active ? Theme.ink : Theme.inkSecondary
+                        color: row.done || row.active ? Colors.ink : Colors.inkSecondary
                         font.pixelSize: Theme.fontSize
                         elide: Text.ElideMiddle
                     }
@@ -198,7 +199,7 @@ Popup {
                         width: parent.width
                         text: root.detail(row.status, row.model.received, row.model.total,
                                           row.model.error, row.model.finishedAt)
-                        color: row.status === "failed" ? Theme.danger : Theme.inkMuted
+                        color: row.status === "failed" ? Colors.danger : Colors.inkMuted
                         font.pixelSize: Theme.fontSizeSmall
                         elide: Text.ElideRight
                     }

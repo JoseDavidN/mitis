@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 
 // Botón de la barra inferior cuando hay una versión nueva de Mitis: el icono
 // de actualizar dentro de un anillo con el degradado de la marca, y cada
@@ -23,7 +24,7 @@ Item {
         radius: width / 2
         color: "transparent"
         border.width: Theme.updateRingWidth
-        border.color: Theme.brandLight1
+        border.color: Colors.brandLight1
         opacity: 0
 
         SequentialAnimation {
@@ -59,8 +60,8 @@ Item {
         }
         gradient: Gradient {
             orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: Theme.brand1 }
-            GradientStop { position: 1.0; color: Theme.brand2 }
+            GradientStop { position: 0.0; color: Colors.brand1 }
+            GradientStop { position: 1.0; color: Colors.brand2 }
         }
     }
 

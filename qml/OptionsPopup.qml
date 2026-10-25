@@ -9,8 +9,8 @@ Popup {
 
     // Monitor de rendimiento activado (Configuración → Desarrollo): añade su opción
     property bool performanceMonitor: false
-    // Hay una página que imprimir (no en la nueva pestaña ni en Configuración)
-    property bool canPrint: false
+    // Ventana privada: sin perfil, historial ni Configuración (es privada del todo)
+    property bool privateMode: false
 
     // Cada opción: { key, label, icon, available, shortcut (opcional) }
     readonly property var options: [
@@ -19,11 +19,10 @@ Popup {
         { key: "private", label: "Nueva ventana privada", icon: "private", available: true, shortcut: "Ctrl+Shift+N" },
         { key: "history", label: "Historial", icon: "history", available: true },
         { key: "downloads", label: "Descargas", icon: "downloads", available: true },
-        { key: "print", label: "Imprimir…", icon: "print", available: true, shortcut: "Ctrl+P" },
         { key: "performance", label: "Monitor de rendimiento", icon: "memory", available: true, shortcut: "Shift+Esc" },
         { key: "settings", label: "Configuración", icon: "settings", available: true }
     ].filter(option => (performanceMonitor || option.key !== "performance")
-                       && (canPrint || option.key !== "print"))
+                       && !(privateMode && ["profile", "history", "settings"].includes(option.key)))
 
     signal optionSelected(string key)
 
@@ -56,7 +55,7 @@ Popup {
                 Rectangle {
                     anchors.fill: parent
                     radius: Theme.radiusSmall
-                    color: rowHover.hovered && row.modelData.available ? Theme.tintHover : "transparent"
+                    color: rowHover.hovered && row.modelData.available ? Colors.tintHover : "transparent"
                     Behavior on color { ColorAnimation { duration: Theme.durationFast } }
                 }
 
@@ -66,7 +65,7 @@ Popup {
                     anchors.leftMargin: Theme.margin
                     anchors.verticalCenter: parent.verticalCenter
                     name: row.modelData.icon ?? ""
-                    color: row.modelData.available ? Theme.inkSoft : Theme.inkMuted
+                    color: row.modelData.available ? Colors.inkSoft : Colors.inkMuted
                     opacity: row.modelData.key === "profile" ? 0 : 1
                 }
                 Avatar {
@@ -85,7 +84,7 @@ Popup {
                     anchors.rightMargin: Theme.margin
                     anchors.verticalCenter: parent.verticalCenter
                     text: row.modelData.label
-                    color: row.modelData.available ? Theme.ink : Theme.inkMuted
+                    color: row.modelData.available ? Colors.ink : Colors.inkMuted
                     font.pixelSize: Theme.fontSize
                     elide: Text.ElideRight
                 }
@@ -97,7 +96,7 @@ Popup {
                     anchors.rightMargin: Theme.margin
                     anchors.verticalCenter: parent.verticalCenter
                     text: row.modelData.available ? (row.modelData.shortcut ?? "") : "Próximamente"
-                    color: row.modelData.available ? Theme.inkMuted : Theme.inkFaint
+                    color: row.modelData.available ? Colors.inkMuted : Colors.inkFaint
                     font.pixelSize: Theme.fontSizeSmall
                 }
 

@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 
 // Deslizar entre páginas (macOS, dos dedos): un relieve que sale del borde
 // del lado hacia el que se va (izquierdo: atrás; derecho: adelante) al ritmo
@@ -36,8 +37,8 @@ Item {
         width: root.depth
         height: parent.height
         x: root.direction < 0 ? 0 : parent.width - width
-        fillStart: Theme.controlsStart
-        fillEnd: Theme.controlsEnd
+        fillStart: Colors.controlsStart
+        fillEnd: Colors.controlsEnd
         path: {
             const h = height, k = h * Theme.swipeBumpCurve
             // Desde el borde de la ventana (x = edge) hacia dentro (x = out)
@@ -58,7 +59,7 @@ Item {
         size: Theme.swipeArrowSize
         opacity: shown
         scale: 0.6 + 0.4 * shown
-        color: root.ready ? Theme.brandLight1 : Theme.ink
+        color: root.ready ? Colors.brandLight1 : Colors.ink
         Behavior on color { ColorAnimation { duration: Theme.durationFast } }
     }
 }

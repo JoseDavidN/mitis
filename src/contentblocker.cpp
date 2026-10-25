@@ -69,7 +69,7 @@ ContentBlocker::ContentBlocker(QObject *parent)
     auto *timer = new QTimer(this);
     timer->setInterval(CheckIntervalMs);
     connect(timer, &QTimer::timeout, this, [this] {
-        if (m_enabled && !updating() && (!m_updated.isValid() || m_updated.secsTo(QDateTime::currentDateTime()) > MaxAgeSecs))
+        if ((m_enabled || m_privateActive) && !updating() && (!m_updated.isValid() || m_updated.secsTo(QDateTime::currentDateTime()) > MaxAgeSecs))
             update();
     });
     timer->start();
@@ -102,6 +102,13 @@ void ContentBlocker::setEnabled(bool enabled)
         compile();
 }
 
+void ContentBlocker::setPrivateActive(bool active)
+{
+    m_privateActive = active;
+    if (active && !m_engine && !m_compiling)
+        compile();
+}
+
 void ContentBlocker::setAllowedSites(const QStringList &sites)
 {
     m_allowedSites.clear();
@@ -123,9 +130,9 @@ QString ContentBlocker::siteOf(const QUrl &url)
     return QString::fromLatin1(FilterEngine::baseDomain(hostOf(url)));
 }
 
-bool ContentBlocker::shouldBlock(const QUrl &url, const QUrl &page, FilterEngine::Type type)
+bool ContentBlocker::shouldBlock(const QUrl &url, const QUrl &page, FilterEngine::Type type, bool strict)
 {
-    if (!m_enabled || !m_engine)
+    if ((!m_enabled && !strict) || !m_engine)
         return false;
     const QString scheme = url.scheme();
     if (scheme != QLatin1String("https") && scheme != QLatin1String("http")
@@ -141,7 +148,7 @@ bool ContentBlocker::shouldBlock(const QUrl &url, const QUrl &page, FilterEngine
     request.type = type;
     request.thirdParty = FilterEngine::baseDomain(request.host) != FilterEngine::baseDomain(request.pageHost);
 
-    if (allowedSite(request.pageHost))
+    if (!strict && allowedSite(request.pageHost))
         return false;
     if (request.pageUrl != m_lastPageUrl) {
         m_lastPageUrl = request.pageUrl;
@@ -161,9 +168,9 @@ bool ContentBlocker::shouldBlock(const QUrl &url, const QUrl &page, FilterEngine
     return true;
 }
 
-QUrl ContentBlocker::withoutTrackingParams(const QUrl &url) const
+QUrl ContentBlocker::withoutTrackingParams(const QUrl &url, bool strict) const
 {
-    if (!stripTracking || !url.hasQuery())
+    if ((!stripTracking && !strict) || !url.hasQuery())
         return url;
     const QUrlQuery query(url);
     QUrlQuery kept;
@@ -187,12 +194,12 @@ QUrl ContentBlocker::withoutTrackingParams(const QUrl &url) const
     return clean;
 }
 
-QString ContentBlocker::cosmeticCss(const QUrl &page) const
+QString ContentBlocker::cosmeticCss(const QUrl &page, bool strict) const
 {
-    if (!m_enabled || !m_engine)
+    if ((!m_enabled && !strict) || !m_engine)
         return QString();
     const QByteArray host = hostOf(page);
-    if (host.isEmpty() || allowedSite(host))
+    if (host.isEmpty() || (!strict && allowedSite(host)))
         return QString();
     return QString::fromUtf8(m_engine->cosmeticCss(page.toEncoded().toLower(), host));
 }
@@ -250,7 +257,7 @@ void ContentBlocker::compile()
         }
         emit stateChanged();
         const bool old = !oldest.isValid() || oldest.secsTo(QDateTime::currentDateTime()) > MaxAgeSecs;
-        if (m_enabled && (missing || old) && !m_network && !m_autoUpdated) {
+        if ((m_enabled || m_privateActive) && (missing || old) && !m_network && !m_autoUpdated) {
             m_autoUpdated = true;
             update();
         }

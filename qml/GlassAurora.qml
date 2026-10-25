@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Shapes
+import Mitis.Core
 
 // Manchas de color de la marca en el fondo de las páginas propias, solo con
 // la transparencia experimental: sobre un fondo liso el vidrio esmerilado no
@@ -9,14 +10,14 @@ import QtQuick.Shapes
 Item {
     id: root
 
-    visible: Theme.glassEnabled
+    visible: Theme.glassEnabled && !Colors.privateWindow
     opacity: Theme.glassAuroraOpacity
 
     // Posición (en fracciones del fondo), tamaño (del lado mayor) y color
     readonly property var spots: [
-        { x: 0.82, y: 0.12, size: 0.55, color: Theme.brand1 },
-        { x: 0.12, y: 0.78, size: 0.6, color: Theme.brand2 },
-        { x: 0.55, y: 0.6, size: 0.4, color: Theme.brandLight1 }
+        { x: 0.82, y: 0.12, size: 0.55, color: Colors.brand1 },
+        { x: 0.12, y: 0.78, size: 0.6, color: Colors.brand2 },
+        { x: 0.55, y: 0.6, size: 0.4, color: Colors.brandLight1 }
     ]
 
     Repeater {

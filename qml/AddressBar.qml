@@ -21,8 +21,8 @@ TextField {
     property int loadProgress: 0
 
     // Relleno: tramo del degradado compartido de los controles (ver BottomBar)
-    property color fillStart: Theme.surfaceFloat
-    property color fillEnd: Theme.surfaceFloat
+    property color fillStart: Colors.surfaceFloat
+    property color fillEnd: Colors.surfaceFloat
 
     readonly property bool editing: activeFocus
 
@@ -98,12 +98,12 @@ TextField {
     leftPadding: Theme.margin + Theme.iconSizeSmall + Theme.spacing
     rightPadding: Theme.margin + Theme.spacing / 2
     verticalAlignment: TextInput.AlignVCenter
-    color: Theme.ink
+    color: Colors.ink
     // Solo al escribir: en reposo el hueco lo ocupa el título
     placeholderText: editing ? "Buscar o escribir una dirección" : ""
-    placeholderTextColor: Theme.inkMuted
-    selectionColor: Theme.selection
-    selectedTextColor: Theme.ink
+    placeholderTextColor: Colors.inkMuted
+    selectionColor: Colors.selection
+    selectedTextColor: Colors.ink
     font.pixelSize: Theme.fontSize
     font.weight: Theme.fontWeightInput
     selectByMouse: true
@@ -126,15 +126,15 @@ TextField {
         Rectangle {
             anchors.fill: parent
             radius: width / 2
-            color: siteHover.hovered ? Theme.tintActive : "transparent"
+            color: siteHover.hovered ? Colors.tintActive : "transparent"
             Behavior on color { ColorAnimation { duration: Theme.durationFast } }
         }
         Icon {
             anchors.centerIn: parent
             name: root.security === "secure" ? "site-secure" : "site-insecure"
             size: Theme.iconSizeSmall
-            color: root.security === "secure" ? (siteHover.hovered ? Theme.ink : Theme.inkSoft)
-                 : root.security === "insecure" ? Theme.warn : Theme.danger
+            color: root.security === "secure" ? (siteHover.hovered ? Colors.ink : Colors.inkSoft)
+                 : root.security === "insecure" ? Colors.warn : Colors.danger
         }
         HoverHandler {
             id: siteHover
@@ -168,7 +168,7 @@ TextField {
             radius: height / 2
             // Sin borde; mientras se escribe, el anillo de foco
             border.width: root.editing ? 1 : 0
-            border.color: Theme.focusRing
+            border.color: Colors.focusRing
             fillStart: root.fillStart
             fillEnd: root.fillEnd
 
@@ -176,7 +176,7 @@ TextField {
             Rectangle {
                 anchors.fill: parent
                 radius: parent.radius
-                color: fieldHover.hovered && !root.editing ? Theme.tintHover : "transparent"
+                color: fieldHover.hovered && !root.editing ? Colors.tintHover : "transparent"
                 Behavior on color { ColorAnimation { duration: Theme.durationFast } }
             }
 
@@ -187,7 +187,7 @@ TextField {
                 anchors.verticalCenter: parent.verticalCenter
                 name: "search"
                 size: Theme.iconSizeSmall
-                color: Theme.brandLight1
+                color: Colors.brandLight1
                 opacity: root.editing ? 1 : 0
                 Behavior on opacity { NumberAnimation { duration: Theme.durationFast } }
             }
@@ -198,7 +198,7 @@ TextField {
                 anchors.leftMargin: Theme.margin + Theme.spacing + (root.security !== "" ? Theme.buttonSizeSmall : 0)
                 anchors.rightMargin: Theme.margin + Theme.spacing
                 text: root.shortTitle || "Buscar"
-                color: root.shortTitle ? Theme.inkStrong : Theme.inkMuted
+                color: root.shortTitle ? Colors.inkStrong : Colors.inkMuted
                 font: root.font
                 elide: Text.ElideRight
                 horizontalAlignment: Text.AlignHCenter
@@ -219,8 +219,8 @@ TextField {
                 opacity: root.loading ? 1 : 0
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
-                    GradientStop { position: 0.0; color: Theme.brand1 }
-                    GradientStop { position: 1.0; color: Theme.brand2 }
+                    GradientStop { position: 0.0; color: Colors.brand1 }
+                    GradientStop { position: 1.0; color: Colors.brand2 }
                 }
                 Behavior on width { NumberAnimation { duration: Theme.durationBase } }
                 Behavior on opacity { NumberAnimation { duration: Theme.durationBase } }
@@ -300,8 +300,8 @@ TextField {
                     Rectangle {
                         anchors.fill: parent
                         radius: Theme.radiusSmall
-                        color: suggestion.selected ? Theme.tintActive
-                                                   : (suggestionHover.hovered ? Theme.tintHover : "transparent")
+                        color: suggestion.selected ? Colors.tintActive
+                                                   : (suggestionHover.hovered ? Colors.tintHover : "transparent")
                         Behavior on color { ColorAnimation { duration: Theme.durationFast } }
                     }
 
@@ -311,7 +311,7 @@ TextField {
                         anchors.leftMargin: Theme.margin
                         anchors.verticalCenter: parent.verticalCenter
                         name: suggestion.modelData.bookmark ? "bookmark" : "history"
-                        color: suggestion.selected ? Theme.brandLight1 : Theme.inkMuted
+                        color: suggestion.selected ? Colors.brandLight1 : Colors.inkMuted
                     }
 
                     Text {
@@ -321,7 +321,7 @@ TextField {
                         anchors.verticalCenter: parent.verticalCenter
                         width: Math.min(implicitWidth, (parent.width - x - Theme.margin) * 0.6)
                         text: suggestion.modelData.title || Urls.host(suggestion.modelData.url)
-                        color: Theme.ink
+                        color: Colors.ink
                         font.pixelSize: Theme.fontSize
                         font.weight: suggestion.selected ? Font.DemiBold : Font.Normal
                         elide: Text.ElideRight
@@ -334,7 +334,7 @@ TextField {
                         anchors.rightMargin: Theme.margin
                         anchors.verticalCenter: parent.verticalCenter
                         text: suggestion.modelData.url.replace(/^https?:\/\/(www\.)?/, "")
-                        color: Theme.inkMuted
+                        color: Colors.inkMuted
                         font.pixelSize: Theme.fontSizeSmall
                         elide: Text.ElideRight
                     }

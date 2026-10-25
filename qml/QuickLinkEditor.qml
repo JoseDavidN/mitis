@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 
 import "urls.js" as Urls
+import Mitis.Core
 
 // Diálogo para añadir un acceso rápido: nombre (opcional) y dirección.
 // Sin nombre, se usa el dominio.
@@ -33,7 +34,7 @@ Popup {
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
     anchors.centerIn: parent
 
-    Overlay.modal: Rectangle { color: Theme.backgroundScrim }
+    Overlay.modal: Rectangle { color: Colors.backgroundScrim }
 
     background: PopupBackground {}
 
@@ -49,7 +50,7 @@ Popup {
 
         Text {
             text: "Nuevo acceso rápido"
-            color: Theme.ink
+            color: Colors.ink
             font.pixelSize: Theme.fontSizeTitle
             font.weight: Font.DemiBold
         }

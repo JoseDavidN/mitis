@@ -99,11 +99,37 @@ QtObject {
             onBrand: "#ffffff", focusRing: "#7c3aed",
             selection: Qt.rgba(147 / 255, 51 / 255, 234 / 255, 0.22),
             ok: "#059669", warn: "#b45309", danger: "#e11d48", dangerStrong: "#e11d48"
+        },
+        // Ventanas privadas (no se elige: es la suya siempre, Colors): negro
+        // mate, sin el morado de la marca ni brillos; los acentos, en gris
+        // claro y los botones principales, gris oscuro
+        privado: {
+            dark: true,
+            bgBase: "#0a0a0a", bgMid: "#0c0c0c", bgGlow: "#121212",
+            titleBarStart: "#121212", titleBarEnd: "#0c0c0c",
+            controlsStart: Qt.rgba(0x16 / 255, 0x16 / 255, 0x16 / 255, 0.96),
+            controlsEnd: Qt.rgba(0x10 / 255, 0x10 / 255, 0x10 / 255, 0.96),
+            surfaceFloat: Qt.rgba(0x0e / 255, 0x0e / 255, 0x0e / 255, 0.94),
+            selectBg: "#1c1c1c",
+            backgroundScrim: Qt.rgba(0x0a / 255, 0x0a / 255, 0x0a / 255, 0.6),
+            faviconBackdrop: Qt.rgba(1, 1, 1, 0.92),
+            surfacePopup: "#121212",
+            hairline: Qt.rgba(1, 1, 1, 0.10), hairlineSoft: Qt.rgba(1, 1, 1, 0.07),
+            hairlineStrong: Qt.rgba(1, 1, 1, 0.16), hairlineHover: Qt.rgba(1, 1, 1, 0.18),
+            line: Qt.rgba(1, 1, 1, 0.06),
+            tintHover: Qt.rgba(1, 1, 1, 0.05), tintActive: Qt.rgba(1, 1, 1, 0.09), tintSunken: Qt.rgba(1, 1, 1, 0.03),
+            ink: "#ececec", inkStrong: Qt.rgba(1, 1, 1, 0.86), inkSoft: Qt.rgba(1, 1, 1, 0.74),
+            inkSecondary: Qt.rgba(1, 1, 1, 0.62), inkMuted: Qt.rgba(1, 1, 1, 0.44),
+            inkFaint: Qt.rgba(1, 1, 1, 0.32), inkDisabled: Qt.rgba(1, 1, 1, 0.26),
+            brand1: "#3a3a3a", brand2: "#2b2b2b", brandLight1: "#d4d4d4", brandLight2: "#a3a3a3",
+            onBrand: "#ffffff", focusRing: "#8a8a8a",
+            selection: Qt.rgba(1, 1, 1, 0.20),
+            ok: "#4ade80", warn: "#fbbf24", danger: "#f87171", dangerStrong: "#ef4444"
         }
     })
 
     // Tema en uso (uno de `themes`; si el guardado no existe, Nocturno)
-    readonly property string current: palettes[Settings.theme] ? Settings.theme : "nocturno"
+    readonly property string current: themes.some(item => item.key === Settings.theme) ? Settings.theme : "nocturno"
     readonly property string name: themes.find(item => item.key === current).name
     readonly property var palette: palettes[current]
     // Tema oscuro (Nocturno, Oscuro) o claro. Lo siguen los diálogos del
@@ -111,7 +137,15 @@ QtObject {
     // oscura (prefers-color-scheme: lo fija main.cpp al iniciar el motor)
     readonly property bool dark: palette.dark
     onDarkChanged: Application.styleHints.colorScheme = dark ? Qt.ColorScheme.Dark : Qt.ColorScheme.Light
-    Component.onCompleted: Application.styleHints.colorScheme = dark ? Qt.ColorScheme.Dark : Qt.ColorScheme.Light
+    Component.onCompleted: {
+        Application.styleHints.colorScheme = dark ? Qt.ColorScheme.Dark : Qt.ColorScheme.Light
+        Colors.setPalettes(palette, palettes.privado)
+    }
+    // Los colores los leen los componentes con `Colors` (src/themecolors.*),
+    // que da los de la ventana: los de este tema o, en las privadas, los de
+    // «privado». Las propiedades de color de aquí abajo son las del tema
+    // elegido, para lo que no depende de la ventana
+    onPaletteChanged: Colors.setPalettes(palette, palettes.privado)
 
     // ── Fondo ────────────────────────────────────────────────────────
     readonly property color bgBase: palette.bgBase
@@ -191,7 +225,9 @@ QtObject {
     readonly property color macZoom: "#28c840"
     readonly property color macDotBorder: Qt.rgba(0, 0, 0, 0.12)
     readonly property color macDotSymbol: Qt.rgba(0, 0, 0, 0.55)
-    readonly property color macDotInactive: dark ? Qt.rgba(1, 1, 1, 0.18) : Qt.rgba(0, 0, 0, 0.14)
+    // Sin foco: claro u oscuro según la ventana (Colors.dark; la privada es oscura)
+    readonly property color macDotInactiveDark: Qt.rgba(1, 1, 1, 0.18)
+    readonly property color macDotInactiveLight: Qt.rgba(0, 0, 0, 0.14)
     readonly property int buttonSizeSmall: 24
     readonly property int controlHeight: 34
     readonly property int logoSize: 18

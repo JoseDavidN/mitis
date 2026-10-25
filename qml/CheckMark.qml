@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 
 // Casilla de verificación. Solo dibuja: la fila que la contiene decide y
 // atiende el clic. Marcada: degradado de marca con la marca en onBrand;
@@ -17,7 +18,7 @@ Item {
         radius: Theme.checkRadius
         color: "transparent"
         border.width: 1
-        border.color: root.hovered ? Theme.hairlineHover : Theme.hairlineStrong
+        border.color: root.hovered ? Colors.hairlineHover : Colors.hairlineStrong
         visible: !root.checked
     }
 
@@ -27,15 +28,15 @@ Item {
         visible: root.checked
         gradient: Gradient {
             orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: Theme.brand1 }
-            GradientStop { position: 1.0; color: Theme.brand2 }
+            GradientStop { position: 0.0; color: Colors.brand1 }
+            GradientStop { position: 1.0; color: Colors.brand2 }
         }
 
         Icon {
             anchors.centerIn: parent
             name: "check"
             size: Theme.iconSizeSmall
-            color: Theme.onBrand
+            color: Colors.onBrand
         }
     }
 }

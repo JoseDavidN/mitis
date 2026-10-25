@@ -8,7 +8,7 @@ import "urls.js" as Urls
 // Panel del sitio (botón del candado del campo de dirección), como el de
 // Zen: en un solo sitio, la conexión (al desplegarla, el certificado y quién
 // lo emitió), la protección contra rastreadores del sitio y acciones con la
-// página: marcadores, copiar el enlace, enviarlo por correo y permisos.
+// página: marcadores, copiar el enlace, captura de pantalla y permisos.
 // Se abre hacia arriba, sobre el campo.
 Popup {
     id: root
@@ -23,6 +23,8 @@ Popup {
     // Cambió la protección del sitio: hay que recargar para aplicarla
     signal reloadRequested()
     signal settingsRequested(string section)
+    // Ventana privada: protección siempre activa y sin camino a Configuración
+    property bool privateMode: false
     signal screenshotRequested()
 
     readonly property string host: Urls.host(pageUrl)
@@ -30,7 +32,7 @@ Popup {
     readonly property bool bookmarked: Bookmarks.urls.indexOf(pageUrl) >= 0
 
     // Bloqueador: activado en Configuración y no permitido en este sitio
-    readonly property bool protectedSite: Settings.blockAds && !Settings.adBlockAllowedSites.includes(site)
+    readonly property bool protectedSite: privateMode || (Settings.blockAds && !Settings.adBlockAllowedSites.includes(site))
 
     // Certificado: se pide al desplegar la conexión. null = consultando
     property bool certificateOpen: false
@@ -134,7 +136,7 @@ Popup {
                 Text {
                     width: parent.width
                     text: root.host
-                    color: Theme.ink
+                    color: Colors.ink
                     font.pixelSize: Theme.fontSizeTitle
                     font.weight: Font.Bold
                     elide: Text.ElideRight
@@ -143,20 +145,20 @@ Popup {
                     width: parent.width
                     visible: text !== ""
                     text: root.pageTitle
-                    color: Theme.inkMuted
+                    color: Colors.inkMuted
                     font.pixelSize: Theme.fontSizeSmall
                     elide: Text.ElideRight
                 }
             }
         }
 
-        Rectangle { width: parent.width; height: 1; color: Theme.line }
+        Rectangle { width: parent.width; height: 1; color: Colors.line }
 
         // ── Conexión (al pulsarla, el certificado) ───────────────────
         StatusRow {
             width: parent.width
             icon: root.security === "secure" ? "site-secure" : "site-insecure"
-            tone: root.security === "secure" ? Theme.ok : root.security === "insecure" ? Theme.warn : Theme.danger
+            tone: root.security === "secure" ? Colors.ok : root.security === "insecure" ? Colors.warn : Colors.danger
             title: root.security === "secure" ? "Conexión segura"
                  : root.security === "insecure" ? "Conexión no segura" : "Certificado no válido"
             detail: root.security === "secure" ? "Lo que envíes y recibas viaja cifrado."
@@ -182,7 +184,7 @@ Popup {
                 visible: root.certificate === null || root.certificate.error !== undefined
                 width: parent.textWidth
                 text: root.certificate === null ? "Comprobando el certificado…" : (root.certificate.error ?? "")
-                color: Theme.inkMuted
+                color: Colors.inkMuted
                 font.pixelSize: Theme.fontSizeSmall
                 wrapMode: Text.Wrap
             }
@@ -226,7 +228,7 @@ Popup {
                          && (root.certificate.errors ?? []).length > 0
                 width: parent.textWidth
                 text: root.certificate && root.certificate.errors ? root.certificate.errors.join("\n") : ""
-                color: Theme.danger
+                color: Colors.danger
                 font.pixelSize: Theme.fontSizeSmall
                 wrapMode: Text.Wrap
             }
@@ -236,16 +238,17 @@ Popup {
         StatusRow {
             width: parent.width
             icon: "blocker"
-            tone: root.protectedSite ? Theme.ok : Theme.inkMuted
+            tone: root.protectedSite ? Colors.ok : Colors.inkMuted
             title: "Protección contra rastreadores"
-            detail: !Settings.blockAds ? "Desactivada en Configuración."
+            detail: root.privateMode ? "Siempre activa en las ventanas privadas."
+                  : !Settings.blockAds ? "Desactivada en Configuración."
                   : root.protectedSite ? "Activada en este sitio." : "Desactivada en este sitio."
-            showToggle: Settings.blockAds && root.site !== ""
+            showToggle: !root.privateMode && Settings.blockAds && root.site !== ""
             toggleChecked: root.protectedSite
             onClicked: root.toggleProtection()
         }
 
-        Rectangle { width: parent.width; height: 1; color: Theme.line }
+        Rectangle { width: parent.width; height: 1; color: Colors.line }
 
         // ── Acciones con la página ───────────────────────────────────
         PopupAction {
@@ -279,16 +282,7 @@ Popup {
         }
         PopupAction {
             width: parent.width
-            icon: "share-mail"
-            text: "Enviar por correo"
-            onTriggered: {
-                Qt.openUrlExternally("mailto:?subject=" + encodeURIComponent(root.pageTitle || root.host)
-                                     + "&body=" + encodeURIComponent(root.pageUrl))
-                root.close()
-            }
-        }
-        PopupAction {
-            width: parent.width
+            visible: !root.privateMode
             icon: "permissions"
             text: "Permisos de sitios"
             onTriggered: {
@@ -304,7 +298,7 @@ Popup {
         id: row
 
         property string icon: ""
-        property color tone: Theme.inkSoft
+        property color tone: Colors.inkSoft
         property string title: ""
         property string detail: ""
         property bool expandable: false
@@ -319,7 +313,7 @@ Popup {
         Rectangle {
             anchors.fill: parent
             radius: Theme.radiusSmall
-            color: rowHover.hovered && (row.expandable || row.showToggle) ? Theme.tintHover : "transparent"
+            color: rowHover.hovered && (row.expandable || row.showToggle) ? Colors.tintHover : "transparent"
             Behavior on color { ColorAnimation { duration: Theme.durationFast } }
         }
         Icon {
@@ -343,7 +337,7 @@ Popup {
             Text {
                 width: parent.width
                 text: row.title
-                color: Theme.ink
+                color: Colors.ink
                 font.pixelSize: Theme.fontSize
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
@@ -351,7 +345,7 @@ Popup {
             Text {
                 width: parent.width
                 text: row.detail
-                color: Theme.inkMuted
+                color: Colors.inkMuted
                 font.pixelSize: Theme.fontSizeSmall
                 wrapMode: Text.Wrap
             }
@@ -369,7 +363,7 @@ Popup {
                 anchors.centerIn: parent
                 name: "expand"
                 size: Theme.iconSizeSmall
-                color: Theme.inkMuted
+                color: Colors.inkMuted
                 rotation: row.expanded ? 180 : 0
                 Behavior on rotation { NumberAnimation { duration: Theme.durationFast } }
             }
@@ -407,13 +401,13 @@ Popup {
         Text {
             width: parent.width
             text: parent.label
-            color: Theme.inkMuted
+            color: Colors.inkMuted
             font.pixelSize: Theme.fontSizeSmall
         }
         Text {
             width: parent.width
             text: parent.value
-            color: Theme.ink
+            color: Colors.ink
             font.pixelSize: Theme.fontSizeSmall
             font.weight: Font.DemiBold
             wrapMode: Text.Wrap

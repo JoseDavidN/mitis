@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 
 // Aviso arriba en el centro, hasta cerrarlo: tarjeta con el estilo de los
 // controles, icono, texto, botones propios (hijos) y la ✕. Lo usan el de
@@ -24,8 +25,8 @@ Item {
     Surface {
         anchors.fill: parent
         radius: Theme.radius
-        fillStart: Theme.controlsStart
-        fillEnd: Theme.controlsEnd
+        fillStart: Colors.controlsStart
+        fillEnd: Colors.controlsEnd
     }
 
     Row {
@@ -36,13 +37,13 @@ Item {
         Icon {
             anchors.verticalCenter: parent.verticalCenter
             name: root.icon
-            color: Theme.brandLight1
+            color: Colors.brandLight1
         }
         Text {
             anchors.verticalCenter: parent.verticalCenter
             rightPadding: Theme.spacing
             text: root.text
-            color: Theme.ink
+            color: Colors.ink
             font.pixelSize: Theme.fontSize
         }
         Row {

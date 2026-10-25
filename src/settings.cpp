@@ -41,6 +41,25 @@ const QString StripTrackingParamsKey = QStringLiteral("Blocker/stripParams");
 const QString AdBlockAllowedSitesKey = QStringLiteral("Blocker/allowedSites");
 const QString AskDownloadFolderKey = QStringLiteral("Downloads/askFolder");
 const QString SuspendAfterKey = QStringLiteral("Performance/suspendAfter");
+const QString SecureDnsKey = QStringLiteral("Privacy/secureDns");
+const QString SecureDnsProviderKey = QStringLiteral("Privacy/secureDnsProvider");
+
+// Servidores de DNS sobre HTTPS: conocidos, sin cuenta y con política de no
+// guardar datos. AdGuard y el de Mullvad con filtro bloquean además anuncios
+struct DnsProvider {
+    const char *key;
+    const char *name;
+    const char *detail;
+    const char *url;
+};
+const DnsProvider DnsProviders[] = {
+    { "cloudflare", "Cloudflare", "1.1.1.1, el más rápido en la mayoría de sitios", "https://cloudflare-dns.com/dns-query" },
+    { "quad9", "Quad9", "Bloquea además dominios de virus y estafas", "https://dns.quad9.net/dns-query" },
+    { "mullvad", "Mullvad", "Sin filtros ni registros", "https://dns.mullvad.net/dns-query" },
+    { "adguard", "AdGuard", "Bloquea además anuncios y rastreadores", "https://dns.adguard-dns.com/dns-query" },
+};
+// Con qué arrancó el motor ("modo:servidor" o "off"); vacío = aún no se sabe
+QString secureDnsStarted;
 
 const QStringList DefaultLanguages = { QStringLiteral("es"), QStringLiteral("en") };
 }
@@ -518,6 +537,70 @@ QVariant Settings::value(const QString &key, const QVariant &defaultValue) const
     return m_settings.value(key, defaultValue);
 }
 
+QString Settings::secureDns() const
+{
+    // De serie, automático: cifrado y, si el servidor no responde, el del sistema
+    const QString mode = m_settings.value(SecureDnsKey, QStringLiteral("auto")).toString();
+    return mode == QLatin1String("off") || mode == QLatin1String("secure") ? mode : QStringLiteral("auto");
+}
+
+void Settings::setSecureDns(const QString &value)
+{
+    if (secureDns() == value)
+        return;
+    m_settings.setValue(SecureDnsKey, value);
+    emit secureDnsChanged();
+    emit secureDnsPendingChanged();
+}
+
+QString Settings::secureDnsProvider() const
+{
+    const QString key = m_settings.value(SecureDnsProviderKey).toString();
+    return secureDnsTemplate(key).isEmpty() ? QString::fromLatin1(DnsProviders[0].key) : key;
+}
+
+void Settings::setSecureDnsProvider(const QString &value)
+{
+    if (secureDnsProvider() == value)
+        return;
+    m_settings.setValue(SecureDnsProviderKey, value);
+    emit secureDnsProviderChanged();
+    emit secureDnsPendingChanged();
+}
+
+QVariantList Settings::secureDnsProviders() const
+{
+    QVariantList list;
+    for (const DnsProvider &provider : DnsProviders)
+        list.append(QVariantMap{ { QStringLiteral("key"), QString::fromLatin1(provider.key) },
+                                 { QStringLiteral("name"), QString::fromUtf8(provider.name) },
+                                 { QStringLiteral("detail"), QString::fromUtf8(provider.detail) } });
+    return list;
+}
+
+bool Settings::secureDnsPending() const
+{
+    if (secureDnsStarted.isEmpty())
+        return false;
+    const QString chosen = secureDns() == QLatin1String("off") ? QStringLiteral("off")
+                                                               : secureDns() + u':' + secureDnsProvider();
+    return chosen != secureDnsStarted;
+}
+
+QString Settings::secureDnsTemplate(const QString &provider)
+{
+    for (const DnsProvider &item : DnsProviders) {
+        if (provider == QLatin1String(item.key))
+            return QString::fromLatin1(item.url);
+    }
+    return {};
+}
+
+void Settings::setSecureDnsStarted(const QString &modeAndProvider)
+{
+    secureDnsStarted = modeAndProvider;
+}
+
 void Settings::setValue(const QString &key, const QVariant &value)
 {
     m_settings.setValue(key, value);
@@ -530,7 +613,7 @@ void Settings::resetPreferences()
         StartupModeKey, StartupUrlKey, DefaultZoomKey, DarkPagesKey, HideScrollbarsKey, NavigationGesturesKey, SpellCheckKey, PreloadPagesKey, GlassEffectKey, GlassToneKey, LanguagesKey,
         BlockThirdPartyCookiesKey, ClearOnExitKey, DoNotTrackKey, HideLocalIpKey, HttpsUpgradeKey,
         JavascriptKey, ImagesKey, BlockPopupsKey, AutoplayKey, BlockedPermissionsKey, AskDownloadFolderKey,
-        SuspendAfterKey, BlockAdsKey, StripTrackingParamsKey, ThemeKey,
+        SuspendAfterKey, BlockAdsKey, StripTrackingParamsKey, ThemeKey, SecureDnsKey, SecureDnsProviderKey,
     };
     for (const QString &key : keys)
         m_settings.remove(key);
@@ -561,4 +644,12 @@ void Settings::resetPreferences()
     emit autoplayChanged();
     emit blockedPermissionsChanged();
     emit askDownloadFolderChanged();
+    emit preloadPagesChanged();
+    emit suspendAfterChanged();
+    emit blockAdsChanged();
+    emit stripTrackingParamsChanged();
+    emit themeChanged();
+    emit secureDnsChanged();
+    emit secureDnsProviderChanged();
+    emit secureDnsPendingChanged();
 }

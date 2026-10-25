@@ -46,6 +46,7 @@ FocusScope {
         { key: "history", title: "Borrar datos", icon: "history" },
         { key: "downloads", title: "Descargas", icon: "downloads" },
         { key: "performance", title: "Rendimiento", icon: "performance" },
+        { key: "shortcuts", title: "Atajos de teclado", icon: "keyboard" },
         { key: "developer", title: "Desarrollo", icon: "devtools" },
         { key: "about", title: "Acerca de Mitis", icon: "info" }
     ]
@@ -135,6 +136,61 @@ FocusScope {
         startupField.text = Settings.startupUrl
     }
 
+    // DNS cifrado: el del sistema, cifrado con respaldo o solo cifrado
+    readonly property var secureDnsModes: [
+        { value: "off", label: "Desactivado" }, { value: "auto", label: "Automático" },
+        { value: "secure", label: "Siempre" }
+    ]
+
+    // Atajos de teclado (los de Main.qml), por grupos: un grupo por página
+    // para que la sección no se haga larga. Cada atajo: qué hace, una o
+    // varias combinaciones y, si hace falta, cuándo funciona
+    readonly property var shortcutGroups: [
+        { title: "Pestañas", items: [
+            { action: "Nueva pestaña", keys: ["Ctrl+T"] },
+            { action: "Cerrar la pestaña", keys: ["Ctrl+W"] },
+            { action: "Reabrir la última cerrada", keys: ["Ctrl+Shift+T"] },
+            { action: "Pestaña siguiente", keys: ["Ctrl+Tab"] },
+            { action: "Pestaña anterior", keys: ["Ctrl+Shift+Tab"] },
+            { action: "Lista de pestañas", keys: ["Ctrl+Shift+A"] }
+        ] },
+        { title: "Navegar", items: [
+            { action: "Escribir una dirección o buscar", keys: ["Ctrl+L"] },
+            { action: "Atrás", keys: ["Alt+Left"] },
+            { action: "Adelante", keys: ["Alt+Right"] },
+            { action: "Recargar la página", keys: ["Ctrl+R", "F5"] },
+            { action: "Guardar en marcadores", keys: ["Ctrl+D"] },
+            { action: "Historial", keys: ["Ctrl+H"] }
+        ] },
+        { title: "Buscar y zoom", items: [
+            { action: "Buscar en la página", keys: ["Ctrl+F"] },
+            { action: "Siguiente coincidencia", keys: ["F3", "Ctrl+G"] },
+            { action: "Coincidencia anterior", keys: ["Shift+F3", "Ctrl+Shift+G"] },
+            { action: "Acercar", keys: ["Ctrl++"] },
+            { action: "Alejar", keys: ["Ctrl+-"] },
+            { action: "Tamaño normal", keys: ["Ctrl+0"] }
+        ] },
+        { title: "Ventana y herramientas", items: [
+            { action: "Nueva ventana privada", keys: ["Ctrl+Shift+N"] },
+            { action: "Pantalla completa", keys: ["F11"] },
+            { action: "Imprimir o guardar como PDF", keys: ["Ctrl+P"] },
+            { action: "Captura de pantalla", keys: ["Ctrl+Shift+S"] },
+            { action: "Monitor de rendimiento", note: "Si está activado en Desarrollo", keys: ["Shift+Esc"] },
+            { action: "Herramientas de desarrollo", note: "Si están activadas en Desarrollo", keys: ["F12"] }
+        ] }
+    ]
+    property int shortcutPage: 0
+    readonly property bool macKeys: Qt.platform.os === "osx" || Qt.platform.os === "macos"
+    // Teclas de una combinación, como se ven en el teclado (en macOS, Qt
+    // cambia Ctrl por Cmd y Alt es Opción)
+    function shortcutKeys(sequence) {
+        const names = macKeys ? { "Ctrl": "⌘", "Alt": "⌥", "Shift": "⇧", "Left": "←", "Right": "→", "Tab": "⇥" }
+                              : { "Shift": "Mayús", "Left": "←", "Right": "→" }
+        // "Ctrl++": el último «+» es la tecla, no el separador
+        const parts = sequence.endsWith("++") ? sequence.slice(0, -2).split("+").concat(["+"]) : sequence.split("+")
+        return parts.map(part => names[part] ?? part)
+    }
+
     // «Restablecer»: el primer clic pide confirmación
     property bool resetPending: false
     // Sección a la vista, resaltada en el índice
@@ -207,6 +263,7 @@ FocusScope {
         case "history": return historySection
         case "downloads": return downloadsSection
         case "performance": return performanceSection
+        case "shortcuts": return shortcutsSection
         case "developer": return developerSection
         case "about": return aboutSection
         default: return startupSection
@@ -365,21 +422,21 @@ FocusScope {
                 radius: width / 2
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
-                    GradientStop { position: 0.0; color: Theme.brand1 }
-                    GradientStop { position: 1.0; color: Theme.brand2 }
+                    GradientStop { position: 0.0; color: Colors.brand1 }
+                    GradientStop { position: 1.0; color: Colors.brand2 }
                 }
                 Icon {
                     anchors.centerIn: parent
                     name: "settings"
                     size: Theme.settingsHeaderIconSize
-                    color: Theme.onBrand
+                    color: Colors.onBrand
                 }
             }
 
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "Configuración"
-                color: Theme.ink
+                color: Colors.ink
                 font.pixelSize: Theme.fontSizeHeading
                 font.weight: Font.Bold
             }
@@ -437,7 +494,7 @@ FocusScope {
             Rectangle {
                 anchors.fill: parent
                 radius: Theme.radiusSmall
-                color: navRow.selected ? Theme.tintActive : (navHover.hovered ? Theme.tintHover : "transparent")
+                color: navRow.selected ? Colors.tintActive : (navHover.hovered ? Colors.tintHover : "transparent")
                 Behavior on color { ColorAnimation { duration: Theme.durationFast } }
             }
 
@@ -450,8 +507,8 @@ FocusScope {
                 height: parent.height - Theme.spacing * 2
                 radius: width / 2
                 gradient: Gradient {
-                    GradientStop { position: 0.0; color: Theme.brand1 }
-                    GradientStop { position: 1.0; color: Theme.brand2 }
+                    GradientStop { position: 0.0; color: Colors.brand1 }
+                    GradientStop { position: 1.0; color: Colors.brand2 }
                 }
             }
 
@@ -461,7 +518,7 @@ FocusScope {
                 anchors.leftMargin: Theme.margin
                 anchors.verticalCenter: parent.verticalCenter
                 name: navRow.modelData.icon
-                color: navRow.selected ? Theme.brandLight1 : Theme.inkMuted
+                color: navRow.selected ? Colors.brandLight1 : Colors.inkMuted
             }
 
             Text {
@@ -471,7 +528,7 @@ FocusScope {
                 anchors.rightMargin: Theme.spacing
                 anchors.verticalCenter: parent.verticalCenter
                 text: navRow.modelData.title
-                color: navRow.selected ? Theme.ink : Theme.inkSecondary
+                color: navRow.selected ? Colors.ink : Colors.inkSecondary
                 font.pixelSize: Theme.fontSize
                 font.weight: navRow.selected ? Font.Bold : Font.DemiBold
                 elide: Text.ElideRight
@@ -516,7 +573,7 @@ FocusScope {
         x: nav.x + (nav.width - width) / 2
         width: Theme.settingsMitisLogoWidth
         height: width * implicitHeight / Math.max(1, implicitWidth)
-        source: Theme.dark ? "qrc:/branding/mitis-logo-dark.png" : "qrc:/branding/mitis-logo-light.png"
+        source: Colors.dark ? "qrc:/branding/mitis-logo-dark.png" : "qrc:/branding/mitis-logo-light.png"
         fillMode: Image.PreserveAspectFit
         smooth: true
         mipmap: true
@@ -613,7 +670,7 @@ FocusScope {
 
                         Text {
                             text: "Nombre"
-                            color: Theme.ink
+                            color: Colors.ink
                             font.pixelSize: Theme.fontSize
                             font.weight: Font.DemiBold
                         }
@@ -807,7 +864,7 @@ FocusScope {
                         anchors.leftMargin: Theme.margin
                         anchors.rightMargin: Theme.margin
                         height: 1
-                        color: Theme.line
+                        color: Colors.line
                     }
 
                     Column {
@@ -820,7 +877,7 @@ FocusScope {
 
                         Text {
                             text: "Personalizado"
-                            color: Theme.ink
+                            color: Colors.ink
                             font.pixelSize: Theme.fontSize
                             font.weight: Font.DemiBold
                         }
@@ -857,7 +914,7 @@ FocusScope {
                                 text: root.customError
                                       ? "Dirección no válida: falta el dominio o el %s"
                                       : "Ejemplo: es.wikipedia.org/w/index.php?search=%s"
-                                color: root.customError ? Theme.danger : Theme.inkMuted
+                                color: root.customError ? Colors.danger : Colors.inkMuted
                                 font.pixelSize: Theme.fontSizeSmall
                                 wrapMode: Text.Wrap
                             }
@@ -941,6 +998,33 @@ FocusScope {
                         checked: Settings.hideLocalIp
                         onToggled: Settings.hideLocalIp = checked
                     }
+                }
+                ChoiceRow {
+                    title: "DNS cifrado"
+                    description: (Settings.secureDns === "off"
+                                  ? "Al abrir un sitio, Mitis pregunta su dirección a tu proveedor de internet sin cifrar: la red y el proveedor ven a qué sitios entras."
+                                  : Settings.secureDns === "auto"
+                                    ? "Mitis pregunta las direcciones de los sitios cifradas, a un servidor que eliges. Si no responde, usa el de tu red."
+                                    : "Siempre cifrado. Si el servidor no responde, las páginas no cargan; los nombres de tu red local (impresoras, servidores de casa o de la empresa) pueden dejar de funcionar.")
+                                 + (Settings.secureDns === "off" ? "" : " Vale para todas las ventanas, también las privadas.")
+                    options: root.secureDnsModes
+                    isSelected: value => Settings.secureDns === value
+                    onChosen: value => Settings.secureDns = value
+                }
+                ChoiceRow {
+                    visible: Settings.secureDns !== "off"
+                    title: "Servidor del DNS cifrado"
+                    description: Settings.secureDnsProviders.find(item => item.key === Settings.secureDnsProvider)?.detail ?? ""
+                    options: Settings.secureDnsProviders.map(item => ({ value: item.key, label: item.name }))
+                    isSelected: value => Settings.secureDnsProvider === value
+                    onChosen: value => Settings.secureDnsProvider = value
+                }
+                // El motor solo lo cambia al arrancar
+                SettingRow {
+                    visible: Settings.secureDnsPending
+                    icon: "reload"
+                    title: "Se aplicará al volver a abrir Mitis"
+                    description: "El DNS cifrado se elige al arrancar. Cierra Mitis y ábrelo de nuevo para usar el cambio."
                 }
             }
 
@@ -1144,7 +1228,7 @@ FocusScope {
                         anchors.leftMargin: Theme.margin + Theme.spacing
                         anchors.verticalCenter: parent.verticalCenter
                         text: "Borrar datos de"
-                        color: Theme.ink
+                        color: Colors.ink
                         font.pixelSize: Theme.fontSize
                         font.weight: Font.DemiBold
                     }
@@ -1215,7 +1299,7 @@ FocusScope {
                         anchors.leftMargin: Theme.margin
                         anchors.rightMargin: Theme.margin
                         height: 1
-                        color: Theme.line
+                        color: Colors.line
                     }
 
                     Row {
@@ -1229,12 +1313,12 @@ FocusScope {
                         Icon {
                             anchors.verticalCenter: parent.verticalCenter
                             name: "check"
-                            color: Theme.ok
+                            color: Colors.ok
                         }
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: "Datos borrados"
-                            color: Theme.ok
+                            color: Colors.ok
                             font.pixelSize: Theme.fontSize
                             font.weight: Font.DemiBold
                         }
@@ -1305,6 +1389,82 @@ FocusScope {
                         checked: Settings.preloadPages
                         onToggled: Settings.preloadPages = checked
                     }
+                }
+            }
+
+            SettingsSection {
+                id: shortcutsSection
+                title: "Atajos de teclado"
+                icon: "keyboard"
+
+                // Grupos en píldoras y flechas para pasar de uno a otro
+                Item {
+                    width: parent.width
+                    height: Theme.settingsRowHeight
+
+                    Flow {
+                        anchors.left: parent.left
+                        anchors.leftMargin: Theme.margin + Theme.spacing
+                        anchors.right: shortcutPager.left
+                        anchors.rightMargin: Theme.margin
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: Theme.spacing
+
+                        Repeater {
+                            model: root.shortcutGroups
+                            delegate: Chip {
+                                required property var modelData
+                                required property int index
+                                text: modelData.title
+                                selected: root.shortcutPage === index
+                                onClicked: root.shortcutPage = index
+                            }
+                        }
+                    }
+
+                    Row {
+                        id: shortcutPager
+                        anchors.right: parent.right
+                        anchors.rightMargin: Theme.margin
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: Theme.spacing / 2
+
+                        IconButton {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: Theme.buttonSizeSmall
+                            height: Theme.buttonSizeSmall
+                            flat: true
+                            icon: "back"
+                            iconSize: Theme.iconSizeSmall
+                            tooltip: "Anteriores"
+                            enabled: root.shortcutPage > 0
+                            opacity: enabled ? 1 : 0.35
+                            onClicked: root.shortcutPage--
+                        }
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: (root.shortcutPage + 1) + " de " + root.shortcutGroups.length
+                            color: Colors.inkMuted
+                            font.pixelSize: Theme.fontSizeSmall
+                        }
+                        IconButton {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: Theme.buttonSizeSmall
+                            height: Theme.buttonSizeSmall
+                            flat: true
+                            icon: "forward"
+                            iconSize: Theme.iconSizeSmall
+                            tooltip: "Siguientes"
+                            enabled: root.shortcutPage < root.shortcutGroups.length - 1
+                            opacity: enabled ? 1 : 0.35
+                            onClicked: root.shortcutPage++
+                        }
+                    }
+                }
+
+                Repeater {
+                    model: root.shortcutGroups[root.shortcutPage].items
+                    delegate: ShortcutRow {}
                 }
             }
 
@@ -1453,7 +1613,7 @@ FocusScope {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "by"
-                    color: Theme.inkMuted
+                    color: Colors.inkMuted
                     font.pixelSize: Theme.fontSizeSmall
                 }
                 // Versión clara (temas oscuros) u oscura (tema Claro), sin fondo
@@ -1464,7 +1624,7 @@ FocusScope {
 
                     Image {
                         anchors.fill: parent
-                        source: Theme.dark ? "qrc:/branding/startcode.png" : "qrc:/branding/startcode-light.png"
+                        source: Colors.dark ? "qrc:/branding/startcode.png" : "qrc:/branding/startcode-light.png"
                         sourceSize: Qt.size(2 * width, 2 * height)
                         fillMode: Image.PreserveAspectFit
                         smooth: true
@@ -1546,12 +1706,12 @@ FocusScope {
             Icon {
                 anchors.verticalCenter: parent.verticalCenter
                 name: section.icon
-                color: Theme.brandLight1
+                color: Colors.brandLight1
             }
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: section.title
-                color: Theme.ink
+                color: Colors.ink
                 font.pixelSize: Theme.fontSizeLarge
                 font.weight: Font.Bold
             }
@@ -1561,7 +1721,7 @@ FocusScope {
             visible: section.description !== ""
             width: parent.width
             text: section.description
-            color: Theme.inkSecondary
+            color: Colors.inkSecondary
             font.pixelSize: Theme.fontSizeSmall
             wrapMode: Text.Wrap
         }
@@ -1570,7 +1730,7 @@ FocusScope {
             width: parent.width
             height: card.height
             radius: Theme.radius
-            fill: Theme.surfaceFloat
+            fill: Colors.surfaceFloat
 
             Column {
                 id: card
@@ -1604,7 +1764,7 @@ FocusScope {
             anchors.leftMargin: Theme.margin
             anchors.rightMargin: Theme.margin
             height: 1
-            color: Theme.line
+            color: Colors.line
         }
 
         Icon {
@@ -1614,7 +1774,7 @@ FocusScope {
             anchors.leftMargin: Theme.margin + Theme.spacing
             anchors.verticalCenter: parent.verticalCenter
             name: row.icon
-            color: Theme.inkSoft
+            color: Colors.inkSoft
         }
 
         Column {
@@ -1629,7 +1789,7 @@ FocusScope {
             Text {
                 width: parent.width
                 text: row.title
-                color: Theme.ink
+                color: Colors.ink
                 font.pixelSize: Theme.fontSize
                 font.weight: Font.DemiBold
                 wrapMode: Text.Wrap
@@ -1638,7 +1798,7 @@ FocusScope {
                 visible: text !== ""
                 width: parent.width
                 text: row.description
-                color: Theme.inkMuted
+                color: Colors.inkMuted
                 font.pixelSize: Theme.fontSizeSmall
                 wrapMode: Text.WrapAtWordBoundaryOrAnywhere
             }
@@ -1673,7 +1833,7 @@ FocusScope {
             anchors.leftMargin: Theme.spacing / 2
             anchors.rightMargin: Theme.spacing / 2
             radius: Theme.radiusSmall
-            color: expandHover.hovered && expandRow.expandable ? Theme.tintHover : "transparent"
+            color: expandHover.hovered && expandRow.expandable ? Colors.tintHover : "transparent"
             Behavior on color { ColorAnimation { duration: Theme.durationFast } }
         }
         Rectangle {
@@ -1683,7 +1843,7 @@ FocusScope {
             anchors.leftMargin: Theme.margin
             anchors.rightMargin: Theme.margin
             height: 1
-            color: Theme.line
+            color: Colors.line
         }
         Column {
             id: expandTexts
@@ -1697,7 +1857,7 @@ FocusScope {
             Text {
                 width: parent.width
                 text: expandRow.title
-                color: Theme.ink
+                color: Colors.ink
                 font.pixelSize: Theme.fontSize
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
@@ -1706,7 +1866,7 @@ FocusScope {
                 visible: text !== ""
                 width: parent.width
                 text: expandRow.description
-                color: Theme.inkMuted
+                color: Colors.inkMuted
                 font.pixelSize: Theme.fontSizeSmall
                 wrapMode: Text.Wrap
             }
@@ -1719,7 +1879,7 @@ FocusScope {
             anchors.verticalCenter: parent.verticalCenter
             name: "expand"
             size: Theme.iconSizeSmall
-            color: Theme.inkMuted
+            color: Colors.inkMuted
             rotation: expandRow.expanded ? 180 : 0
             Behavior on rotation { NumberAnimation { duration: Theme.durationFast } }
         }
@@ -1750,7 +1910,7 @@ FocusScope {
             anchors.leftMargin: Theme.spacing / 2
             anchors.rightMargin: Theme.spacing / 2
             radius: Theme.radiusSmall
-            color: engine.selected ? Theme.tintActive : (engineHover.hovered ? Theme.tintHover : "transparent")
+            color: engine.selected ? Colors.tintActive : (engineHover.hovered ? Colors.tintHover : "transparent")
             Behavior on color { ColorAnimation { duration: Theme.durationFast } }
         }
 
@@ -1763,7 +1923,7 @@ FocusScope {
             width: Theme.settingsIconBox
             height: Theme.settingsIconBox
             radius: width / 2
-            color: favicon.visible ? Theme.faviconBackdrop : Theme.tintActive
+            color: favicon.visible ? Colors.faviconBackdrop : Colors.tintActive
 
             Image {
                 id: favicon
@@ -1784,7 +1944,7 @@ FocusScope {
                 visible: !favicon.visible
                 anchors.centerIn: parent
                 name: "search"
-                color: Theme.inkSoft
+                color: Colors.inkSoft
             }
         }
 
@@ -1798,7 +1958,7 @@ FocusScope {
             Text {
                 width: parent.width
                 text: engine.modelData.name
-                color: Theme.ink
+                color: Colors.ink
                 font.pixelSize: Theme.fontSize
                 font.weight: engine.selected ? Font.Bold : Font.DemiBold
                 elide: Text.ElideRight
@@ -1806,7 +1966,7 @@ FocusScope {
             Text {
                 width: parent.width
                 text: Urls.host(engine.modelData.url)
-                color: Theme.inkMuted
+                color: Colors.inkMuted
                 font.pixelSize: Theme.fontSizeSmall
                 elide: Text.ElideRight
             }
@@ -1849,7 +2009,7 @@ FocusScope {
             anchors.leftMargin: Theme.spacing / 2
             anchors.rightMargin: Theme.spacing / 2
             radius: Theme.radiusSmall
-            color: option.checked ? Theme.tintActive : (optionHover.hovered ? Theme.tintHover : "transparent")
+            color: option.checked ? Colors.tintActive : (optionHover.hovered ? Colors.tintHover : "transparent")
             Behavior on color { ColorAnimation { duration: Theme.durationFast } }
         }
 
@@ -1865,7 +2025,7 @@ FocusScope {
             Text {
                 width: parent.width
                 text: option.title
-                color: Theme.ink
+                color: Colors.ink
                 font.pixelSize: Theme.fontSize
                 font.weight: option.checked ? Font.Bold : Font.DemiBold
                 wrapMode: Text.Wrap
@@ -1873,7 +2033,7 @@ FocusScope {
             Text {
                 width: parent.width
                 text: option.description
-                color: Theme.inkMuted
+                color: Colors.inkMuted
                 font.pixelSize: Theme.fontSizeSmall
                 wrapMode: Text.WrapAtWordBoundaryOrAnywhere
             }
@@ -1922,7 +2082,7 @@ FocusScope {
             anchors.leftMargin: Theme.margin
             anchors.rightMargin: Theme.margin
             height: 1
-            color: Theme.line
+            color: Colors.line
         }
 
         Column {
@@ -1937,7 +2097,7 @@ FocusScope {
             Text {
                 width: parent.width
                 text: choice.title
-                color: Theme.ink
+                color: Colors.ink
                 font.pixelSize: Theme.fontSize
                 font.weight: Font.DemiBold
                 wrapMode: Text.Wrap
@@ -1946,7 +2106,7 @@ FocusScope {
                 visible: text !== ""
                 width: parent.width
                 text: choice.description
-                color: Theme.inkMuted
+                color: Colors.inkMuted
                 font.pixelSize: Theme.fontSizeSmall
                 wrapMode: Text.Wrap
             }
@@ -1988,7 +2148,7 @@ FocusScope {
             anchors.leftMargin: Theme.spacing / 2
             anchors.rightMargin: Theme.spacing / 2
             radius: Theme.radiusSmall
-            color: siteHover.hovered ? Theme.tintHover : "transparent"
+            color: siteHover.hovered ? Colors.tintHover : "transparent"
             Behavior on color { ColorAnimation { duration: Theme.durationFast } }
         }
 
@@ -1998,7 +2158,7 @@ FocusScope {
             anchors.leftMargin: Theme.margin + Theme.spacing
             anchors.verticalCenter: parent.verticalCenter
             name: site.info.icon
-            color: Theme.inkSoft
+            color: Colors.inkSoft
         }
 
         Column {
@@ -2011,7 +2171,7 @@ FocusScope {
             Text {
                 width: parent.width
                 text: site.modelData.origin.replace(/^https?:\/\//, "").replace(/\/$/, "")
-                color: Theme.ink
+                color: Colors.ink
                 font.pixelSize: Theme.fontSize
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
@@ -2019,7 +2179,7 @@ FocusScope {
             Text {
                 width: parent.width
                 text: site.info.title + " · " + (site.modelData.allowed ? "Permitido" : "Bloqueado")
-                color: site.modelData.allowed ? Theme.inkMuted : Theme.warn
+                color: site.modelData.allowed ? Colors.inkMuted : Colors.warn
                 font.pixelSize: Theme.fontSizeSmall
                 elide: Text.ElideRight
             }
@@ -2060,7 +2220,7 @@ FocusScope {
             anchors.leftMargin: Theme.margin
             anchors.rightMargin: Theme.margin
             height: 1
-            color: Theme.line
+            color: Colors.line
         }
 
         Column {
@@ -2074,14 +2234,14 @@ FocusScope {
 
             Text {
                 text: "Color"
-                color: Theme.ink
+                color: Colors.ink
                 font.pixelSize: Theme.fontSize
                 font.weight: Font.DemiBold
             }
             Text {
                 width: parent.width
                 text: "El fondo de tu inicial cuando no hay foto."
-                color: Theme.inkMuted
+                color: Colors.inkMuted
                 font.pixelSize: Theme.fontSizeSmall
                 wrapMode: Text.WrapAtWordBoundaryOrAnywhere
             }
@@ -2107,8 +2267,8 @@ FocusScope {
                         radius: width / 2
                         color: "transparent"
                         border.width: 2
-                        border.color: selected ? Theme.focusRing
-                                               : (swatchHover.hovered ? Theme.hairlineHover : "transparent")
+                        border.color: selected ? Colors.focusRing
+                                               : (swatchHover.hovered ? Colors.hairlineHover : "transparent")
 
                         Rectangle {
                             anchors.centerIn: parent
@@ -2151,14 +2311,14 @@ FocusScope {
             Text {
                 width: parent.width
                 text: "Tema"
-                color: Theme.ink
+                color: Colors.ink
                 font.pixelSize: Theme.fontSize
                 font.weight: Font.DemiBold
             }
             Text {
                 width: parent.width
                 text: "Mitis cambia al momento. Las páginas que tienen versión oscura la usan con los temas oscuros (desde la próxima vez que abras Mitis)."
-                color: Theme.inkMuted
+                color: Colors.inkMuted
                 font.pixelSize: Theme.fontSizeSmall
                 wrapMode: Text.WrapAtWordBoundaryOrAnywhere
             }
@@ -2199,7 +2359,7 @@ FocusScope {
             radius: Theme.radiusSmall
             color: tile.colors.bgBase
             border.width: tile.selected ? 2 : 1
-            border.color: tile.selected ? Theme.focusRing : (tileHover.hovered ? Theme.hairlineHover : Theme.hairline)
+            border.color: tile.selected ? Colors.focusRing : (tileHover.hovered ? Colors.hairlineHover : Colors.hairline)
 
             // Barra de título con la marca
             Rectangle {
@@ -2293,12 +2453,12 @@ FocusScope {
                 anchors.verticalCenter: parent.verticalCenter
                 name: "check"
                 size: Theme.iconSizeSmall
-                color: Theme.brandLight1
+                color: Colors.brandLight1
             }
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: tile.modelData.name
-                color: tile.selected ? Theme.ink : Theme.inkSecondary
+                color: tile.selected ? Colors.ink : Colors.inkSecondary
                 font.pixelSize: Theme.fontSize
                 font.weight: tile.selected ? Font.Bold : Font.Normal
             }
@@ -2327,7 +2487,7 @@ FocusScope {
             anchors.leftMargin: Theme.spacing / 2
             anchors.rightMargin: Theme.spacing / 2
             radius: Theme.radiusSmall
-            color: allowedHover.hovered ? Theme.tintHover : "transparent"
+            color: allowedHover.hovered ? Colors.tintHover : "transparent"
             Behavior on color { ColorAnimation { duration: Theme.durationFast } }
         }
 
@@ -2337,7 +2497,7 @@ FocusScope {
             anchors.leftMargin: Theme.margin + Theme.spacing
             anchors.verticalCenter: parent.verticalCenter
             name: "blocker"
-            color: Theme.inkSoft
+            color: Colors.inkSoft
         }
 
         Column {
@@ -2350,7 +2510,7 @@ FocusScope {
             Text {
                 width: parent.width
                 text: allowed.modelData
-                color: Theme.ink
+                color: Colors.ink
                 font.pixelSize: Theme.fontSize
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
@@ -2358,7 +2518,7 @@ FocusScope {
             Text {
                 width: parent.width
                 text: "Anuncios y rastreadores permitidos"
-                color: Theme.warn
+                color: Colors.warn
                 font.pixelSize: Theme.fontSizeSmall
                 elide: Text.ElideRight
             }
@@ -2384,6 +2544,100 @@ FocusScope {
         }
     }
 
+    // Un atajo: qué hace a la izquierda y sus teclas a la derecha
+    component ShortcutRow: Item {
+        id: shortcut
+
+        required property var modelData
+
+        width: parent ? parent.width : 0
+        height: Theme.pageRowHeight
+
+        Rectangle {
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: Theme.margin
+            anchors.rightMargin: Theme.margin
+            height: 1
+            color: Colors.line
+        }
+
+        Column {
+            anchors.left: parent.left
+            anchors.leftMargin: Theme.margin + Theme.spacing
+            anchors.right: keysRow.left
+            anchors.rightMargin: Theme.margin
+            anchors.verticalCenter: parent.verticalCenter
+
+            Text {
+                width: parent.width
+                text: shortcut.modelData.action
+                color: Colors.ink
+                font.pixelSize: Theme.fontSize
+                elide: Text.ElideRight
+            }
+            Text {
+                visible: text !== ""
+                width: parent.width
+                text: shortcut.modelData.note ?? ""
+                color: Colors.inkMuted
+                font.pixelSize: Theme.fontSizeSmall
+                elide: Text.ElideRight
+            }
+        }
+
+        // Combinaciones separadas por «o»; cada tecla, en su tecla dibujada
+        Row {
+            id: keysRow
+            anchors.right: parent.right
+            anchors.rightMargin: Theme.margin + Theme.spacing
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Theme.spacing
+
+            Repeater {
+                model: shortcut.modelData.keys
+                delegate: Row {
+                    id: combo
+                    required property string modelData
+                    required property int index
+                    spacing: Theme.spacing / 2
+
+                    Text {
+                        visible: combo.index > 0
+                        anchors.verticalCenter: parent.verticalCenter
+                        rightPadding: Theme.spacing / 2
+                        text: "o"
+                        color: Colors.inkMuted
+                        font.pixelSize: Theme.fontSizeSmall
+                    }
+                    Repeater {
+                        model: root.shortcutKeys(combo.modelData)
+                        delegate: Rectangle {
+                            id: key
+                            required property string modelData
+                            width: Math.max(Theme.buttonSizeSmall, keyText.implicitWidth + Theme.spacing * 2)
+                            height: Theme.buttonSizeSmall
+                            radius: Theme.radiusSmall
+                            color: Colors.tintHover
+                            border.width: 1
+                            border.color: Colors.hairline
+
+                            Text {
+                                id: keyText
+                                anchors.centerIn: parent
+                                text: key.modelData
+                                color: Colors.inkSecondary
+                                font.pixelSize: Theme.fontSizeSmall
+                                font.weight: Font.DemiBold
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Fila con casilla: pulsar en cualquier punto la marca o desmarca
     component CheckRow: Item {
         id: check
@@ -2402,7 +2656,7 @@ FocusScope {
             anchors.leftMargin: Theme.spacing / 2
             anchors.rightMargin: Theme.spacing / 2
             radius: Theme.radiusSmall
-            color: checkHover.hovered ? Theme.tintHover : "transparent"
+            color: checkHover.hovered ? Colors.tintHover : "transparent"
             Behavior on color { ColorAnimation { duration: Theme.durationFast } }
         }
 
@@ -2427,7 +2681,7 @@ FocusScope {
             Text {
                 width: parent.width
                 text: check.title
-                color: Theme.ink
+                color: Colors.ink
                 font.pixelSize: Theme.fontSize
                 font.weight: Font.DemiBold
                 wrapMode: Text.Wrap
@@ -2435,7 +2689,7 @@ FocusScope {
             Text {
                 width: parent.width
                 text: check.description
-                color: Theme.inkMuted
+                color: Colors.inkMuted
                 font.pixelSize: Theme.fontSizeSmall
                 wrapMode: Text.Wrap
             }
@@ -2463,16 +2717,16 @@ FocusScope {
         width: chipText.implicitWidth + 2 * Theme.margin
         height: Theme.buttonSizeSmall + Theme.spacing / 2
         radius: height / 2
-        color: chip.selected ? Theme.tintActive : (chipHover.hovered ? Theme.tintHover : "transparent")
+        color: chip.selected ? Colors.tintActive : (chipHover.hovered ? Colors.tintHover : "transparent")
         border.width: 1
-        border.color: chip.selected ? Theme.brandLight1 : (chipHover.hovered ? Theme.hairlineHover : Theme.hairline)
+        border.color: chip.selected ? Colors.brandLight1 : (chipHover.hovered ? Colors.hairlineHover : Colors.hairline)
         Behavior on color { ColorAnimation { duration: Theme.durationFast } }
 
         Text {
             id: chipText
             anchors.centerIn: parent
             text: chip.text
-            color: chip.selected ? Theme.ink : Theme.inkSecondary
+            color: chip.selected ? Colors.ink : Colors.inkSecondary
             font.pixelSize: Theme.fontSizeSmall
             font.weight: chip.selected ? Font.Bold : Font.DemiBold
         }
@@ -2499,13 +2753,13 @@ FocusScope {
         radius: height / 2
         color: "transparent"
         border.width: 1
-        border.color: badge.ok ? Theme.ok : Theme.warn
+        border.color: badge.ok ? Colors.ok : Colors.warn
 
         Text {
             id: badgeText
             anchors.centerIn: parent
             text: badge.text
-            color: badge.ok ? Theme.ok : Theme.warn
+            color: badge.ok ? Colors.ok : Colors.warn
             font.pixelSize: Theme.fontSizeSmall
             font.weight: Font.Bold
         }

@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
+import Mitis.Core
 
 // Anillo de progreso: arco fino sobre una pista tenue, desde arriba y en el
 // sentido de las agujas del reloj. Sin total conocido (`indeterminate`), un
@@ -10,8 +11,8 @@ Item {
     // 0..1
     property real value: 0
     property bool indeterminate: false
-    property color color: Theme.brandLight1
-    property color trackColor: Theme.tintActive
+    property color color: Colors.brandLight1
+    property color trackColor: Colors.tintActive
     property int thickness: Theme.progressRingWidth
 
     implicitWidth: Theme.buttonSize

@@ -1,6 +1,7 @@
 import QtQuick
 
 import "urls.js" as Urls
+import Mitis.Core
 
 // Acceso rápido de la página de nueva pestaña: icono del sitio (o su
 // inicial, si no hay icono) en un cuadro redondeado y su nombre debajo.
@@ -11,6 +12,8 @@ Item {
     property string name: ""
     property string url: ""
     property bool adder: false
+    // Se puede quitar (no en las ventanas privadas)
+    property bool editable: true
 
     readonly property string faviconUrl: Urls.favicon(url)
 
@@ -28,7 +31,7 @@ Item {
         width: Theme.tileSize
         height: Theme.tileSize
         radius: Theme.radius
-        fill: Theme.surfaceFloat
+        fill: Colors.surfaceFloat
         scale: tap.pressed ? Theme.pressScale : (root.hovered ? Theme.hoverScale : 1)
 
         Behavior on scale {
@@ -42,7 +45,7 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: parent.radius
-            color: root.hovered ? Theme.tintHover : "transparent"
+            color: root.hovered ? Colors.tintHover : "transparent"
         }
 
         Rectangle {
@@ -51,7 +54,7 @@ Item {
             width: Theme.tileIconBackdrop
             height: Theme.tileIconBackdrop
             radius: width / 2
-            color: Theme.faviconBackdrop
+            color: Colors.faviconBackdrop
         }
 
         Image {
@@ -73,7 +76,7 @@ Item {
             visible: !root.adder && !favicon.visible
             anchors.centerIn: parent
             text: root.name.charAt(0).toUpperCase()
-            color: Theme.brandLight1
+            color: Colors.brandLight1
             font.pixelSize: Theme.fontSizeLarge + 6
             font.weight: Font.DemiBold
         }
@@ -82,7 +85,7 @@ Item {
             visible: root.adder
             anchors.centerIn: parent
             name: "new-tab"
-            color: Theme.inkSoft
+            color: Colors.inkSoft
         }
     }
 
@@ -93,7 +96,7 @@ Item {
         width: parent.width
         horizontalAlignment: Text.AlignHCenter
         text: root.adder ? "Añadir" : root.name
-        color: Theme.inkSecondary
+        color: Colors.inkSecondary
         font.pixelSize: Theme.fontSizeSmall
         elide: Text.ElideRight
     }
@@ -109,7 +112,7 @@ Item {
 
     // Quitar: aparece en la esquina al pasar por encima
     IconButton {
-        visible: !root.adder && root.hovered
+        visible: !root.adder && root.editable && root.hovered
         anchors.right: tile.right
         anchors.top: tile.top
         anchors.margins: -Theme.spacing / 2

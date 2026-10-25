@@ -74,6 +74,17 @@ class Settings : public QObject
     Q_PROPERTY(bool hideLocalIp READ hideLocalIp WRITE setHideLocalIp NOTIFY hideLocalIpChanged)
     // Abrir con https:// las direcciones http:// (si falla, se vuelve a http). Activado de serie
     Q_PROPERTY(bool httpsUpgrade READ httpsUpgrade WRITE setHttpsUpgrade NOTIFY httpsUpgradeChanged)
+    // DNS cifrado (DNS sobre HTTPS) de las páginas: "off" (el del sistema),
+    // "auto" (de serie: cifrado y, si no responde, el del sistema) o "secure"
+    // (solo cifrado). El motor lo lee al arrancar (main.cpp): vale desde el
+    // próximo arranque, y para todas las ventanas
+    Q_PROPERTY(QString secureDns READ secureDns WRITE setSecureDns NOTIFY secureDnsChanged)
+    // Servidor del DNS cifrado: clave de secureDnsProviders
+    Q_PROPERTY(QString secureDnsProvider READ secureDnsProvider WRITE setSecureDnsProvider NOTIFY secureDnsProviderChanged)
+    // Servidores que se pueden elegir: [{ key, name, detail }]
+    Q_PROPERTY(QVariantList secureDnsProviders READ secureDnsProviders CONSTANT)
+    // Lo elegido no es lo que usa el motor desde que arrancó: falta reiniciar
+    Q_PROPERTY(bool secureDnsPending READ secureDnsPending NOTIFY secureDnsPendingChanged)
 
     // ── Contenido y permisos ──
     Q_PROPERTY(bool javascript READ javascript WRITE setJavascript NOTIFY javascriptChanged)
@@ -188,6 +199,18 @@ public:
     void setAskDownloadFolder(bool value);
     int suspendAfter() const;
     void setSuspendAfter(int value);
+    QString secureDns() const;
+    void setSecureDns(const QString &value);
+    QString secureDnsProvider() const;
+    void setSecureDnsProvider(const QString &value);
+    QVariantList secureDnsProviders() const;
+    bool secureDnsPending() const;
+
+    // Para main.cpp, antes de crear los perfiles: dirección (plantilla de
+    // DNS sobre HTTPS) del servidor elegido y, una vez aplicado, con qué
+    // modo y servidor arrancó el motor ("off" si con el del sistema)
+    static QString secureDnsTemplate(const QString &provider);
+    static void setSecureDnsStarted(const QString &modeAndProvider);
 
     // Valor de `key` ("Categoría/nombre") o `defaultValue` si no está guardado
     Q_INVOKABLE QVariant value(const QString &key, const QVariant &defaultValue = {}) const;
@@ -235,6 +258,9 @@ signals:
     void adBlockAllowedSitesChanged();
     void askDownloadFolderChanged();
     void suspendAfterChanged();
+    void secureDnsChanged();
+    void secureDnsProviderChanged();
+    void secureDnsPendingChanged();
 
 private:
     // Guarda `value` en `key` y avisa si cambió

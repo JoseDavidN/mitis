@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 
 // Barra de progreso fina con el degradado de marca sobre una pista tenue.
 // Sin total conocido (`indeterminate`), un tramo recorre la pista sin parar.
@@ -16,7 +17,7 @@ Item {
         id: track
         anchors.fill: parent
         radius: height / 2
-        color: Theme.tintActive
+        color: Colors.tintActive
         clip: true
 
         Rectangle {
@@ -29,8 +30,8 @@ Item {
             width: root.indeterminate ? span : track.width * Math.max(0, Math.min(1, root.value))
             gradient: Gradient {
                 orientation: Gradient.Horizontal
-                GradientStop { position: 0.0; color: Theme.brand1 }
-                GradientStop { position: 1.0; color: Theme.brand2 }
+                GradientStop { position: 0.0; color: Colors.brand1 }
+                GradientStop { position: 1.0; color: Colors.brand2 }
             }
 
             Behavior on width {

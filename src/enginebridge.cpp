@@ -45,7 +45,7 @@ QQuickWebEngineProfile *newProfile(const QString &storageName, QObject *parent)
 EngineBridge::EngineBridge(const QString &widevinePath, QObject *parent)
     : QObject(parent)
     , m_blocker(new ContentBlocker(this))
-    , m_interceptor(new RequestInterceptor(m_blocker, this))
+    , m_interceptor(new RequestInterceptor(m_blocker, false, this))
     , m_widevinePath(widevinePath)
 {
     connect(m_blocker, &ContentBlocker::stateChanged, this, &EngineBridge::adBlockStateChanged);
@@ -59,7 +59,7 @@ EngineBridge::EngineBridge(const QString &widevinePath, QObject *parent)
     // Permisos concedidos o bloqueados (ubicación, notificaciones…): los
     // guarda el motor, por sitio. Cámara y micrófono: BrowserProfile.qml.
     m_profile->setPersistentPermissionsPolicy(QQuickWebEngineProfile::PersistentPermissionsPolicy::StoreOnDisk);
-    installInterceptor(m_profile);
+    installInterceptor(m_profile, m_interceptor, false);
 
     // Notificaciones de las páginas: del sistema, no dentro de Mitis
     m_notifier = new SystemNotifier(this);
@@ -84,7 +84,11 @@ QQuickWebEngineProfile *EngineBridge::createPrivateProfile()
     profile->setHttpCacheType(QQuickWebEngineProfile::MemoryHttpCache);
     profile->setPersistentCookiesPolicy(QQuickWebEngineProfile::NoPersistentCookies);
     profile->setPersistentPermissionsPolicy(QQuickWebEngineProfile::PersistentPermissionsPolicy::StoreInMemory);
-    installInterceptor(profile);
+    // Ventanas privadas: privacidad siempre activa (bloqueador, sin rastreo,
+    // DNT, https, sin cookies de terceros), sin mirar Configuración
+    m_privateInterceptor = new RequestInterceptor(m_blocker, true, this);
+    m_blocker->setPrivateActive(true);
+    installInterceptor(profile, m_privateInterceptor, true);
     m_notifier->attach(profile);
     // Es de C++: QML no debe recogerlo como basura
     QQmlEngine::setObjectOwnership(profile, QQmlEngine::CppOwnership);
@@ -93,8 +97,18 @@ QQuickWebEngineProfile *EngineBridge::createPrivateProfile()
 
 void EngineBridge::destroyPrivateProfile(QObject *profile)
 {
-    if (profile && profile != m_profile && profile->parent() == this)
+    if (profile && profile != m_profile && profile->parent() == this) {
         profile->deleteLater();
+        // Su interceptor, después (las eliminaciones van en orden): con él se
+        // olvida lo de la sesión privada (hosts que no admitían https)
+        if (m_privateInterceptor) {
+            m_privateInterceptor->deleteLater();
+            m_privateInterceptor = nullptr;
+        }
+        // Las listas siguen cargadas (no se descargan de memoria): solo deja
+        // de pedirlas si el bloqueador está apagado
+        m_blocker->setPrivateActive(false);
+    }
 }
 
 // Junto al ejecutable (Windows), en Contents/Resources (macOS) o en
@@ -337,9 +351,9 @@ void EngineBridge::updateFilterLists()
     m_blocker->update();
 }
 
-QString EngineBridge::cosmeticCss(const QUrl &url) const
+QString EngineBridge::cosmeticCss(const QUrl &url, bool strict) const
 {
-    return m_blocker->cosmeticCss(url);
+    return m_blocker->cosmeticCss(url, strict);
 }
 
 QString EngineBridge::siteOf(const QUrl &url) const
@@ -347,31 +361,42 @@ QString EngineBridge::siteOf(const QUrl &url) const
     return ContentBlocker::siteOf(url);
 }
 
-// Un solo interceptor para los dos perfiles
-void EngineBridge::installInterceptor(QQuickWebEngineProfile *webProfile)
+// Un interceptor para el perfil normal y otro (`strict`) para el privado
+void EngineBridge::installInterceptor(QQuickWebEngineProfile *webProfile, RequestInterceptor *interceptor, bool strict)
 {
-    webProfile->setUrlRequestInterceptor(m_interceptor);
+    webProfile->setUrlRequestInterceptor(interceptor);
     // Cookies de terceros: las de otro sitio dentro de la página (anuncios,
-    // rastreadores, botones de redes sociales). El puente vive toda la app.
-    webProfile->cookieStore()->setCookieFilter([this](const QWebEngineCookieStore::FilterRequest &request) {
-        return !(request.thirdParty && m_blockThirdPartyCookies);
+    // rastreadores, botones de redes sociales); en el privado, siempre. El
+    // puente vive toda la app.
+    webProfile->cookieStore()->setCookieFilter([this, strict](const QWebEngineCookieStore::FilterRequest &request) {
+        return !(request.thirdParty && (strict || m_blockThirdPartyCookies));
     });
 }
 
-bool EngineBridge::takeHttpsFallback(const QUrl &url)
+// Cada perfil, con su interceptor: lo que pasa en una ventana privada no
+// deja rastro en el normal (ni al revés)
+RequestInterceptor *EngineBridge::interceptorFor(bool privateProfile) const
 {
-    return url.scheme() == QLatin1String("https") && m_interceptor->takeHttpsFallback(url.host());
+    return privateProfile ? m_privateInterceptor : m_interceptor;
 }
 
-bool EngineBridge::isHttpsUpgrade(const QUrl &url) const
+bool EngineBridge::takeHttpsFallback(const QUrl &url, bool privateProfile)
 {
-    return url.scheme() == QLatin1String("https") && m_interceptor->isUpgraded(url.host());
+    RequestInterceptor *interceptor = interceptorFor(privateProfile);
+    return url.scheme() == QLatin1String("https") && interceptor && interceptor->takeHttpsFallback(url.host());
 }
 
-void EngineBridge::confirmHttps(const QUrl &url)
+bool EngineBridge::isHttpsUpgrade(const QUrl &url, bool privateProfile) const
 {
-    if (url.scheme() == QLatin1String("https"))
-        m_interceptor->confirmHttps(url.host());
+    RequestInterceptor *interceptor = interceptorFor(privateProfile);
+    return url.scheme() == QLatin1String("https") && interceptor && interceptor->isUpgraded(url.host());
+}
+
+void EngineBridge::confirmHttps(const QUrl &url, bool privateProfile)
+{
+    RequestInterceptor *interceptor = interceptorFor(privateProfile);
+    if (url.scheme() == QLatin1String("https") && interceptor)
+        interceptor->confirmHttps(url.host());
 }
 
 void EngineBridge::clearCookies(QObject *profile)

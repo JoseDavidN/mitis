@@ -29,14 +29,14 @@ Popup {
         Text {
             width: parent.width
             text: "Actualizar ahora"
-            color: Theme.ink
+            color: Colors.ink
             font.pixelSize: Theme.fontSize
             font.weight: Font.DemiBold
         }
         Text {
             width: parent.width
             wrapMode: Text.Wrap
-            color: Updates.error !== "" && !Updates.installing ? Theme.danger : Theme.inkMuted
+            color: Updates.error !== "" && !Updates.installing ? Colors.danger : Colors.inkMuted
             font.pixelSize: Theme.fontSizeSmall
             text: Updates.installing
                   ? "Descargando Mitis " + Updates.available + "…"

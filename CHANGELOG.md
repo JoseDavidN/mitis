@@ -5,6 +5,28 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ## [Sin publicar]
 
+> Una ventana privada de verdad y DNS cifrado
+
+### Añadido
+
+- Nueva sección «Atajos de teclado» en Configuración: todas las combinaciones de teclas de Mitis, agrupadas en Pestañas, Navegar, Buscar y zoom, y Ventana y herramientas. Se ve un grupo cada vez; pasas de uno a otro con sus botones o con las flechas.
+- DNS cifrado (Configuración → Privacidad): al abrir un sitio, Mitis pregunta su dirección de forma cifrada a un servidor que eliges (Cloudflare, Quad9, Mullvad o AdGuard), en lugar de hacerlo a la vista de tu proveedor de internet y de la red a la que estás conectado, por ejemplo una wifi pública. Viene en «Automático» con Cloudflare: si el servidor no responde, usa el de tu red como siempre. Con «Siempre» no vuelve nunca al de tu red, y con «Desactivado» se apaga. Los cambios se aplican al volver a abrir Mitis.
+
+### Cambiado
+
+- La ventana privada estrena aspecto: negro mate de arriba abajo (barra de arriba, botones, listas y nueva pestaña), para que sepas a simple vista que estás en ella.
+- En la ventana privada, todas las protecciones están siempre activas, aunque las hayas apagado en Configuración: el bloqueo de anuncios y rastreadores, quitar el rastreo de los enlaces, pedir a los sitios que no te rastreen, bloquear las cookies de otros sitios, ocultar tu dirección de red local y usar conexiones seguras.
+- Desde la ventana privada ya no se puede entrar en Configuración, en tu perfil ni en tu historial, ni cambiar el fondo o los accesos rápidos de la nueva pestaña. La nueva pestaña privada te recuerda que todo se borra al cerrarla.
+- «Imprimir…» sale del menú de opciones para dejarlo más corto. Sigue a mano con Ctrl+P (Cmd+P en Mac) o con clic derecho sobre la página → «Imprimir…».
+- El panel del sitio (el candado del campo de dirección) ya no tiene «Enviar por correo». Para compartir una página, usa «Copiar enlace».
+
+### Corregido
+
+- Si dabas permiso a un sitio para usar la cámara o el micrófono en una ventana privada, Mitis lo recordaba también fuera de ella. Ahora ese permiso se olvida al cerrar la ventana privada.
+- «Restablecer la configuración» no refrescaba en pantalla el tema, el bloqueo de anuncios, quitar el rastreo de los enlaces, la suspensión de pestañas ni la precarga de páginas hasta volver a abrir Mitis.
+
+## [0.12.0] - 2026-10-25
+
 > Más ligero y más rápido al navegar
 
 ### Añadido

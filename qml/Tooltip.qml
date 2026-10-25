@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import Mitis.Core
 
 // Tooltip propio: qué hace un control y, si tiene, su atajo de teclado.
 // Aparece centrado sobre su padre (o debajo, con `below`) tras una espera.
@@ -26,7 +27,7 @@ ToolTip {
 
     background: Surface {
         radius: Theme.radiusSmall
-        fill: Theme.surfacePopup
+        fill: Colors.surfacePopup
     }
 
     contentItem: Row {
@@ -34,7 +35,7 @@ ToolTip {
 
         Text {
             text: root.text
-            color: Theme.ink
+            color: Colors.ink
             font: root.font
             wrapMode: Text.NoWrap
             maximumLineCount: 1
@@ -42,7 +43,7 @@ ToolTip {
         Text {
             visible: root.shortcut !== ""
             text: root.shortcut
-            color: Theme.inkMuted
+            color: Colors.inkMuted
             font: root.font
             wrapMode: Text.NoWrap
             maximumLineCount: 1

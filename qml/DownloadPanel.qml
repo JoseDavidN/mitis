@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 // Con prefijo: Controls también tiene un ProgressBar
 import QtQuick.Controls.Basic as T
+import Mitis.Core
 
 // Panel de las descargas de ahora, anclado al botón de descargas de la barra
 // inferior: una fila por descarga de esta tanda (las que siguen en curso y
@@ -164,7 +165,7 @@ T.Popup {
                       ? (root.rows.count === 1 ? "Descarga terminada" : "Descargas terminadas")
                       : root.runningCount === 1 ? "Descargando 1 archivo"
                       : "Descargando " + root.runningCount + " archivos"
-                color: Theme.inkSecondary
+                color: Colors.inkSecondary
                 font.pixelSize: Theme.fontSizeSmall
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
@@ -230,15 +231,15 @@ T.Popup {
                 name: row.downloadState === "done" ? "download-done"
                     : row.downloadState === "failed" ? "download-failed"
                     : row.downloadState === "canceled" ? "download-cancel" : "downloads"
-                color: row.downloadState === "done" ? Theme.ok
-                     : row.downloadState === "failed" ? Theme.danger
-                     : row.downloadState === "progress" ? Theme.brandLight1 : Theme.inkMuted
+                color: row.downloadState === "done" ? Colors.ok
+                     : row.downloadState === "failed" ? Colors.danger
+                     : row.downloadState === "progress" ? Colors.brandLight1 : Colors.inkMuted
             }
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width - stateIcon.width - parent.spacing
                 text: row.fileName
-                color: Theme.ink
+                color: Colors.ink
                 font.pixelSize: Theme.fontSize
                 font.weight: Font.DemiBold
                 // Por el medio: se conserva la extensión
@@ -267,8 +268,8 @@ T.Popup {
                 anchors.verticalCenter: parent.verticalCenter
                 font.pixelSize: Theme.fontSizeSmall
                 elide: Text.ElideRight
-                color: row.downloadState === "failed" ? Theme.danger
-                     : row.downloadState === "done" ? Theme.ok : Theme.inkSecondary
+                color: row.downloadState === "failed" ? Colors.danger
+                     : row.downloadState === "done" ? Colors.ok : Colors.inkSecondary
                 text: {
                     const size = row.knownTotal
                             ? Downloads.formatBytes(row.received) + " de " + Downloads.formatBytes(row.total)

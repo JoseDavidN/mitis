@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 
 // Aviso de una pestaña cuya página pide contenido protegido (Netflix,
 // Spotify…) sin Widevine en el motor (BrowserTab.protectedContentUnavailable).
@@ -36,7 +37,7 @@ PageDialog {
               ? "Para tenerlo, instala Google Chrome o, en Arch Linux, el paquete chromium-widevine (AUR)."
                 + " También sirve Firefox con la reproducción de contenido con DRM activada. Después, reinicia Mitis."
               : "Para tenerlo, instala Google Chrome y ábrelo una vez. Después, reinicia Mitis."
-        color: Theme.inkSecondary
+        color: Colors.inkSecondary
         font.pixelSize: Theme.fontSizeSmall
         wrapMode: Text.Wrap
     }

@@ -96,8 +96,9 @@ public:
 
     // Descarga ahora las listas de filtros
     Q_INVOKABLE void updateFilterLists();
-    // CSS que oculta los huecos de anuncios en la página `url` ("" si nada)
-    Q_INVOKABLE QString cosmeticCss(const QUrl &url) const;
+    // CSS que oculta los huecos de anuncios en la página `url` ("" si nada).
+    // `strict`: de una ventana privada (siempre, sin sitios permitidos)
+    Q_INVOKABLE QString cosmeticCss(const QUrl &url, bool strict = false) const;
     // Sitio de una dirección para permitir anuncios ("https://www.a.com/x" → "a.com")
     Q_INVOKABLE QString siteOf(const QUrl &url) const;
 
@@ -105,11 +106,11 @@ public:
     Q_INVOKABLE void clearCookies(QObject *profile);
     // Falló la carga de `url`: true si era una página subida de http a https,
     // que entonces hay que volver a pedir por http (ver RequestInterceptor)
-    Q_INVOKABLE bool takeHttpsFallback(const QUrl &url);
+    Q_INVOKABLE bool takeHttpsFallback(const QUrl &url, bool privateProfile = false);
     // `url` es una página que Mitis subió de http a https (el usuario no pidió https)
-    Q_INVOKABLE bool isHttpsUpgrade(const QUrl &url) const;
+    Q_INVOKABLE bool isHttpsUpgrade(const QUrl &url, bool privateProfile = false) const;
     // La página `url` cargó bien
-    Q_INVOKABLE void confirmHttps(const QUrl &url);
+    Q_INVOKABLE void confirmHttps(const QUrl &url, bool privateProfile = false);
 
 signals:
     void preferencesChanged();
@@ -124,12 +125,15 @@ signals:
     void certificateReady(const QString &host, const QVariantMap &certificate);
 
 private:
+    RequestInterceptor *interceptorFor(bool privateProfile) const;
     // Interceptor de peticiones y filtro de cookies
-    void installInterceptor(QQuickWebEngineProfile *profile);
+    void installInterceptor(QQuickWebEngineProfile *profile, RequestInterceptor *interceptor, bool strict);
 
     ContentBlocker *m_blocker;
     SystemNotifier *m_notifier;
     RequestInterceptor *m_interceptor;
+    // El del perfil privado: privacidad siempre activa (existe con él)
+    RequestInterceptor *m_privateInterceptor = nullptr;
     QStringList m_adBlockAllowedSites;
     // Certificados ya consultados en esta sesión ("host:puerto" → datos)
     QHash<QString, QVariantMap> m_certificates;

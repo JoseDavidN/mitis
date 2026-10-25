@@ -12,6 +12,9 @@ Item {
     id: root
 
     signal navigate(url target)
+    // Ventana privada: sin fondo propio ni cambios en los accesos rápidos
+    // (nada de Configuración) y un aviso de lo que hace la ventana
+    property bool privateMode: false
 
     function focusSearch() {
         search.forceActiveFocus()
@@ -62,7 +65,7 @@ Item {
         Image {
             id: wallpaper
             anchors.fill: parent
-            source: Settings.newTabBackground
+            source: root.privateMode ? "" : Settings.newTabBackground
             sourceSize: Qt.size(Screen.width, Screen.height)
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
@@ -71,7 +74,7 @@ Item {
         Rectangle {
             anchors.fill: parent
             visible: wallpaper.visible
-            color: Theme.backgroundScrim
+            color: Colors.backgroundScrim
         }
     }
 
@@ -108,7 +111,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     width: Theme.ntpLogoWidth
                     height: width * implicitHeight / Math.max(1, implicitWidth)
-                    source: Theme.dark ? "qrc:/branding/mitis-logo-dark.png" : "qrc:/branding/mitis-logo-light.png"
+                    source: Colors.dark ? "qrc:/branding/mitis-logo-dark.png" : "qrc:/branding/mitis-logo-light.png"
                     fillMode: Image.PreserveAspectFit
                     smooth: true
                     mipmap: true
@@ -122,11 +125,11 @@ Item {
                     leftPadding: Theme.margin * 2 + Theme.iconSize
                     rightPadding: Theme.margin * 2
                     verticalAlignment: TextInput.AlignVCenter
-                    color: Theme.ink
+                    color: Colors.ink
                     placeholderText: "Buscar en " + SearchEngines.name + " o escribir una dirección"
-                    placeholderTextColor: Theme.inkMuted
-                    selectionColor: Theme.selection
-                    selectedTextColor: Theme.ink
+                    placeholderTextColor: Colors.inkMuted
+                    selectionColor: Colors.selection
+                    selectedTextColor: Colors.ink
                     font.pixelSize: Theme.fontSizeLarge
                     font.weight: Theme.fontWeightInput
                     selectByMouse: true
@@ -134,8 +137,8 @@ Item {
                     // Mismo degradado que el campo de dirección y los controles
                     background: Surface {
                         radius: height / 2
-                        fillStart: Theme.controlsStart
-                        fillEnd: Theme.controlsEnd
+                        fillStart: Colors.controlsStart
+                        fillEnd: Colors.controlsEnd
                         // Sin borde ni anillo de foco: el icono de búsqueda
                         // en brandLight1 ya dice que tiene el foco
                         Icon {
@@ -143,7 +146,7 @@ Item {
                             anchors.leftMargin: Theme.margin + Theme.spacing / 2
                             anchors.verticalCenter: parent.verticalCenter
                             name: "search"
-                            color: search.activeFocus ? Theme.brandLight1 : Theme.inkMuted
+                            color: search.activeFocus ? Colors.brandLight1 : Colors.inkMuted
                         }
                     }
 
@@ -157,6 +160,27 @@ Item {
                             text = ""
                             root.navigate(target)
                         }
+                    }
+                }
+
+                // Ventana privada: qué hace por ti
+                Row {
+                    visible: root.privateMode
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: Math.min(parent.width, Theme.ntpSearchWidth)
+                    spacing: Theme.spacing
+
+                    Icon {
+                        id: privateIcon
+                        name: "private"
+                        color: Colors.brandLight1
+                    }
+                    Text {
+                        width: parent.width - privateIcon.width - parent.spacing
+                        text: "Ventana privada: al cerrarla se borra lo que hayas hecho en ella (historial, cookies, datos de los sitios). La protección contra rastreadores y el resto de opciones de privacidad están siempre activas."
+                        color: Colors.inkSecondary
+                        font.pixelSize: Theme.fontSizeSmall
+                        wrapMode: Text.Wrap
                     }
                 }
             }
@@ -180,6 +204,7 @@ Item {
                             required property int index
                             required url
                             required name
+                            editable: !root.privateMode
                             onOpened: root.navigate(url)
                             onRemoveRequested: {
                                 links.remove(index)
@@ -189,7 +214,7 @@ Item {
                     }
 
                     QuickLinkTile {
-                        visible: links.count < Theme.quickLinksMax
+                        visible: links.count < Theme.quickLinksMax && !root.privateMode
                         adder: true
                         onOpened: editor.openEmpty()
                     }
@@ -212,12 +237,12 @@ Item {
                         Icon {
                             anchors.verticalCenter: parent.verticalCenter
                             name: "news"
-                            color: Theme.brandLight1
+                            color: Colors.brandLight1
                         }
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: "Tecnología"
-                            color: Theme.ink
+                            color: Colors.ink
                             font.pixelSize: Theme.fontSizeTitle
                             font.weight: Font.DemiBold
                         }
@@ -241,7 +266,7 @@ Item {
                     visible: News.items.count === 0
                     text: News.loading ? "Cargando noticias…"
                                        : (News.failed ? "No se pudieron cargar las noticias." : "")
-                    color: Theme.inkMuted
+                    color: Colors.inkMuted
                     font.pixelSize: Theme.fontSize
                 }
 
@@ -269,8 +294,9 @@ Item {
         }
     }
 
-    // Botones de fondo, arriba a la derecha
+    // Botones de fondo, arriba a la derecha (no en las ventanas privadas)
     Row {
+        visible: !root.privateMode
         anchors.top: parent.top
         anchors.right: parent.right
         anchors.margins: Theme.margin

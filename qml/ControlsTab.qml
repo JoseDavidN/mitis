@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 
 // Pestaña del borde inferior cuando los controles están ocultos: un relieve
 // pequeño que sale del borde, centrado, con el título de la página. Al pasar el
@@ -19,8 +20,8 @@ Item {
     // abajo, donde se funde con el borde, y horizontal arriba), sin bordes
     SurfaceShape {
         anchors.fill: parent
-        fillStart: Theme.controlsStart
-        fillEnd: Theme.controlsEnd
+        fillStart: Colors.controlsStart
+        fillEnd: Colors.controlsEnd
         path: {
             const w = width, h = height, s = Theme.controlsTabSlope
             const k = s * Theme.controlsTabCurve
@@ -34,7 +35,7 @@ Item {
         anchors.centerIn: parent
         width: Math.min(implicitWidth, root.width - 2 * (Theme.margin + Theme.controlsTabSlope))
         text: root.title !== "" ? root.title : "Mitis"
-        color: root.hovered ? Theme.ink : Theme.inkSecondary
+        color: root.hovered ? Colors.ink : Colors.inkSecondary
         font.pixelSize: Theme.fontSizeSmall
         elide: Text.ElideRight
     }

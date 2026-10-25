@@ -21,7 +21,7 @@ Window {
     minimumHeight: 360
     visible: true
     flags: Qt.Window | Qt.FramelessWindowHint
-    color: Theme.bgBase
+    color: Colors.bgBase
     title: (currentView && currentView.title ? currentView.title + " — " : "")
            + (privateMode ? "Mitis (ventana privada)" : "Mitis")
            + (Qt.application.version.indexOf("beta") >= 0 ? " Beta" : "")
@@ -811,6 +811,9 @@ Window {
 
     // `section`: la de Configuración a la que ir ("history"…); sin ella, arriba
     function openSettings(section) {
+        // Ventana privada: no se puede entrar en Configuración
+        if (privateMode)
+            return
         findBar.close()
         settingsOpen = true
         if (section)
@@ -830,7 +833,7 @@ Window {
 
     // La página de la pestaña activa está tapada (nueva pestaña, novedades o Configuración)
     readonly property bool pageHidden: showingNewTabPage || showingReleaseNotes || settingsOpen
-    // Hay una página web a la vista que imprimir (Ctrl+P, Opciones)
+    // Hay una página web a la vista que imprimir (Ctrl+P)
     readonly property bool canPrint: currentView !== null && !pageHidden
 
     // ── Buscar en la página ──────────────────────────────────────────
@@ -1388,6 +1391,7 @@ Window {
             id: newTabPage
             anchors.fill: parent
             visible: win.showingNewTabPage
+            privateMode: win.privateMode
             onNavigate: target => {
                 win.currentView.navigate(target)
                 win.currentView.focusPage()
@@ -1517,6 +1521,7 @@ Window {
                 pageTitle: win.currentView ? win.currentView.title : ""
                 pageIcon: win.displayIcon(win.currentView)
                 security: bottomBar.security
+                privateMode: win.privateMode
                 onReloadRequested: if (win.currentView) win.currentView.reload()
                 onSettingsRequested: section => win.openSettings(section)
                 onScreenshotRequested: win.startScreenshot()
@@ -1558,7 +1563,7 @@ Window {
             OptionsPopup {
                 parent: bottomBar.optionsButton
                 performanceMonitor: Settings.performanceMonitor
-                canPrint: win.canPrint
+                privateMode: win.privateMode
                 x: parent.width - width
                 y: -height - Theme.floatingMargin
                 onOptionSelected: key => {
@@ -1574,8 +1579,6 @@ Window {
                         win.openSettings("profile")
                     else if (key === "performance")
                         win.togglePerformancePanel()
-                    else if (key === "print")
-                        win.currentView.requestPrint()
                 }
             }
         }
@@ -1974,7 +1977,8 @@ Window {
     Shortcut {
         sequence: "Ctrl+H"
         context: Qt.ApplicationShortcut
-        enabled: win.ownsShortcuts
+        // En la ventana privada no hay historial (ni el de la normal)
+        enabled: win.ownsShortcuts && !win.privateMode
         onActivated: {
             win.closeSettings()
             historyPopup.opened ? historyPopup.close() : historyPopup.open()

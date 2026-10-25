@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import Mitis.Core
 
 // Monitor de rendimiento (Configuración → Desarrollo; Shift+Esc u Opciones →
 // Monitor de rendimiento): memoria, CPU y GPU de Mitis en total, por tipo de
@@ -142,14 +143,14 @@ Item {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 text: cell.label
-                color: Theme.inkSecondary
+                color: Colors.inkSecondary
                 font.pixelSize: Theme.fontSizeSmall
             }
             Text {
                 id: cellValue
                 anchors.right: parent.right
                 text: cell.value
-                color: Theme.ink
+                color: Colors.ink
                 font.pixelSize: Theme.fontSize
                 font.weight: Font.Bold
             }
@@ -171,7 +172,7 @@ Item {
                 const ctx = getContext("2d")
                 ctx.reset()
                 const line = Theme.performanceChartLineWidth
-                ctx.fillStyle = Theme.line
+                ctx.fillStyle = Colors.line
                 ctx.fillRect(0, height - 1, width, 1)
                 const values = cell.values
                 if (values.length < 2)
@@ -220,14 +221,14 @@ Item {
                 anchors.leftMargin: Theme.margin
                 anchors.verticalCenter: parent.verticalCenter
                 name: "memory"
-                color: Theme.brandLight1
+                color: Colors.brandLight1
             }
             Text {
                 anchors.left: headerIcon.right
                 anchors.leftMargin: Theme.spacing
                 anchors.verticalCenter: parent.verticalCenter
                 text: "Rendimiento"
-                color: Theme.ink
+                color: Colors.ink
                 font.pixelSize: Theme.fontSize
                 font.weight: Font.Bold
             }
@@ -254,7 +255,7 @@ Item {
             bottomPadding: Theme.spacing
             text: root.sample ? root.sample.processCount + " procesos · se mide cada "
                                 + Theme.memoryPanelRefresh / 1000 + " s" : ""
-            color: Theme.inkMuted
+            color: Colors.inkMuted
             font.pixelSize: Theme.fontSizeSmall
         }
 
@@ -305,7 +306,7 @@ Item {
                     anchors.rightMargin: Theme.spacing
                     anchors.verticalCenter: parent.verticalCenter
                     text: group.modelData.label
-                    color: Theme.inkSecondary
+                    color: Colors.inkSecondary
                     font.pixelSize: Theme.fontSizeSmall
                     elide: Text.ElideRight
                 }
@@ -315,7 +316,7 @@ Item {
                     anchors.rightMargin: Theme.margin
                     anchors.verticalCenter: parent.verticalCenter
                     text: group.modelData.value
-                    color: Theme.inkSecondary
+                    color: Colors.inkSecondary
                     font.pixelSize: Theme.fontSizeSmall
                     font.weight: Font.DemiBold
                 }
@@ -333,7 +334,7 @@ Item {
                 anchors.leftMargin: Theme.margin
                 anchors.rightMargin: Theme.margin
                 height: 1
-                color: Theme.line
+                color: Colors.line
             }
         }
 
@@ -342,7 +343,7 @@ Item {
             topPadding: Theme.spacing
             bottomPadding: Theme.spacing / 2
             text: "Pestañas de esta ventana"
-            color: Theme.inkMuted
+            color: Colors.inkMuted
             font.pixelSize: Theme.fontSizeSmall
             font.weight: Font.DemiBold
         }

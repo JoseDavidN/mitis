@@ -1,6 +1,7 @@
 import QtQuick
 
 import "urls.js" as Urls
+import Mitis.Core
 
 // Fila de una página guardada (marcadores, historial): favicon, título y una
 // línea de detalle; al pasar por encima, una ✕ para quitarla.
@@ -27,7 +28,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: Theme.radiusSmall
-        color: root.hovered ? Theme.tintHover : "transparent"
+        color: root.hovered ? Colors.tintHover : "transparent"
         Behavior on color { ColorAnimation { duration: Theme.durationFast } }
     }
 
@@ -40,7 +41,7 @@ Item {
         width: Theme.buttonSizeSmall
         height: Theme.buttonSizeSmall
         radius: width / 2
-        color: favicon.visible ? Theme.faviconBackdrop : Theme.tintActive
+        color: favicon.visible ? Colors.faviconBackdrop : Colors.tintActive
 
         Image {
             id: favicon
@@ -59,7 +60,7 @@ Item {
             visible: !favicon.visible
             anchors.centerIn: parent
             text: (Urls.host(root.url) || "?").charAt(0).toUpperCase()
-            color: Theme.brandLight1
+            color: Colors.brandLight1
             font.pixelSize: Theme.fontSizeSmall
             font.weight: Font.Bold
         }
@@ -76,14 +77,14 @@ Item {
         Text {
             width: parent.width
             text: root.title || Urls.host(root.url) || root.url
-            color: Theme.ink
+            color: Colors.ink
             font.pixelSize: Theme.fontSize
             elide: Text.ElideRight
         }
         Text {
             width: parent.width
             text: root.detail || root.url.replace(/^https?:\/\/(www\.)?/, "")
-            color: Theme.inkMuted
+            color: Colors.inkMuted
             font.pixelSize: Theme.fontSizeSmall
             elide: Text.ElideRight
         }
@@ -96,7 +97,7 @@ Item {
         anchors.rightMargin: Theme.margin
         anchors.verticalCenter: parent.verticalCenter
         text: root.value
-        color: Theme.inkSecondary
+        color: Colors.inkSecondary
         font.pixelSize: Theme.fontSizeSmall
         font.weight: Font.DemiBold
     }

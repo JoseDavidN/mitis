@@ -36,13 +36,18 @@ public:
     // Sitios (dominio registrable) donde no se bloquea nada
     void setAllowedSites(const QStringList &sites);
     bool stripTracking = true;
+    // Hay una ventana privada abierta: las listas hacen falta aunque el
+    // bloqueador esté apagado (allí siempre bloquea)
+    void setPrivateActive(bool active);
 
+    // `strict` (ventanas privadas): bloquea y limpia aunque esté apagado y
+    // sin sitios permitidos
     // ¿Se bloquea esta petición? `page` es la página que la hace
-    bool shouldBlock(const QUrl &url, const QUrl &page, FilterEngine::Type type);
+    bool shouldBlock(const QUrl &url, const QUrl &page, FilterEngine::Type type, bool strict = false);
     // La dirección sin parámetros de rastreo (utm_…, fbclid…); igual si no tiene
-    QUrl withoutTrackingParams(const QUrl &url) const;
+    QUrl withoutTrackingParams(const QUrl &url, bool strict = false) const;
     // CSS que oculta los huecos de anuncios en la página `page` ("" si nada)
-    QString cosmeticCss(const QUrl &page) const;
+    QString cosmeticCss(const QUrl &page, bool strict = false) const;
     // Sitio de una dirección para la lista de permitidos ("www.a.com" → "a.com")
     static QString siteOf(const QUrl &url);
 
@@ -68,6 +73,7 @@ private:
     QString filterDir() const;
 
     bool m_enabled = false;
+    bool m_privateActive = false;
     QSet<QByteArray> m_allowedSites;
     std::shared_ptr<const FilterEngine> m_engine;
     bool m_compiling = false;

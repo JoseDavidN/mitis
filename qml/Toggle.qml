@@ -1,4 +1,5 @@
 import QtQuick
+import Mitis.Core
 
 // Interruptor de encendido/apagado. Encendido: pista con el degradado de
 // marca y bola onBrand; apagado: pista tintActive con borde y bola inkSoft.
@@ -25,9 +26,9 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: height / 2
-        color: hover.hovered ? Theme.tintActive : Theme.tintHover
+        color: hover.hovered ? Colors.tintActive : Colors.tintHover
         border.width: 1
-        border.color: root.activeFocus ? Theme.focusRing : (hover.hovered ? Theme.hairlineHover : Theme.hairline)
+        border.color: root.activeFocus ? Colors.focusRing : (hover.hovered ? Colors.hairlineHover : Colors.hairline)
         Behavior on color { ColorAnimation { duration: Theme.durationFast } }
     }
 
@@ -37,11 +38,11 @@ Item {
         radius: height / 2
         opacity: root.checked ? 1 : 0
         border.width: root.activeFocus ? 1 : 0
-        border.color: Theme.focusRing
+        border.color: Colors.focusRing
         gradient: Gradient {
             orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: Theme.brand1 }
-            GradientStop { position: 1.0; color: Theme.brand2 }
+            GradientStop { position: 0.0; color: Colors.brand1 }
+            GradientStop { position: 1.0; color: Colors.brand2 }
         }
         Behavior on opacity { NumberAnimation { duration: Theme.durationFast } }
     }
@@ -53,7 +54,7 @@ Item {
         radius: size / 2
         y: Theme.toggleKnobInset
         x: root.checked ? root.width - size - Theme.toggleKnobInset : Theme.toggleKnobInset
-        color: root.checked ? Theme.onBrand : Theme.inkSoft
+        color: root.checked ? Colors.onBrand : Colors.inkSoft
         Behavior on x {
             NumberAnimation { duration: Theme.durationBase; easing.type: Easing.BezierSpline; easing.bezierCurve: Theme.easeInOut }
         }
