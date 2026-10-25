@@ -141,6 +141,9 @@ for f in usr/libexec/QtWebEngineProcess \
 done
 [[ $falta == 0 ]] || exit 1
 
+# Diccionario del corrector (main.cpp lo busca en usr/share/mitis)
+install -Dm644 "$RAIZ/assets/dictionaries/es.bdic" "$APPDIR/usr/share/mitis/qtwebengine_dictionaries/es.bdic"
+
 # Licencias de terceros que van dentro (iconos Lucide, fuente Nunito)
 install -Dm644 "$RAIZ/assets/icons/LICENSE" "$APPDIR/usr/share/licenses/mitis/LICENSE-Lucide"
 install -Dm644 "$RAIZ/assets/fonts/OFL.txt" "$APPDIR/usr/share/licenses/mitis/OFL-Nunito.txt"

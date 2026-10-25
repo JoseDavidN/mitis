@@ -16,6 +16,8 @@ const QString StartupUrlKey = QStringLiteral("Startup/url");
 const QString DefaultZoomKey = QStringLiteral("Pages/zoom");
 const QString DarkPagesKey = QStringLiteral("Pages/dark");
 const QString HideScrollbarsKey = QStringLiteral("Pages/hideScrollbars");
+const QString NavigationGesturesKey = QStringLiteral("Pages/navigationGestures");
+const QString SpellCheckKey = QStringLiteral("Pages/spellCheck");
 const QString GlassEffectKey = QStringLiteral("Appearance/glassEffect");
 const QString GlassToneKey = QStringLiteral("Appearance/glassTone");
 const QString LanguagesKey = QStringLiteral("Pages/languages");
@@ -216,6 +218,28 @@ void Settings::setHideScrollbars(bool value)
 {
     if (storeBool(HideScrollbarsKey, value, false))
         emit hideScrollbarsChanged();
+}
+
+bool Settings::spellCheck() const
+{
+    return flag(SpellCheckKey, true);
+}
+
+void Settings::setSpellCheck(bool value)
+{
+    if (storeBool(SpellCheckKey, value, true))
+        emit spellCheckChanged();
+}
+
+bool Settings::navigationGestures() const
+{
+    return flag(NavigationGesturesKey, true);
+}
+
+void Settings::setNavigationGestures(bool value)
+{
+    if (storeBool(NavigationGesturesKey, value, true))
+        emit navigationGesturesChanged();
 }
 
 bool Settings::glassEffect() const
@@ -490,7 +514,7 @@ void Settings::resetPreferences()
 {
     const QStringList keys = {
         SearchEngineKey, NewTabBackgroundKey, DownloadFolderKey, DevToolsKey, PerformanceMonitorKey, RestoreSessionKey,
-        StartupModeKey, StartupUrlKey, DefaultZoomKey, DarkPagesKey, HideScrollbarsKey, GlassEffectKey, GlassToneKey, LanguagesKey,
+        StartupModeKey, StartupUrlKey, DefaultZoomKey, DarkPagesKey, HideScrollbarsKey, NavigationGesturesKey, SpellCheckKey, GlassEffectKey, GlassToneKey, LanguagesKey,
         BlockThirdPartyCookiesKey, ClearOnExitKey, DoNotTrackKey, HideLocalIpKey, HttpsUpgradeKey,
         JavascriptKey, ImagesKey, BlockPopupsKey, AutoplayKey, BlockedPermissionsKey, AskDownloadFolderKey,
         SuspendAfterKey, BlockAdsKey, StripTrackingParamsKey, ThemeKey,
@@ -508,6 +532,8 @@ void Settings::resetPreferences()
     emit defaultZoomChanged();
     emit darkPagesChanged();
     emit hideScrollbarsChanged();
+    emit navigationGesturesChanged();
+    emit spellCheckChanged();
     emit glassEffectChanged();
     emit glassToneChanged();
     emit languagesChanged();

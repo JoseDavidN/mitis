@@ -37,7 +37,8 @@ env:
   # 6.12.0, que tiene el mismo formato que la 6.11.3). Quitar cuando salga
   # aqtinstall 3.4.
   AQT_SOURCE: "git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7"
-  QT_MODULES: "qtwebengine qtwebchannel qtpositioning"
+  # qtpdf: imprimir y guardar como PDF (Qt PDF y QtQuick.Pdf)
+  QT_MODULES: "qtwebengine qtwebchannel qtpositioning qtpdf"
   # Qt WebEngine con códecs propietarios (H.264, AAC), compilado aparte
   # (docs/codecs.md): release con los archivos. Vacío: el Qt oficial, sin códecs
   QT_CODECS_RELEASE: ${{ vars.QT_CODECS_RELEASE }}

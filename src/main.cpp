@@ -1,4 +1,6 @@
 #include <QCoreApplication>
+#include <QDir>
+#include <QFileInfo>
 #include <QFont>
 #include <QFontDatabase>
 #include <QGuiApplication>
@@ -47,6 +49,30 @@ void setupTranslations(QGuiApplication &app)
     auto *translator = new QTranslator(&app);
     if (translator->load(QStringLiteral("qt_es"), QLibraryInfo::path(QLibraryInfo::TranslationsPath)))
         QCoreApplication::installTranslator(translator);
+}
+
+// Corrector ortográfico: el diccionario de español (es.bdic) viaja con Mitis
+// en una carpeta «qtwebengine_dictionaries» que cambia de sitio según el
+// paquete: junto al ejecutable (Windows y la compilación), en Resources
+// (macOS) o en share/mitis (Linux instalado y AppImage). Se le dice al motor
+// la que exista; QTWEBENGINE_DICTIONARIES_PATH puesta a mano manda
+void setupDictionaries()
+{
+    if (qEnvironmentVariableIsSet("QTWEBENGINE_DICTIONARIES_PATH"))
+        return;
+    const QString app = QCoreApplication::applicationDirPath();
+    const QString name = QStringLiteral("qtwebengine_dictionaries");
+    const QStringList candidates = {
+        app + u'/' + name,
+        app + QStringLiteral("/../Resources/") + name,
+        app + QStringLiteral("/../share/mitis/") + name,
+    };
+    for (const QString &dir : candidates) {
+        if (QFileInfo::exists(dir + QStringLiteral("/es.bdic"))) {
+            qputenv("QTWEBENGINE_DICTIONARIES_PATH", QDir::cleanPath(dir).toLocal8Bit());
+            return;
+        }
+    }
 }
 
 // Opciones de Chromium para gastar menos (Fase 5, docs/rendimiento.md). Van
@@ -109,6 +135,8 @@ int main(int argc, char *argv[])
     QGuiApplication::setDesktopFileName(QStringLiteral("mitis"));
     setupFont();
     setupTranslations(app);
+    // Antes de que EngineBridge cree los perfiles (el motor la lee entonces)
+    setupDictionaries();
 
     // Navegador predeterminado: los enlaces llegan como argumentos. Si ya hay
     // un Mitis abierto con este perfil, se los lleva él (y se pone delante) y

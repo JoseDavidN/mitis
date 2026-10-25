@@ -9,6 +9,8 @@ Popup {
 
     // Monitor de rendimiento activado (Configuración → Desarrollo): añade su opción
     property bool performanceMonitor: false
+    // Hay una página que imprimir (no en la nueva pestaña ni en Configuración)
+    property bool canPrint: false
 
     // Cada opción: { key, label, icon, available, shortcut (opcional) }
     readonly property var options: [
@@ -17,9 +19,11 @@ Popup {
         { key: "private", label: "Nueva ventana privada", icon: "private", available: true, shortcut: "Ctrl+Shift+N" },
         { key: "history", label: "Historial", icon: "history", available: true },
         { key: "downloads", label: "Descargas", icon: "downloads", available: true },
+        { key: "print", label: "Imprimir…", icon: "print", available: true, shortcut: "Ctrl+P" },
         { key: "performance", label: "Monitor de rendimiento", icon: "memory", available: true, shortcut: "Shift+Esc" },
         { key: "settings", label: "Configuración", icon: "settings", available: true }
-    ].filter(option => performanceMonitor || option.key !== "performance")
+    ].filter(option => (performanceMonitor || option.key !== "performance")
+                       && (canPrint || option.key !== "print"))
 
     signal optionSelected(string key)
 

@@ -343,6 +343,19 @@ QtObject {
     readonly property int miniPlayerWidth: 270
     readonly property int findBarWidth: 440
     readonly property int zoomLabelWidth: 52
+    // Flecha de deslizar entre páginas (SwipeIndicator): tamaño y cuánto
+    // crece cuando soltar ya navega
+    readonly property int swipeIndicatorSize: 44
+    readonly property real swipeIndicatorReadyScale: 1.1
+    // Ventana de imprimir (PrintDialog): tamaño máximo, columna de opciones,
+    // alto de sus filas y copias como mucho. La hoja de la vista previa es
+    // blanca en todos los temas, como el papel
+    readonly property int printDialogWidth: 820
+    readonly property int printDialogHeight: 600
+    readonly property int printOptionsWidth: 300
+    readonly property int printRowHeight: 32
+    readonly property int printMaxCopies: 99
+    readonly property color printPaper: "#ffffff"
     readonly property int miniPlayerHeight: 34
     // Mini reproductor: negro en todos los temas (como la paleta de DevTools).
     // Botones sin fondo: solo el icono, relleno y redondeado, en blanco; al

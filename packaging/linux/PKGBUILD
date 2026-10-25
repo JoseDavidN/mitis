@@ -57,6 +57,7 @@ build() {
 package() {
   # Instalación a mano: CMake genera «Mitis» y en Linux el comando va en minúsculas
   install -Dm755 build/bin/Mitis "$pkgdir/usr/bin/mitis"
+  install -Dm644 mitis/assets/dictionaries/es.bdic "$pkgdir/usr/share/mitis/qtwebengine_dictionaries/es.bdic"
   install -Dm644 mitis/packaging/linux/mitis.desktop "$pkgdir/usr/share/applications/mitis.desktop"
   install -Dm644 mitis/packaging/linux/mitis.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/mitis.svg"
   # Licencias de terceros que van dentro del ejecutable (iconos Lucide, fuente Nunito)

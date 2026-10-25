@@ -38,6 +38,10 @@ try {
     $raiz = Join-Path $PSScriptRoot ".."
     Copy-Item (Join-Path $raiz "LICENSE") $carpeta
     Copy-Item (Join-Path $raiz "licencias") $carpeta -Recurse
+    # Diccionario del corrector, junto a Mitis.exe (main.cpp, setupDictionaries)
+    $diccionarios = Join-Path $carpeta "qtwebengine_dictionaries"
+    New-Item -ItemType Directory -Path $diccionarios -Force | Out-Null
+    Copy-Item (Join-Path $raiz "assets\dictionaries\es.bdic") $diccionarios
 
     # Comprimido con 7-Zip (en los equipos de GitHub Actions) o, si no está,
     # con PowerShell (más lento)

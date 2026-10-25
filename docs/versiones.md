@@ -25,10 +25,11 @@ Historial con este esquema (ver [CHANGELOG.md](../CHANGELOG.md)):
 | 0.9.0 | Actualizaciones desde el servidor de descargas (botón tras Opciones), informes de cierres inesperados, logo en la nueva pestaña, «Mitis» en vez de «Mitis.exe» en Windows, memoria real en el monitor de Windows | `0e8f5eb` |
 | 0.9.1 | Corrige la caída con pestañas suspendidas (iconos de pestañas descargadas) | `e22e038` |
 | 0.10.0 | Pestaña de novedades tras actualizar, vidrio experimental en toda la interfaz, controles sin bordes, pestaña de relieve, panel con todas las descargas | `be4392a` |
+| 0.10.1 | Corrige la caída al volver a una pestaña que se había descargado (iconos de pestañas que se descargaron alguna vez) | `0d25aba` |
 
 Las fases 0–2 van juntas en 0.2.0 porque entraron en un solo commit. Esas versiones no tienen etiqueta ni release: son anteriores al workflow de publicación. Si se quieren marcar, basta con etiquetas ligeras (`git tag v0.4.0 d6cfa89`); al subirlas no se publica nada porque esos commits no tienen `.github/workflows/`.
 
-**Versión actual: 0.10.1-beta** (en desarrollo; la 0.10.0 ya tiene commit y se da por publicada). Solo trae correcciones (la caída al volver a una pestaña que se había descargado): sube PARCHE. Se publica al subir la etiqueta `v0.10.1`.
+**Versión actual: 0.11.0-beta** (en desarrollo; la 0.10.1 ya tiene commit y se da por publicada). Trae funciones nuevas (atrás y adelante con los gestos de macOS y los botones laterales del ratón; corrector ortográfico en español; imprimir y guardar como PDF con ventana propia; códecs propietarios en Windows y macOS): sube MENOR. Se publica al subir la etiqueta `v0.11.0`.
 
 **Regla:** una versión con commit ya está desplegada. Lo siguiente que se haga va en una versión nueva, subida según lo que traiga (MENOR con funciones nuevas, PARCHE con solo correcciones), y su sección del CHANGELOG se escribe en lenguaje claro para quien no sabe de tecnología: es lo que se ve en la pestaña de novedades.
 

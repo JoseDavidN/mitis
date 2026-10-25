@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(Mitis
-    VERSION 0.10.1
+    VERSION 0.11.0
     DESCRIPTION "Navegador web ligero, multiplataforma y con interfaz propia"
     LANGUAGES CXX
 )
@@ -9,7 +9,9 @@ project(Mitis
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Quick Network Sql WebEngineCore WebEngineQuick Svg)
+# Pdf (con su módulo QML, QtQuick.Pdf) y PrintSupport: imprimir y guardar como
+# PDF (src/printing.*, PrintDialog.qml)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Quick Network Sql WebEngineCore WebEngineQuick Svg Pdf PdfQuick PrintSupport)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -110,11 +112,21 @@ qt_add_qml_module(mitiscore
         src/crashreporter.cpp
         src/updater.h
         src/updater.cpp
+        src/navigationgestures.h
+        src/navigationgestures.cpp
+        src/printing.h
+        src/printing.cpp
 )
+# Deslizar entre páginas: el ajuste del sistema (src/navigationgestures_mac.mm)
+if(APPLE)
+    target_sources(mitiscore PRIVATE src/navigationgestures_mac.mm)
+    set_source_files_properties(src/navigationgestures_mac.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+    target_link_libraries(mitiscore PRIVATE "-framework AppKit")
+endif()
 # El registro de tipos generado incluye "settings.h" sin ruta
 target_include_directories(mitiscore PRIVATE src)
 target_compile_definitions(mitiscore PRIVATE MITIS_SERVIDOR="${MITIS_SERVIDOR}")
-target_link_libraries(mitiscore PRIVATE Qt6::Sql Qt6::Network Qt6::Gui Qt6::Svg)
+target_link_libraries(mitiscore PRIVATE Qt6::Sql Qt6::Network Qt6::Gui Qt6::Svg Qt6::Pdf Qt6::PrintSupport)
 
 # Iconos SVG (Lucide, ISC: assets/icons/LICENSE), empaquetados en :/icons
 file(GLOB MITIS_ICON_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" CONFIGURE_DEPENDS assets/icons/*.svg)
@@ -148,6 +160,7 @@ qt_add_resources(mitis "scripts"
     PREFIX "/scripts"
     BASE assets/scripts
     FILES assets/scripts/media.js assets/scripts/devtools.js assets/scripts/drm.js assets/scripts/google.js
+          assets/scripts/swipe.js
 )
 
 # Cambios de cada versión: la pestaña de novedades tras actualizarse
@@ -198,6 +211,8 @@ set(MITIS_QML_FILES
     qml/MiniPlayer.qml
     qml/FindBar.qml
     qml/ZoomIndicator.qml
+    qml/SwipeIndicator.qml
+    qml/PrintDialog.qml
     qml/DownloadPanel.qml
     qml/ProgressBar.qml
     qml/ProgressRing.qml
@@ -289,6 +304,18 @@ if(APPLE)
 endif()
 
 include(GNUInstallDirs)
+# Diccionario del corrector (assets/dictionaries/es.bdic): el motor lo lee de
+# un archivo, no de los recursos. main.cpp (setupDictionaries) lo busca en
+# «qtwebengine_dictionaries»: junto al ejecutable (Windows y esta
+# compilación), en Resources (Mitis.app) o en share/mitis (Linux instalado)
+set(MITIS_DICTIONARY "${CMAKE_CURRENT_SOURCE_DIR}/assets/dictionaries/es.bdic")
+if(APPLE)
+    set_source_files_properties("${MITIS_DICTIONARY}" PROPERTIES MACOSX_PACKAGE_LOCATION Resources/qtwebengine_dictionaries)
+    target_sources(mitis PRIVATE "${MITIS_DICTIONARY}")
+else()
+    configure_file("${MITIS_DICTIONARY}" "${CMAKE_BINARY_DIR}/bin/qtwebengine_dictionaries/es.bdic" COPYONLY)
+endif()
+
 install(TARGETS mitis
     BUNDLE DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -301,4 +328,5 @@ if(UNIX AND NOT APPLE)
     install(FILES packaging/linux/mitis.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
     install(FILES LICENSE DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/licenses/mitis)
     install(DIRECTORY licencias/ DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/licenses/mitis)
+    install(FILES "${MITIS_DICTIONARY}" DESTINATION ${CMAKE_INSTALL_DATADIR}/mitis/qtwebengine_dictionaries)
 endif()

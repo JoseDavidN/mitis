@@ -48,6 +48,11 @@ class Settings : public QObject
     Q_PROPERTY(bool darkPages READ darkPages WRITE setDarkPages NOTIFY darkPagesChanged)
     // Ocultar las barras de desplazamiento de las páginas (se sigue desplazando)
     Q_PROPERTY(bool hideScrollbars READ hideScrollbars WRITE setHideScrollbars NOTIFY hideScrollbarsChanged)
+    // Atrás y adelante con los botones laterales del ratón y los gestos de
+    // macOS (NavigationGestures); encendido por defecto
+    Q_PROPERTY(bool navigationGestures READ navigationGestures WRITE setNavigationGestures NOTIFY navigationGesturesChanged)
+    // Corrector ortográfico en español al escribir en las páginas; encendido por defecto
+    Q_PROPERTY(bool spellCheck READ spellCheck WRITE setSpellCheck NOTIFY spellCheckChanged)
     // Experimental: controles de vidrio esmerilado (Glass), apagado por defecto
     Q_PROPERTY(bool glassEffect READ glassEffect WRITE setGlassEffect NOTIFY glassEffectChanged)
     // Tono morado del velo del vidrio: 0 lavanda, 1 violeta, 2 profundo
@@ -129,6 +134,10 @@ public:
     void setDarkPages(bool value);
     bool hideScrollbars() const;
     void setHideScrollbars(bool value);
+    bool spellCheck() const;
+    void setSpellCheck(bool value);
+    bool navigationGestures() const;
+    void setNavigationGestures(bool value);
     bool glassEffect() const;
     void setGlassEffect(bool value);
     int glassTone() const;
@@ -195,6 +204,8 @@ signals:
     void defaultZoomChanged();
     void darkPagesChanged();
     void hideScrollbarsChanged();
+    void navigationGesturesChanged();
+    void spellCheckChanged();
     void glassEffectChanged();
     void glassToneChanged();
     void languagesChanged();

@@ -146,6 +146,9 @@ Item {
     // motor no lo tiene. Solo llega si falta Widevine; la página sigue sin
     // poder reproducirlo (ver BrowserProfile.widevineAvailable).
     signal protectedContentUnavailable()
+    // Hay que mostrar la ventana de imprimir (PrintDialog): Ctrl+P, Opciones,
+    // menú contextual (requestPrint()) o la propia página (window.print())
+    signal printRequested()
     readonly property bool certificateErrorPending: certState.pending !== null
     // Se aceptó un certificado no válido de este sitio («Continuar» en el
     // aviso): la conexión está cifrada pero no se sabe con quién
@@ -202,6 +205,17 @@ Item {
             if (edited === false && !root.visible && view.lifecycleState < target)
                 root._applyState(target)
         })
+    }
+    // Deslizar entre páginas: `done(true)` si el gesto horizontal en curso no
+    // es de la página (no desplaza nada ni se lo queda; assets/scripts/swipe.js)
+    function swipeAllowed(done) {
+        if (root.url.toString() === "") {
+            done(true)
+            return
+        }
+        view.runJavaScript("window.__mitisSwipe ? window.__mitisSwipe() : null",
+                           WebEngineScript.ApplicationWorld,
+                           result => done(!!result && result.recent && !result.claimed))
     }
     function goBack() {
         root._cancelCertificateError()
@@ -300,6 +314,24 @@ Item {
         const action = _webActions[name]
         if (action !== undefined)
             view.triggerWebAction(action)
+    }
+
+    // ── Imprimir ─────────────────────────────────────────────────────
+    function requestPrint() {
+        root.printRequested()
+    }
+    // La página como PDF para imprimirla o guardarla: `done(datos)`, con los
+    // bytes del PDF. paper: "a4", "letter" o "legal"
+    function printToPdf(done, landscape, paper, backgrounds) {
+        const sizes = { a4: WebEngineView.A4, letter: WebEngineView.Letter, legal: WebEngineView.Legal }
+        view.settings.printElementBackgrounds = backgrounds
+        view.printToPdf(data => done(data), sizes[paper] ?? WebEngineView.A4,
+                        landscape ? WebEngineView.Landscape : WebEngineView.Portrait)
+    }
+
+    // Corrector: cambia la palabra mal escrita del menú contextual por `word`
+    function replaceMisspelledWord(word) {
+        view.replaceMisspelledWord(word)
     }
 
     // ── Herramientas de desarrollo ───────────────────────────────────
@@ -906,6 +938,9 @@ Item {
                 captureState.set(Number(parts[0]), Number(parts[1]))
             }
         }
+        // window.print(): la ventana de imprimir propia, no la del motor
+        onPrintRequested: root.printRequested()
+
         onFullScreenRequested: request => {
             request.accept()
             root.pageFullScreenRequested(request.toggleOn)
@@ -1001,7 +1036,10 @@ Item {
                 canCut: (flags & ContextMenuRequest.CanCut) !== 0,
                 canCopy: (flags & ContextMenuRequest.CanCopy) !== 0,
                 canPaste: (flags & ContextMenuRequest.CanPaste) !== 0,
-                canSelectAll: (flags & ContextMenuRequest.CanSelectAll) !== 0
+                canSelectAll: (flags & ContextMenuRequest.CanSelectAll) !== 0,
+                // Corrector: la palabra mal escrita bajo el ratón y sus sugerencias
+                misspelledWord: request.misspelledWord,
+                suggestions: request.spellCheckerSuggestions
             })
         }
 

@@ -735,6 +735,15 @@ FocusScope {
                     isSelected: value => Settings.languages.includes(value)
                     onChosen: value => root.toggleLanguage(value)
                 }
+                SettingRow {
+                    title: "Revisar la ortografía"
+                    description: "Subraya en rojo las palabras mal escritas en español mientras escribes en las páginas. Con clic derecho sobre una, te propone cómo corregirla."
+
+                    Toggle {
+                        checked: Settings.spellCheck
+                        onToggled: Settings.spellCheck = checked
+                    }
+                }
             }
 
             // Búsqueda: el buscador de la barra de dirección, la nueva pestaña
@@ -1073,6 +1082,17 @@ FocusScope {
                     Toggle {
                         checked: Settings.autoplay
                         onToggled: Settings.autoplay = checked
+                    }
+                }
+                SettingRow {
+                    title: "Atrás y adelante con gestos y botones del ratón"
+                    description: Qt.platform.os === "osx" || Qt.platform.os === "macos"
+                                 ? "Deslizar en el panel táctil o el Magic Mouse (con dos o tres dedos, según «Deslizar entre páginas» en Ajustes del Sistema) y los botones laterales del ratón te llevan a la página anterior o a la siguiente."
+                                 : "Los botones laterales del ratón te llevan a la página anterior o a la siguiente."
+
+                    Toggle {
+                        checked: Settings.navigationGestures
+                        onToggled: Settings.navigationGestures = checked
                     }
                 }
             }

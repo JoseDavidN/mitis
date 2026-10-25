@@ -271,6 +271,11 @@ QtObject {
         profile.httpUserAgent = profile.httpUserAgent.replace(/ QtWebEngine\/\S+/, "")
         profile.downloadPath = Qt.binding(() => Settings.downloadFolder || root.systemDownloadPath)
         profile.httpAcceptLanguage = Qt.binding(() => root._acceptLanguage(Settings.languages))
+        // Corrector: solo español, con el diccionario que viaja con Mitis
+        // (assets/dictionaries/es.bdic; main.cpp le dice al motor dónde está).
+        // No se pueden añadir otros idiomas ni palabras
+        profile.spellCheckLanguages = ["es"]
+        profile.spellCheckEnabled = Qt.binding(() => Settings.spellCheck)
 
         // Puente con el contenido multimedia (mini reproductor), en todas las páginas
         const script = WebEngine.script()
@@ -305,6 +310,18 @@ QtObject {
         google.worldId = WebEngineScript.MainWorld
         google.runsOnSubFrames = true
         root._insertScript(profile, google)
+
+        // Deslizar entre páginas (macOS, NavigationGestures): si el gesto
+        // horizontal es de la página (assets/scripts/swipe.js). Solo el marco
+        // principal: lo de dentro de otro marco no se sabe y no navega
+        if (Qt.platform.os === "osx" || Qt.platform.os === "macos") {
+            const swipe = WebEngine.script()
+            swipe.name = "mitis-swipe"
+            swipe.sourceUrl = "qrc:/scripts/swipe.js"
+            swipe.injectionPoint = WebEngineScript.DocumentCreation
+            swipe.worldId = WebEngineScript.ApplicationWorld
+            root._insertScript(profile, swipe)
+        }
     }
 
     // Antes de empezar: si hay que preguntar la carpeta, espera la respuesta

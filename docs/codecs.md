@@ -298,6 +298,12 @@ seguridad de Chromium: no conviene quedarse mucho en una.
   archivo**, es un fallo de esa versión de Apple clang: actualizar Xcode (Xcode 16.2 trae
   clang 1600.0.26.6) y repetir. Los archivos que se piden adjuntar (`/var/folders/…`) no
   hacen falta.
+- **«LNK1104: no se puede abrir el archivo 'atls.lib'»** (Windows, al final, enlazando
+  `Qt6WebEngineCore.dll`): están las cabeceras de ATL pero no su biblioteca para x64 (p. ej.
+  solo se instaló la versión «con mitigaciones de Spectre» o la de ARM64). Instalar «ATL de
+  C++ para las herramientas de compilación v143 más recientes (x86 y x64)», abrir una
+  consola de VS nueva y repetir el comando: continúa en el enlace, sin recompilar. El
+  script ya lo comprueba antes de empezar.
 - **Rutas demasiado largas en Windows:** ruta de trabajo corta y `LongPathsEnabled`.
 - **Mitis no arranca con el Qt nuevo** («Cannot mix incompatible Qt library», símbolos que
   faltan): la versión del Qt base y la del archivo no coinciden.

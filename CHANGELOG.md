@@ -5,6 +5,19 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ## [Sin publicar]
 
+> Imprimir, corrector y gestos para ir atrás
+
+### Añadido
+
+- En Mac puedes ir a la página anterior o a la siguiente deslizando el dedo, como en Safari: con dos dedos en el panel táctil (o uno en el Magic Mouse) aparece una flecha en el borde; cuando se rellena de color, suelta y cambias de página. Si lo tienes configurado con tres dedos en Ajustes del Sistema, también funciona. Mitis respeta lo que hayas elegido allí («Deslizar entre páginas») y no cambia de página si lo que deslizas es algo de la propia página, como una galería de fotos o un mapa.
+- En todos los sistemas, los botones laterales del ratón (los de atrás y adelante que traen muchos ratones) ya sirven para ir a la página anterior y a la siguiente.
+- Si prefieres que los gestos y los botones del ratón no cambien de página, puedes apagarlos en Configuración → Contenido, «Atrás y adelante con gestos y botones del ratón».
+- Corrector ortográfico en español: al escribir en una página (un correo, un formulario, un comentario), las palabras mal escritas se subrayan en rojo y, con clic derecho sobre una, Mitis te propone cómo escribirla bien. Se puede apagar en Configuración → Apariencia e idioma, «Revisar la ortografía».
+- Ya puedes imprimir páginas o guardarlas como PDF (Ctrl+P, o Opciones → «Imprimir…», o clic derecho → «Imprimir…»). Se abre una ventana de Mitis con la vista previa de las hojas, donde eliges la impresora o «Guardar como PDF», el número de copias, color o blanco y negro, hoja vertical u horizontal, el tamaño del papel y si imprimir también los fondos de la página.
+- En Windows y Mac, Mitis ya puede reproducir los formatos de vídeo y audio más usados en internet (como el MP4). Antes muchos vídeos no se veían y algunos servicios de música o películas no funcionaban; ahora sí.
+
+## [0.10.1] - 2026-10-24
+
 > Mitis, más estable
 
 ### Corregido

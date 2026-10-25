@@ -617,7 +617,16 @@ Window {
         case "search":
             newTab(SearchEngines.searchUrl(info.selectedText.trim()), true, index + 1)
             break
+        case "print":
+            tab.requestPrint()
+            break
         default:
+            // Corrector: una sugerencia para la palabra mal escrita
+            if (action.startsWith("replace:")) {
+                tab.focusPage()
+                tab.replaceMisspelledWord(action.slice("replace:".length))
+                break
+            }
             // Cortar, pegar… actúan sobre el elemento con foco de la página
             tab.focusPage()
             tab.runAction(action)
@@ -735,6 +744,60 @@ Window {
     // Página sobre las pestañas (no es una pestaña): mientras está abierta,
     // los controles inferiores se ocultan y la pestaña activa no recibe
     // atajos de página (buscar, zoom, F12). Se cierra al cambiar de pestaña.
+    // Atrás y adelante sin la barra: botones laterales del ratón y gestos de
+    // macOS (NavigationGestures, solo los de esta ventana), si no se han
+    // apagado (Configuración → Contenido)
+    function historyStep(direction) {
+        const tab = win.currentView
+        if (!tab || win.settingsOpen || !Settings.navigationGestures)
+            return
+        if (direction < 0 && tab.canGoBack)
+            tab.goBack()
+        else if (direction > 0 && tab.canGoForward)
+            tab.goForward()
+    }
+    // Deslizar con dos dedos es también desplazar: solo navega si la página
+    // no usa el gesto (BrowserTab.swipeAllowed), y se pregunta con algo de
+    // recorrido, cuando la página ya ha recibido los primeros eventos.
+    // 0: sin preguntar; 1: preguntando; 2: para navegar; 3: de la página
+    property int _swipeCheck: 0
+    property int _swipeId: 0
+    Connections {
+        target: NavigationGestures
+        function onNavigateRequested(source, direction) {
+            if (source === win)
+                win.historyStep(direction)
+        }
+        function onSwipeUpdated(source, direction, progress) {
+            if (source !== win)
+                return
+            swipeIndicator.direction = direction
+            swipeIndicator.progress = progress
+            if (win._swipeCheck !== 0 || progress < 0.2)
+                return
+            const tab = win.currentView
+            if (!tab || !Settings.navigationGestures || win.settingsOpen || win.pageFullScreen
+                    || !(direction < 0 ? tab.canGoBack : tab.canGoForward)) {
+                win._swipeCheck = 3
+                return
+            }
+            win._swipeCheck = 1
+            const id = ++win._swipeId
+            tab.swipeAllowed(allowed => {
+                if (id === win._swipeId && win._swipeCheck === 1)
+                    win._swipeCheck = allowed ? 2 : 3
+            })
+        }
+        function onSwipeFinished(source, navigate) {
+            if (source !== win)
+                return
+            if (navigate && win._swipeCheck === 2)
+                win.historyStep(swipeIndicator.direction)
+            win._swipeCheck = 0
+            swipeIndicator.progress = 0
+        }
+    }
+
     property bool settingsOpen: false
 
     // `section`: la de Configuración a la que ir ("history"…); sin ella, arriba
@@ -756,6 +819,8 @@ Window {
 
     // La página de la pestaña activa está tapada (nueva pestaña, novedades o Configuración)
     readonly property bool pageHidden: showingNewTabPage || showingReleaseNotes || settingsOpen
+    // Hay una página web a la vista que imprimir (Ctrl+P, Opciones)
+    readonly property bool canPrint: currentView !== null && !pageHidden
 
     // ── Buscar en la página ──────────────────────────────────────────
     // Pestaña en la que se está buscando (la barra se cierra al cambiar de pestaña)
@@ -1252,6 +1317,15 @@ Window {
                     onProceeded: tab.focusPage()
                 }
 
+                // Imprimir y guardar como PDF: ventana propia sobre la página
+                onPrintRequested: printDialog.open()
+
+                PrintDialog {
+                    id: printDialog
+                    page: tab
+                    onFinished: tab.focusPage()
+                }
+
                 // alert, confirm, prompt y aviso de salir de la página
                 onJavaScriptDialogRequested: dialog => jsDialog.enqueue(dialog)
                 onJavaScriptDialogCancelled: dialog => jsDialog.cancel(dialog)
@@ -1424,6 +1498,7 @@ Window {
         id: optionsPopup
         parent: bottomBar.optionsButton
         performanceMonitor: Settings.performanceMonitor
+        canPrint: win.canPrint
         x: parent.width - width
         y: -height - Theme.floatingMargin
         onOptionSelected: key => {
@@ -1439,6 +1514,8 @@ Window {
                 win.openSettings("profile")
             else if (key === "performance")
                 win.togglePerformancePanel()
+            else if (key === "print")
+                win.currentView.requestPrint()
         }
     }
 
@@ -1498,6 +1575,14 @@ Window {
         onRefreshRequested: win.measurePerformance()
         onTabSelected: index => win.selectTab(index)
         onCloseRequested: win.togglePerformancePanel()
+    }
+
+    // Deslizar entre páginas con dos dedos (macOS): la flecha del lado al que
+    // se va, a media altura de las páginas
+    SwipeIndicator {
+        id: swipeIndicator
+        z: 1
+        shown: win._swipeCheck === 2
     }
 
     ZoomIndicator {
@@ -1717,6 +1802,12 @@ Window {
         context: Qt.ApplicationShortcut
         enabled: win.ownsShortcuts
         onActivated: win.startScreenshot()
+    }
+    Shortcut {
+        sequence: "Ctrl+P"
+        context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts && win.canPrint
+        onActivated: win.currentView.requestPrint()
     }
     Shortcut {
         sequence: "Ctrl+F"

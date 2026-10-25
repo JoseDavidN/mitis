@@ -79,10 +79,16 @@ if ($sdk -and ([version]$sdk).Build -lt 26100) {
     throw "SDK de Windows ${sdk}: Qt WebEngine $QtVersion pide 10.0.26100 o posterior (instalador de Visual Studio)"
 }
 
-# Chromium usa ATL (atldef.h), que no viene con la carga de C++ por defecto:
-# sin él falla al empezar a compilar Chromium, tras la configuración
-if ($env:VCToolsInstallDir -and -not (Test-Path (Join-Path $env:VCToolsInstallDir "atlmfc\include\atldef.h"))) {
-    throw "Falta ATL de C++ en Visual Studio (atldef.h): instálalo con el instalador de Visual Studio (componentes Microsoft.VisualStudio.Component.VC.ATL y VC.ATLMFC; docs/codecs.md)"
+# Chromium usa ATL (atldef.h al compilar, atls.lib al enlazar Qt6WebEngineCore.dll),
+# que no viene con la carga de C++ por defecto. Las cabeceras pueden estar sin la
+# biblioteca x64 (p. ej. solo la versión Spectre o la de ARM64): se miran las dos,
+# porque sin atls.lib falla al final, tras horas de compilación
+if ($env:VCToolsInstallDir) {
+    foreach ($archivo in "atlmfc\include\atldef.h", "atlmfc\lib\x64\atls.lib") {
+        if (-not (Test-Path (Join-Path $env:VCToolsInstallDir $archivo))) {
+            throw "Falta ATL de C++ para x64 en Visual Studio ($archivo): instálalo con el instalador de Visual Studio («ATL de C++ para las herramientas de compilación v143 más recientes (x86 y x64)», Microsoft.VisualStudio.Component.VC.ATL, y VC.ATLMFC; docs/codecs.md)"
+        }
+    }
 }
 
 # Rutas largas: aunque el trabajo vaya en una ruta corta, conviene tenerlas activas

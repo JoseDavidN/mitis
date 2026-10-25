@@ -23,6 +23,8 @@ Popup {
 
     readonly property int separatorHeight: Theme.spacing + 1
     readonly property int searchTextMax: 24
+    // Sugerencias del corrector que se muestran como mucho
+    readonly property int maxSuggestions: 5
 
     padding: Theme.spacing
     focus: true
@@ -96,6 +98,13 @@ Popup {
                 row("saveMedia", "Guardar archivo", "save")
             ])
         }
+        // Corrector: primero las sugerencias para la palabra mal escrita
+        if (menuInfo.editable && menuInfo.misspelledWord) {
+            const suggestions = (menuInfo.suggestions ?? []).slice(0, maxSuggestions)
+            groups.push(suggestions.length > 0
+                ? suggestions.map(word => row("replace:" + word, word, "check"))
+                : [row("noSuggestions", "Sin sugerencias", "check", "", false)])
+        }
         if (menuInfo.editable) {
             groups.push([
                 row("undo", "Deshacer", "undo", "Ctrl+Z", menuInfo.canUndo),
@@ -118,7 +127,8 @@ Popup {
                 row("back", "Atrás", "back", "Alt+←", menuInfo.canGoBack),
                 row("forward", "Adelante", "forward", "Alt+→", menuInfo.canGoForward),
                 row("reload", "Recargar", "reload", "Ctrl+R"),
-                row("savePage", "Guardar página", "save")
+                row("savePage", "Guardar página", "save"),
+                row("print", "Imprimir…", "print", "Ctrl+P")
             ])
         }
         // Al final

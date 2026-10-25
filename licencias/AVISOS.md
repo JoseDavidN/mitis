@@ -10,7 +10,8 @@ licencia que se citan están en esta misma carpeta.
 - **Qué:** biblioteca de la interfaz y del sistema. Módulos usados: Qt Core,
   Qt Gui, Qt Qml, Qt Quick, Qt Quick Controls, Qt Network, Qt Sql (SQLite),
   Qt Svg, Qt WebEngine (Core y Quick) y sus dependencias Qt WebChannel y
-  Qt Positioning.
+  Qt Positioning, Qt PDF (con QtQuick.Pdf; usa PDFium, BSD de 3 cláusulas) y
+  Qt Print Support (con Qt Widgets, de la que depende).
 - **Licencia:** GNU LGPL v3 (`LGPL-3.0.txt`, junto con `GPL-3.0.txt`).
   Copyright (C) The Qt Company Ltd. y otros colaboradores.
 - **Enlace:** <https://www.qt.io/> · código: <https://download.qt.io/official_releases/qt/>
@@ -37,7 +38,21 @@ licencia que se citan están en esta misma carpeta.
   sus `third_party/`).
 - El FFmpeg que incluye Qt WebEngine es el de Chromium, compilado como LGPL.
   Los paquetes oficiales de Qt para Windows y macOS no traen códecs
-  propietarios (H.264, AAC); el Qt WebEngine de Arch Linux sí.
+  propietarios (H.264, AAC): Mitis usa en ellos un Qt WebEngine compilado
+  aparte con esos códecs (`docs/codecs.md`); el Qt WebEngine de Arch Linux ya
+  los trae.
+
+### Diccionario de español (RLA-ES)
+
+- **Qué:** diccionario del corrector ortográfico (`es.bdic`, convertido del
+  diccionario Hunspell `es` genérico, versión 2.9).
+- **Licencia:** triple a elegir: GNU GPL v3 o posterior, GNU LGPL v3 o
+  posterior o MPL 1.1 o posterior; Mitis lo distribuye bajo la GPL v3
+  (`GPL-3.0.txt`). Copyright los colaboradores del proyecto RLA-ES
+  (Santiago Bosio y otros).
+- **Enlace:** <https://github.com/sbosio/rla-es>
+- Va como archivo aparte, en la carpeta `qtwebengine_dictionaries` (en el
+  código, `assets/dictionaries/`).
 
 ### Fuente Nunito
 
