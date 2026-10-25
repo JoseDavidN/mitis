@@ -5,7 +5,7 @@ import QtQuick.Shapes
 // Como Surface, para un fondo con forma propia (no un rectángulo): la forma es
 // un trazado SVG (`path`, en el tamaño del elemento), rellena con el color o
 // el degradado horizontal del tema, sin borde. Con la transparencia
-// experimental, el vidrio (Glass) recortado con la forma. Lo usa ControlsTab.
+// experimental, el vidrio (Glass) recortado con la forma. Lo usan ControlsTab y SwipeIndicator.
 Item {
     id: root
 

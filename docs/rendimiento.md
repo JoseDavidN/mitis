@@ -68,6 +68,70 @@ la estabilidad (una página colgada arrastraría a otras). No se usan. Sí se
 usan las que quitan trabajo en segundo plano (ver `setupChromiumFlags()` en
 `src/main.cpp`).
 
+## Paneles creados al abrirlos (2026-10-24, versión 0.11.1)
+
+Antes, `Main.qml` creaba al arrancar, en cada ventana (también las privadas),
+Configuración entera, las ocho listas desplegables, el menú contextual, el
+monitor de rendimiento, la captura de pantalla y una ventana de imprimir por
+pestaña, aunque no se abrieran nunca. Ahora existen solo mientras se usan
+(`LazyPopup` para las listas y el menú; `Loader` para lo demás, también la pestaña de novedades) y se sueltan al
+cerrarse; el monitor de rendimiento, solo con su opción activada.
+
+Medido en el servidor de desarrollo (Xvnc, dibujo por software, modo `--dev`
+en los dos casos: mismo ejecutable, solo cambia `Main.qml`), 25 s tras la
+primera imagen, con PSS como en el resto del documento. Cada arranque parte de
+una copia idéntica del perfil (sesión vacía) y abre una página sencilla; media
+de 4 arranques:
+
+| | Antes | Después | Diferencia |
+|---|---|---|---|
+| Hasta la primera imagen | 5,8 s | 4,0 s | −1,8 s (−31 %) |
+| Proceso principal (interfaz) | 230 MB | 205 MB | −25 MB (−11 %) |
+| Total (con la página) | 349 MB | 324 MB | −25 MB (−7 %) |
+| Lo que añade una ventana privada (proceso principal) | +36 MB | +19 MB | −17 MB (−48 %) |
+
+Con muchas pestañas el ahorro crece, porque antes cada una llevaba su ventana
+de imprimir: con unas 50–60 pestañas restauradas (sin cargar), el proceso
+principal pasó de 352 a 299 MB (−53 MB) y la primera imagen, de 13,9 a 11,8 s
+(medida menos controlada: la sesión crecía entre arranques, en contra del
+cambio).
+
+En modo `--dev` los QML se compilan al cargarlos, así que el arranque mejora
+algo menos en el ejecutable normal (que los trae compilados); la memoria es
+del mismo orden. Abrir un panel por primera vez lo crea en ese momento (unas
+decenas de milisegundos).
+
+## Precargar páginas (2026-10-25, versión 0.12.0)
+
+«Precargar páginas» (Configuración → Rendimiento, apagada por defecto):
+`assets/scripts/preload.js` precarga la página del enlace que tiene el ratón
+encima 65 ms (o que se pulsa).
+
+Medido en el servidor de desarrollo con un servidor local que simula una
+conexión lenta (0,15 s de latencia por petición y 0,6 s para preparar la
+página de destino; respuesta `Cache-Control: no-cache`, como la mayoría de
+páginas HTML). La prueba pasa el ratón por un enlace, espera y lo pulsa;
+copia limpia del perfil, modo `--dev`, 5–8 navegaciones por caso. «Del clic
+a la página cargada» se mide fuera de Mitis (hora del clic en el guion y del
+aviso de carga en el servidor); «respuesta» y «lista» son los tiempos de
+navegación de la propia página (Navigation Timing).
+
+| Caso (ratón encima antes de pulsar) | Del clic a la página cargada | Respuesta | Lista | Descargas de la página |
+|---|---|---|---|---|
+| Sin precarga (0,5 s) | 1091 ms | 700 ms | 750 ms | 1 por visita |
+| `<link rel=prefetch>` (1,5 s) | — | 703 ms | 763 ms | 2 por visita: no se aprovecha |
+| `<link rel=prefetch>` con la página guardable (`max-age=60`) | — | 23 ms | 100 ms | 1 |
+| Regla de precarga (`speculationrules`, 0,5 s) | **442 ms (−60 %)** | 8 ms | 96 ms | 1 (la precarga) |
+
+`<link rel=prefetch>` va a la caché normal: con `no-cache` (o `max-age=0`,
+como GitHub y Wikipedia) la navegación vuelve a pedir la página entera y la
+precarga es una descarga doble. Las reglas de precarga la guardan aparte y la
+navegación la usa aunque la página pida comprobarse; si la precarga aún no
+ha terminado al pulsar, la navegación la espera en vez de empezar otra. La
+memoria no cambia de forma apreciable (proceso principal 225 → 215 MB, dentro
+de lo que varía de una prueba a otra). El coste es de datos: cada enlace en
+el que el ratón se para se descarga (como mucho 20 por página).
+
 ## Repetir la medición
 
 ```bash

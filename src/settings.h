@@ -51,6 +51,10 @@ class Settings : public QObject
     // Atrás y adelante con los botones laterales del ratón y los gestos de
     // macOS (NavigationGestures); encendido por defecto
     Q_PROPERTY(bool navigationGestures READ navigationGestures WRITE setNavigationGestures NOTIFY navigationGesturesChanged)
+    // Precargar páginas: la del enlace bajo el ratón (preload.js) y los
+    // nombres de dominio de los enlaces (motor). Apagada por defecto: gasta
+    // datos y avisa a los sitios de por dónde pasa el ratón
+    Q_PROPERTY(bool preloadPages READ preloadPages WRITE setPreloadPages NOTIFY preloadPagesChanged)
     // Corrector ortográfico en español al escribir en las páginas; encendido por defecto
     Q_PROPERTY(bool spellCheck READ spellCheck WRITE setSpellCheck NOTIFY spellCheckChanged)
     // Experimental: controles de vidrio esmerilado (Glass), apagado por defecto
@@ -134,6 +138,8 @@ public:
     void setDarkPages(bool value);
     bool hideScrollbars() const;
     void setHideScrollbars(bool value);
+    bool preloadPages() const;
+    void setPreloadPages(bool value);
     bool spellCheck() const;
     void setSpellCheck(bool value);
     bool navigationGestures() const;
@@ -206,6 +212,7 @@ signals:
     void hideScrollbarsChanged();
     void navigationGesturesChanged();
     void spellCheckChanged();
+    void preloadPagesChanged();
     void glassEffectChanged();
     void glassToneChanged();
     void languagesChanged();

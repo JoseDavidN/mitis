@@ -7,8 +7,9 @@
 #include <QtQml/qqmlregistration.h>
 
 // Imprimir y guardar como PDF con la ventana propia de Mitis (PrintDialog).
-// La página la convierte el motor en un PDF (BrowserTab.printToPdf); aquí se
-// guarda en un archivo temporal para la vista previa (QtQuick.Pdf), se copia
+// La página la convierte el motor en un PDF (BrowserTab.printToPdf) que
+// escribe en un archivo temporal de aquí (nextPath); ese es el de la vista
+// previa (QtQuick.Pdf, useDocument), y desde él se copia
 // donde el usuario elija o se manda a una impresora del sistema: cada página
 // del PDF se dibuja (Qt PDF) sobre la impresora (Qt Print Support), en un
 // hilo aparte para no congelar la ventana. En QML es el singleton `Printing`
@@ -34,9 +35,14 @@ public:
 
     // Vuelve a pedir la lista de impresoras al sistema
     Q_INVOKABLE void refreshPrinters();
-    // Guarda el PDF de la página y devuelve su dirección para la vista previa.
-    // Cada llamada usa un archivo nuevo (la vista previa no recarga el mismo)
-    Q_INVOKABLE QUrl setDocument(const QByteArray &pdf);
+    // Archivo temporal nuevo donde el motor escriba el PDF de la página. Cada
+    // vista previa usa uno distinto (la vista previa no recarga el mismo)
+    Q_INVOKABLE QString nextPath();
+    // El PDF de `path` (de nextPath) pasa a ser el actual: devuelve su
+    // dirección para la vista previa y borra el anterior
+    Q_INVOKABLE QUrl useDocument(const QString &path);
+    // Borra un PDF de nextPath que ya no hace falta (llegó tarde)
+    Q_INVOKABLE void discard(const QString &path);
     // Carpeta donde proponer guardar: Documentos, Descargas o la personal,
     // la primera que exista (el diálogo no puede abrirse en una que no existe)
     Q_INVOKABLE QUrl saveFolder() const;

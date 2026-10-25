@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(Mitis
-    VERSION 0.11.0
+    VERSION 0.12.0
     DESCRIPTION "Navegador web ligero, multiplataforma y con interfaz propia"
     LANGUAGES CXX
 )
@@ -160,7 +160,7 @@ qt_add_resources(mitis "scripts"
     PREFIX "/scripts"
     BASE assets/scripts
     FILES assets/scripts/media.js assets/scripts/devtools.js assets/scripts/drm.js assets/scripts/google.js
-          assets/scripts/swipe.js
+          assets/scripts/swipe.js assets/scripts/preload.js
 )
 
 # Cambios de cada versión: la pestaña de novedades tras actualizarse
@@ -213,6 +213,7 @@ set(MITIS_QML_FILES
     qml/ZoomIndicator.qml
     qml/SwipeIndicator.qml
     qml/PrintDialog.qml
+    qml/LazyPopup.qml
     qml/DownloadPanel.qml
     qml/ProgressBar.qml
     qml/ProgressRing.qml

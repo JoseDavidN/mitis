@@ -267,8 +267,8 @@ Window (bgBase, sin marco)
 - Pasos de Chrome: 25, 33, 50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200, 250, 300, 400, 500 %. Atajos: Ctrl + `+` / `=` / `+` numérico, Ctrl + `-`, Ctrl + `0`. El zoom es de la pestaña y se mantiene al navegar dentro de ella.
 
 ### `SwipeIndicator` — deslizar entre páginas (macOS)
-- Círculo de `swipeIndicatorSize` con la flecha `back` o `forward` (`iconSize`, `ink`), a media altura de la ventana, con el degradado de los controles, sin borde (`Surface`).
-- Entra desde fuera del borde del lado hacia el que se va (izquierdo: atrás; derecho: adelante) al ritmo del gesto, con fundido, hasta quedar a `margin` del borde. Cuando soltar ya navega, se rellena con el degradado de la marca (`brand1` → `brand2`, flecha `onBrand`; con el vidrio, la flecha en `brandLight1`) y crece a `swipeIndicatorReadyScale` (`durationFast`). Al soltar desaparece.
+- **Relieve** que sale del borde del lado hacia el que se va (izquierdo: atrás; derecho: adelante), a media altura de la ventana: una cúpula larga y poco honda (`swipeBumpLength` de largo), sin parte recta: sale del borde en vertical, donde se funde con él, y llega a la cima en el centro, también en vertical (tensión `swipeBumpCurve`, fracción del largo). Sin borde, con el degradado de los controles (`SurfaceShape`, que también lleva el vidrio).
+- Sale al ritmo del gesto, hasta `swipeBumpDepth`. Dentro, un chevron grueso de puntas redondas (`swipe-back` / `swipe-forward`, `swipeArrowSize`, `ink`), centrado en lo que ya ha salido: aparece y crece (del 60 % al 100 %) a medida que avanza el gesto, para no verse pegado al borde. Conserva siempre los colores de los controles del tema; cuando soltar ya navega, solo la flecha pasa a `brandLight1` (`durationFast`). Al soltar vuelve a entrar en el borde (`durationBase`, `easeOut`).
 - Solo aparece si se puede ir hacia ese lado y el gesto no es de la página (ver `NavigationGestures` en CLAUDE.md); nunca con Configuración ni en pantalla completa.
 
 ### `PrintDialog` — imprimir y guardar como PDF

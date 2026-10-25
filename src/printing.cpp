@@ -37,21 +37,30 @@ void Printing::refreshPrinters()
     emit printersChanged();
 }
 
-QUrl Printing::setDocument(const QByteArray &pdf)
+QString Printing::nextPath()
 {
-    if (!m_dir.isValid() || pdf.isEmpty())
+    if (!m_dir.isValid())
+        return {};
+    return m_dir.filePath(QStringLiteral("pagina-%1.pdf").arg(++m_serial));
+}
+
+QUrl Printing::useDocument(const QString &path)
+{
+    if (path.isEmpty() || !QFileInfo::exists(path))
         return {};
     const QString previous = m_current;
-    const QString path = m_dir.filePath(QStringLiteral("pagina-%1.pdf").arg(++m_serial));
-    QFile file(path);
-    if (!file.open(QIODevice::WriteOnly) || file.write(pdf) != pdf.size())
-        return {};
-    file.close();
     m_current = path;
     // Mientras se imprime, el hilo aún lee el anterior
-    if (!previous.isEmpty() && !m_busy)
+    if (!previous.isEmpty() && previous != path && !m_busy)
         QFile::remove(previous);
     return QUrl::fromLocalFile(path);
+}
+
+void Printing::discard(const QString &path)
+{
+    // Solo los de su carpeta temporal y nunca el actual
+    if (!path.isEmpty() && path != m_current && m_dir.isValid() && path.startsWith(m_dir.path()))
+        QFile::remove(path);
 }
 
 QUrl Printing::saveFolder() const

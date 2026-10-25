@@ -213,6 +213,37 @@ FocusScope {
         }
     }
 
+    // Ir a una sección en cuanto esté colocada. Recién creada (Main la crea
+    // al abrirla), sus columnas se colocan en los primeros fotogramas y con
+    // un ancho aún provisional: se espera a que la altura del contenido no
+    // cambie de un fotograma al siguiente (durante el fundido de entrada se
+    // pintan varios). Desde entonces se va directamente
+    function showSection(key) {
+        if (root._laidOut)
+            root.scrollTo(key)
+        else
+            root._pendingSection = key
+    }
+    property string _pendingSection: ""
+    property bool _laidOut: false
+    property real _lastHeight: -1
+    Connections {
+        target: root.Window.window
+        enabled: !root._laidOut
+        function onFrameSwapped() {
+            if (content.height <= 0 || content.height !== root._lastHeight) {
+                root._lastHeight = content.height
+                return
+            }
+            root._laidOut = true
+            if (root._pendingSection === "")
+                return
+            const key = root._pendingSection
+            root._pendingSection = ""
+            root.scrollTo(key)
+        }
+    }
+
     function scrollTo(key) {
         const target = Math.min(Math.max(0, sectionItem(key).y - Theme.settingsSectionSpacing),
                                 Math.max(0, flick.contentHeight - flick.height))
@@ -1256,7 +1287,7 @@ FocusScope {
                 id: performanceSection
                 title: "Rendimiento"
                 icon: "performance"
-                description: "Para que Mitis gaste menos memoria."
+                description: "Para que Mitis gaste menos memoria y las páginas se abran antes."
 
                 ChoiceRow {
                     divider: false
@@ -1265,6 +1296,15 @@ FocusScope {
                     options: root.suspendOptions
                     isSelected: value => Settings.suspendAfter === value
                     onChosen: value => Settings.suspendAfter = value
+                }
+                SettingRow {
+                    title: "Precargar páginas"
+                    description: "Cuando dejas el ratón un momento sobre un enlace, Mitis empieza a cargar esa página para que se abra antes al pulsarlo. Gasta algo más de datos y el sitio sabe sobre qué enlaces pasas el ratón. Nunca en las ventanas privadas."
+
+                    Toggle {
+                        checked: Settings.preloadPages
+                        onToggled: Settings.preloadPages = checked
+                    }
                 }
             }
 

@@ -252,6 +252,31 @@ QtObject {
             clearCache()
         }
         _setup(root.profile)
+        _updatePreload()
+    }
+
+    // Precarga de páginas (Settings.preloadPages, assets/scripts/preload.js):
+    // solo en el perfil normal (en las ventanas privadas, nunca: avisaría a
+    // los sitios de por dónde pasa el ratón). Al cambiar la opción vale para
+    // las páginas que se abran desde entonces
+    readonly property Connections _preloadSetting: Connections {
+        target: Settings
+        function onPreloadPagesChanged() {
+            root._updatePreload()
+        }
+    }
+    function _updatePreload() {
+        const scripts = root.profile.userScripts
+        for (const old of scripts.find("mitis-preload"))
+            scripts.remove(old)
+        if (!Settings.preloadPages)
+            return
+        const preload = WebEngine.script()
+        preload.name = "mitis-preload"
+        preload.sourceUrl = "qrc:/scripts/preload.js"
+        preload.injectionPoint = WebEngineScript.DocumentReady
+        preload.worldId = WebEngineScript.ApplicationWorld
+        root._insertScript(root.profile, preload)
     }
 
     // Pone un script en todas las páginas del perfil; si ya estaba (otra

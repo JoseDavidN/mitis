@@ -40,7 +40,7 @@ Window {
     property string graphicsApi: ""
     // Lo que difumina el vidrio de lo que no está sobre un fondo propio (las
     // listas desplegables): la Configuración, si está abierta, o las páginas
-    readonly property Item glassBackdrop: settingsOpen ? settingsPage.glassBackdropItem : pages
+    readonly property Item glassBackdrop: settingsOpen && settingsPage.page ? settingsPage.page.glassBackdropItem : pages
     onFrameSwapped: {
         if (graphicsApi !== "")
             return
@@ -491,7 +491,9 @@ Window {
         if (gpu.bytes > 0)
             groups.push(gpu)
         groups.push(other)
-        performancePanel.sample = { total: measured.total, cpu: measured.cpu, gpu: measured.gpu,
+        if (!performancePanel.panel)
+            return
+        performancePanel.panel.sample = { total: measured.total, cpu: measured.cpu, gpu: measured.gpu,
                                     processCount: measured.processes.length,
                                     groups: groups, tabs: list }
     }
@@ -559,7 +561,9 @@ Window {
         if (!currentView || showingNewTabPage || settingsOpen || pageFullScreen)
             return
         siteInfoPopup.close()
-        screenshotOverlay.open(currentView)
+        screenshotOverlay.active = true
+        const overlay = screenshotOverlay.item as ScreenshotOverlay
+        overlay.open(currentView)
     }
 
     function openFromTab(opener, openerIndex, target, background) {
@@ -576,6 +580,8 @@ Window {
     // ── Menú contextual ──────────────────────────────────────────────
     // Pestaña en la que se abrió el menú (las acciones van a ella)
     property BrowserTab contextTab: null
+    // Lo que había bajo el ratón (el menú se destruye al cerrarse)
+    property var contextInfo: ({})
 
     // Sitios a los que ya se explicó que falta Widevine (host → true)
     property var protectedContentNoticed: ({})
@@ -584,7 +590,10 @@ Window {
         contextTab = tab
         const point = tab.mapToItem(win.contentItem, info.x, info.y)
         const menuInfo = Object.assign({}, info, { canGoBack: tab.canGoBack, canGoForward: tab.canGoForward })
-        contextMenu.show(menuInfo, point.x, point.y)
+        contextInfo = menuInfo
+        contextMenu.active = true
+        const menu = contextMenu.item as ContextMenu
+        menu.show(menuInfo, point.x, point.y)
     }
 
     function contextAction(action) {
@@ -598,7 +607,7 @@ Window {
         }
         if (index < 0)
             return    // la pestaña se cerró con el menú abierto
-        const info = contextMenu.info
+        const info = contextInfo
         switch (action) {
         case "openLinkBackground":
             openFromTab(tab, index, info.linkUrl, true)
@@ -805,12 +814,14 @@ Window {
         findBar.close()
         settingsOpen = true
         if (section)
-            Qt.callLater(() => settingsPage.scrollTo(section))
+            if (settingsPage.page)
+                settingsPage.page.showSection(section)
     }
     function closeSettings() {
         if (!settingsOpen)
             return
         settingsOpen = false
+        settingsRelease.restart()
         if (showingNewTabPage)
             newTabPage.focusSearch()
         else if (currentView)
@@ -1317,13 +1328,25 @@ Window {
                     onProceeded: tab.focusPage()
                 }
 
-                // Imprimir y guardar como PDF: ventana propia sobre la página
-                onPrintRequested: printDialog.open()
+                // Imprimir y guardar como PDF: ventana propia sobre la página.
+                // Solo existe abierta (cada pestaña tendría la suya)
+                onPrintRequested: {
+                    printDialog.active = true
+                    const dialog = printDialog.item as PrintDialog
+                    dialog.open()
+                }
 
-                PrintDialog {
+                Loader {
                     id: printDialog
-                    page: tab
-                    onFinished: tab.focusPage()
+                    anchors.fill: parent
+                    z: 10
+                    active: false
+
+                    sourceComponent: PrintDialog {
+                        page: tab
+                        onFinished: tab.focusPage()
+                        onReleased: Qt.callLater(() => printDialog.active = false)
+                    }
                 }
 
                 // alert, confirm, prompt y aviso de salir de la página
@@ -1371,28 +1394,43 @@ Window {
             }
         }
 
-        // Novedades tras actualizar, sobre su pestaña
-        ReleaseNotesPage {
+        // Novedades tras actualizar, sobre su pestaña: solo mientras se ve
+        // (sale una vez, tras actualizarse)
+        Loader {
             anchors.fill: parent
-            visible: win.showingReleaseNotes
-            notes: win.releaseNotes
-            onCloseRequested: win.closeTab(win.currentIndex)
+            active: win.showingReleaseNotes
+            sourceComponent: ReleaseNotesPage {
+                notes: win.releaseNotes
+                onCloseRequested: win.closeTab(win.currentIndex)
+            }
         }
     }
 
-    // Configuración: sobre las pestañas y los controles inferiores
-    SettingsPage {
+    // Configuración: sobre las pestañas y los controles inferiores. Solo
+    // existe abierta: se crea al abrirla y se suelta tras el fundido de cierre
+    Loader {
         id: settingsPage
         z: 1
         anchors.top: titleBar.bottom
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        open: win.settingsOpen
-        graphicsApi: win.graphicsApi
-        currentPageUrl: win.currentView && !win.privateMode ? win.currentView.url.toString() : ""
-        onCloseRequested: win.closeSettings()
-        onUpdateRequested: win.installUpdate()
+        active: win.settingsOpen || settingsRelease.running
+        readonly property SettingsPage page: item as SettingsPage
+
+        sourceComponent: SettingsPage {
+            // Se abre ya creada: así se ve el fundido y prepara la página
+            open: win.settingsOpen && settingsPage.status === Loader.Ready
+            graphicsApi: win.graphicsApi
+            currentPageUrl: win.currentView && !win.privateMode ? win.currentView.url.toString() : ""
+            onCloseRequested: win.closeSettings()
+            onUpdateRequested: win.installUpdate()
+        }
+    }
+    Timer {
+        id: settingsRelease
+        // El fundido de cierre de SettingsPage, y un margen
+        interval: Theme.durationBase * 2
     }
 
     // «Preguntar dónde guardar» (Configuración → Descargas): la carpeta se
@@ -1424,117 +1462,149 @@ Window {
         y: -height - Theme.floatingMargin
     }
 
-    TabsPopup {
+    LazyPopup {
         id: tabsPopup
-        parent: bottomBar.tabsButton
-        x: parent.width - width
-        y: -height - Theme.floatingMargin
-        tabs: tabs
-        currentIndex: win.currentIndex
-        closedCount: win.closedTabs.length
-        pinnedCount: win.pinnedCount
-        onTabPinToggled: index => win.setTabPinned(index, !tabs.get(index).pinned)
-        onTabMoveRequested: (from, to) => win.moveTab(from, to)
-        onReopenRequested: win.reopenClosedTab()
-        onTabSelected: index => win.selectTab(index)
-        onTabCloseRequested: index => win.closeTab(index)
-        onTabMuteToggled: index => {
-            const tab = views.itemAt(index) as BrowserTab
-            tab.muted = !tab.muted
-        }
-        onNewTabRequested: {
-            win.openNewTabPage()
+        popup: Component {
+            TabsPopup {
+                parent: bottomBar.tabsButton
+                x: parent.width - width
+                y: -height - Theme.floatingMargin
+                tabs: tabs
+                currentIndex: win.currentIndex
+                closedCount: win.closedTabs.length
+                pinnedCount: win.pinnedCount
+                onTabPinToggled: index => win.setTabPinned(index, !tabs.get(index).pinned)
+                onTabMoveRequested: (from, to) => win.moveTab(from, to)
+                onReopenRequested: win.reopenClosedTab()
+                onTabSelected: index => win.selectTab(index)
+                onTabCloseRequested: index => win.closeTab(index)
+                onTabMuteToggled: index => {
+                    const tab = views.itemAt(index) as BrowserTab
+                    tab.muted = !tab.muted
+                }
+                onNewTabRequested: {
+                    win.openNewTabPage()
+                }
+            }
         }
     }
 
     // Marcadores: la página actual, buscar, abrir y quitar
-    BookmarksPopup {
+    LazyPopup {
         id: bookmarksPopup
-        parent: bottomBar.bookmarksButton
-        x: parent.width - width
-        y: -height - Theme.floatingMargin
-        pageUrl: win.currentView && !win.showingNewTabPage ? win.currentView.url.toString() : ""
-        pageTitle: win.currentView ? win.currentView.title : ""
-        onOpenRequested: url => win.openUrl(url)
+        popup: Component {
+            BookmarksPopup {
+                parent: bottomBar.bookmarksButton
+                x: parent.width - width
+                y: -height - Theme.floatingMargin
+                pageUrl: win.currentView && !win.showingNewTabPage ? win.currentView.url.toString() : ""
+                pageTitle: win.currentView ? win.currentView.title : ""
+                onOpenRequested: url => win.openUrl(url)
+            }
+        }
     }
 
     // Panel del sitio (candado del campo de dirección): conexión y
     // certificado, rastreadores y acciones con la página
-    SiteInfoPopup {
+    LazyPopup {
         id: siteInfoPopup
-        parent: bottomBar.addressField
-        x: 0
-        y: -height - Theme.floatingMargin
-        pageUrl: win.currentView && !win.showingNewTabPage ? win.currentView.url.toString() : ""
-        pageTitle: win.currentView ? win.currentView.title : ""
-        pageIcon: win.displayIcon(win.currentView)
-        security: bottomBar.security
-        onReloadRequested: if (win.currentView) win.currentView.reload()
-        onSettingsRequested: section => win.openSettings(section)
-        onScreenshotRequested: win.startScreenshot()
-    }
-
-    // Historial: reabrir la última cerrada, lo visitado y el acceso a Configuración
-    HistoryPopup {
-        id: historyPopup
-        parent: bottomBar.optionsButton
-        x: parent.width - width
-        y: -height - Theme.floatingMargin
-        closedCount: win.closedTabs.length
-        onOpenRequested: url => win.openUrl(url)
-        onReopenRequested: win.reopenClosedTab()
-        onSettingsRequested: win.openSettings("history")
-    }
-
-    // Confirmación de la actualización (botón tras Opciones)
-    UpdatePopup {
-        id: updatePopup
-        parent: bottomBar.updateButton
-        x: parent.width - width
-        y: -height - Theme.floatingMargin
-    }
-
-    OptionsPopup {
-        id: optionsPopup
-        parent: bottomBar.optionsButton
-        performanceMonitor: Settings.performanceMonitor
-        canPrint: win.canPrint
-        x: parent.width - width
-        y: -height - Theme.floatingMargin
-        onOptionSelected: key => {
-            if (key === "downloads")
-                downloadsPopup.open()
-            else if (key === "history")
-                historyPopup.open()
-            else if (key === "private")
-                win.openPrivateWindow()
-            else if (key === "settings")
-                win.openSettings()
-            else if (key === "profile")
-                win.openSettings("profile")
-            else if (key === "performance")
-                win.togglePerformancePanel()
-            else if (key === "print")
-                win.currentView.requestPrint()
+        popup: Component {
+            SiteInfoPopup {
+                parent: bottomBar.addressField
+                x: 0
+                y: -height - Theme.floatingMargin
+                pageUrl: win.currentView && !win.showingNewTabPage ? win.currentView.url.toString() : ""
+                pageTitle: win.currentView ? win.currentView.title : ""
+                pageIcon: win.displayIcon(win.currentView)
+                security: bottomBar.security
+                onReloadRequested: if (win.currentView) win.currentView.reload()
+                onSettingsRequested: section => win.openSettings(section)
+                onScreenshotRequested: win.startScreenshot()
+            }
         }
     }
 
-    DownloadsPopup {
+    // Historial: reabrir la última cerrada, lo visitado y el acceso a Configuración
+    LazyPopup {
+        id: historyPopup
+        popup: Component {
+            HistoryPopup {
+                parent: bottomBar.optionsButton
+                x: parent.width - width
+                y: -height - Theme.floatingMargin
+                closedCount: win.closedTabs.length
+                onOpenRequested: url => win.openUrl(url)
+                onReopenRequested: win.reopenClosedTab()
+                onSettingsRequested: win.openSettings("history")
+            }
+        }
+    }
+
+    // Confirmación de la actualización (botón tras Opciones)
+    LazyPopup {
+        id: updatePopup
+        popup: Component {
+            UpdatePopup {
+                parent: bottomBar.updateButton
+                x: parent.width - width
+                y: -height - Theme.floatingMargin
+            }
+        }
+    }
+
+    LazyPopup {
+        id: optionsPopup
+        popup: Component {
+            OptionsPopup {
+                parent: bottomBar.optionsButton
+                performanceMonitor: Settings.performanceMonitor
+                canPrint: win.canPrint
+                x: parent.width - width
+                y: -height - Theme.floatingMargin
+                onOptionSelected: key => {
+                    if (key === "downloads")
+                        downloadsPopup.open()
+                    else if (key === "history")
+                        historyPopup.open()
+                    else if (key === "private")
+                        win.openPrivateWindow()
+                    else if (key === "settings")
+                        win.openSettings()
+                    else if (key === "profile")
+                        win.openSettings("profile")
+                    else if (key === "performance")
+                        win.togglePerformancePanel()
+                    else if (key === "print")
+                        win.currentView.requestPrint()
+                }
+            }
+        }
+    }
+
+    LazyPopup {
         id: downloadsPopup
-        parent: bottomBar.optionsButton
-        x: parent.width - width
-        y: -height - Theme.floatingMargin
+        popup: Component {
+            DownloadsPopup {
+                parent: bottomBar.optionsButton
+                x: parent.width - width
+                y: -height - Theme.floatingMargin
+            }
+        }
     }
 
     // Clic derecho en la página: se coloca en openContextMenu()
-    ContextMenu {
+    LazyPopup {
         id: contextMenu
-        inspectAvailable: Settings.devTools
-        onActionSelected: action => win.contextAction(action)
-        // El teclado vuelve a la página al cerrar (salvo si ya se reabrió)
-        onClosed: {
-            if (!contextMenu.visible && win.contextTab && win.contextTab === win.currentView)
-                win.contextTab.focusPage()
+        popup: Component {
+            ContextMenu {
+                inspectAvailable: Settings.devTools
+                onActionSelected: action => win.contextAction(action)
+                // El teclado vuelve a la página al cerrar (salvo si ya se reabrió)
+                onClosed: {
+                    if (!contextMenu.opened && win.contextTab && win.contextTab === win.currentView)
+                        win.contextTab.focusPage()
+                }
+            }
         }
     }
 
@@ -1562,19 +1632,26 @@ Window {
         }
     }
 
-    MemoryPanel {
+    // Monitor de rendimiento: solo existe con su opción activada
+    // (Configuración → Desarrollo; viene apagada)
+    Loader {
         id: performancePanel
         z: 1
         anchors.top: titleBar.bottom
         anchors.topMargin: Theme.floatingMargin
         anchors.left: parent.left
         anchors.leftMargin: Theme.margin
-        // Configuración lo tapa: se oculta (y deja de medir) mientras está abierta
-        shown: Settings.performanceMonitor && win.performancePanelOpen && !win.settingsOpen
-        graphicsApi: win.graphicsApi
-        onRefreshRequested: win.measurePerformance()
-        onTabSelected: index => win.selectTab(index)
-        onCloseRequested: win.togglePerformancePanel()
+        active: Settings.performanceMonitor
+        readonly property MemoryPanel panel: item as MemoryPanel
+
+        sourceComponent: MemoryPanel {
+            // Configuración lo tapa: se oculta (y deja de medir) mientras está abierta
+            shown: win.performancePanelOpen && !win.settingsOpen
+            graphicsApi: win.graphicsApi
+            onRefreshRequested: win.measurePerformance()
+            onTabSelected: index => win.selectTab(index)
+            onCloseRequested: win.togglePerformancePanel()
+        }
     }
 
     // Deslizar entre páginas con dos dedos (macOS): la flecha del lado al que
@@ -1653,11 +1730,17 @@ Window {
 
     // Captura de pantalla: sobre la página y los controles de abajo, bajo la
     // barra de título. Copia la capa de las páginas (sin la interfaz)
-    ScreenshotOverlay {
+    Loader {
         id: screenshotOverlay
         z: 1.5
         anchors.fill: parent
-        source: pages
+        active: false
+
+        sourceComponent: ScreenshotOverlay {
+            source: pages
+            // Al terminar se suelta (fuera del aviso: no mientras lo emite)
+            onClosed: Qt.callLater(() => screenshotOverlay.active = false)
+        }
     }
 
     // Avisos de arriba, solo en la ventana principal: cierre inesperado de la
@@ -1882,9 +1965,10 @@ Window {
         enabled: win.ownsShortcuts
         onActivated: {
             win.closeSettings()
-            if (!bookmarksPopup.bookmarked)
-                bookmarksPopup.toggleCurrent()
             bookmarksPopup.open()
+            const popup = bookmarksPopup.item as BookmarksPopup
+            if (!popup.bookmarked)
+                popup.toggleCurrent()
         }
     }
     Shortcut {

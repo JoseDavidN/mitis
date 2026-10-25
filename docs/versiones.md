@@ -26,10 +26,11 @@ Historial con este esquema (ver [CHANGELOG.md](../CHANGELOG.md)):
 | 0.9.1 | Corrige la caída con pestañas suspendidas (iconos de pestañas descargadas) | `e22e038` |
 | 0.10.0 | Pestaña de novedades tras actualizar, vidrio experimental en toda la interfaz, controles sin bordes, pestaña de relieve, panel con todas las descargas | `be4392a` |
 | 0.10.1 | Corrige la caída al volver a una pestaña que se había descargado (iconos de pestañas que se descargaron alguna vez) | `0d25aba` |
+| 0.11.0 | Atrás y adelante con gestos de macOS y botones del ratón, corrector en español, imprimir y guardar como PDF con ventana propia, códecs propietarios en Windows y macOS | `6fa68b2` |
 
 Las fases 0–2 van juntas en 0.2.0 porque entraron en un solo commit. Esas versiones no tienen etiqueta ni release: son anteriores al workflow de publicación. Si se quieren marcar, basta con etiquetas ligeras (`git tag v0.4.0 d6cfa89`); al subirlas no se publica nada porque esos commits no tienen `.github/workflows/`.
 
-**Versión actual: 0.11.0-beta** (en desarrollo; la 0.10.1 ya tiene commit y se da por publicada). Trae funciones nuevas (atrás y adelante con los gestos de macOS y los botones laterales del ratón; corrector ortográfico en español; imprimir y guardar como PDF con ventana propia; códecs propietarios en Windows y macOS): sube MENOR. Se publica al subir la etiqueta `v0.11.0`.
+**Versión actual: 0.12.0-beta** (en desarrollo; la 0.11.0 ya tiene commit y se da por publicada). Trae una función nueva (precargar páginas, `docs/rendimiento.md`), además de crear los paneles al abrirlos, el nuevo diseño del indicador de deslizar y la corrección de la caída al imprimir: sube MENOR. Se publica al subir la etiqueta `v0.12.0`.
 
 **Regla:** una versión con commit ya está desplegada. Lo siguiente que se haga va en una versión nueva, subida según lo que traiga (MENOR con funciones nuevas, PARCHE con solo correcciones), y su sección del CHANGELOG se escribe en lenguaje claro para quien no sabe de tecnología: es lo que se ve en la pestaña de novedades.
 

@@ -20,10 +20,9 @@ FocusScope {
     readonly property bool shown: _shown
     property bool _shown: false
 
-    // Opciones (se recuerdan mientras la pestaña está abierta)
+    // Opciones (la ventana solo existe abierta: cada vez, las de partida)
     // Destino: "" = guardar como PDF; si no, el nombre de la impresora
     property string destination: ""
-    property bool _destinationChosen: false
     property bool landscape: false
     // "a4", "letter" o "legal"
     property string paper: "a4"
@@ -37,21 +36,21 @@ FocusScope {
     property bool _printing: false
     property int _job: 0
     property string _error: ""
+    // Cerrada y desapareciendo (para avisar con `released` al terminar)
+    property bool _closing: false
     readonly property bool _toPrinter: destination !== ""
 
     // Se cerró (impreso, guardado o cancelado)
     signal finished()
+    // Terminó de ocultarse tras cerrarse: ya se puede destruir
+    signal released()
 
     function open() {
         if (!root.page)
             return
         Printing.refreshPrinters()
-        // La primera vez, la impresora predeterminada (o PDF si no hay); si la
-        // elegida ya no está, PDF
-        if (!root._destinationChosen)
-            root.destination = Printing.defaultPrinter
-        if (root.destination !== "" && Printing.printers.indexOf(root.destination) < 0)
-            root.destination = ""
+        // La impresora predeterminada, o PDF si no hay
+        root.destination = Printing.defaultPrinter
         root._error = ""
         root._shown = true
         root.forceActiveFocus()
@@ -61,6 +60,7 @@ FocusScope {
         if (!root._shown || root._printing)
             return
         root._shown = false
+        root._closing = true
         root._job++
         root._previewUrl = ""
         Printing.clear()
@@ -70,15 +70,20 @@ FocusScope {
     function _render() {
         root._rendering = true
         const job = ++root._job
-        root.page.printToPdf(data => {
-            if (job !== root._job || !root._shown)
+        root.page.printToPdf(Printing.nextPath(), file => {
+            // Una anterior que llegó tarde: ya no se muestra
+            if (job !== root._job || !root._shown) {
+                Printing.discard(file)
                 return
-            root._previewUrl = Printing.setDocument(data)
+            }
+            root._previewUrl = Printing.useDocument(file)
             root._rendering = false
             if (root._previewUrl.toString() === "")
                 root._error = "No se pudo preparar la página."
         }, root.landscape, root.paper, root.backgrounds)
     }
+    // Destruida (se cerró): el PDF en curso ya no tiene a quién avisar
+    Component.onDestruction: if (root.page) root.page.cancelPdf()
     // Varios cambios seguidos: un solo PDF
     Timer {
         id: renderLater
@@ -139,7 +144,14 @@ FocusScope {
     opacity: _shown ? 1 : 0
     Behavior on opacity { NumberAnimation { duration: Theme.durationBase } }
 
-    onVisibleChanged: if (visible && _shown) root.forceActiveFocus()
+    onVisibleChanged: {
+        if (visible && _shown)
+            root.forceActiveFocus()
+        else if (!visible && _closing) {
+            root._closing = false
+            root.released()
+        }
+    }
 
     Keys.onEscapePressed: root.close()
     Keys.onReturnPressed: root.accept()
@@ -291,10 +303,7 @@ FocusScope {
                     ChoiceLine {
                         label: "Guardar como PDF"
                         checked: root.destination === ""
-                        onPicked: {
-                            root.destination = ""
-                            root._destinationChosen = true
-                        }
+                        onPicked: root.destination = ""
                     }
                     Repeater {
                         model: Printing.printers
@@ -302,10 +311,7 @@ FocusScope {
                             required property string modelData
                             label: modelData === Printing.defaultPrinter ? modelData + " (predeterminada)" : modelData
                             checked: root.destination === modelData
-                            onPicked: {
-                                root.destination = modelData
-                                root._destinationChosen = true
-                            }
+                            onPicked: root.destination = modelData
                         }
                     }
 

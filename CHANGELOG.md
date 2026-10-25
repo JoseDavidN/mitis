@@ -5,6 +5,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ## [Sin publicar]
 
+> Más ligero y más rápido al navegar
+
+### Añadido
+
+- Nueva opción «Precargar páginas» (Configuración → Rendimiento): cuando dejas el ratón un momento sobre un enlace, Mitis empieza a cargar esa página y, al pulsarlo, se abre mucho antes (en nuestras pruebas con una conexión lenta, en menos de la mitad de tiempo). Gasta algo más de datos y el sitio sabe sobre qué enlaces pasas el ratón, por eso viene apagada y nunca se usa en las ventanas privadas.
+
+### Corregido
+
+- Mitis podía cerrarse de golpe en la ventana de imprimir si cambiabas una opción (por ejemplo, la orientación de la hoja) mientras aún preparaba la vista previa de una página grande. Ya no ocurre.
+
+### Cambiado
+
+- Mitis arranca más rápido y gasta menos memoria: Configuración, las listas de abajo (pestañas, marcadores, historial, descargas…), el menú del clic derecho, la captura de pantalla y la ventana de imprimir ya no se preparan al abrir Mitis, sino cuando los abres, y se liberan al cerrarlos. Cada ventana privada también gasta mucho menos.
+- En Mac, al deslizar para ir a la página anterior o a la siguiente, la flecha ya no es un círculo: ahora es un relieve largo y redondeado, con los colores de tu tema, que va saliendo del borde de la ventana mientras deslizas. Dentro aparece poco a poco una flecha gruesa y redondeada; cuando cambia de color, suelta y cambias de página.
+
+## [0.11.0] - 2026-10-24
+
 > Imprimir, corrector y gestos para ir atrás
 
 ### Añadido

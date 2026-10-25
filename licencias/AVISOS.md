@@ -68,7 +68,8 @@ licencia que se citan están en esta misma carpeta.
   Copyright (c) Lucide Contributors 2022; partes, Cole Bemis 2013-2022
   (Feather, MIT).
 - **Enlace:** <https://lucide.dev/> · <https://github.com/lucide-icons/lucide>
-- Los SVG van dentro del ejecutable (algunos renombrados por uso).
+- Los SVG van dentro del ejecutable (algunos renombrados por uso; `swipe-back` y
+  `swipe-forward` son los chevrones de Lucide con el trazo más grueso).
 
 ### miniz
 

@@ -18,6 +18,7 @@ const QString DarkPagesKey = QStringLiteral("Pages/dark");
 const QString HideScrollbarsKey = QStringLiteral("Pages/hideScrollbars");
 const QString NavigationGesturesKey = QStringLiteral("Pages/navigationGestures");
 const QString SpellCheckKey = QStringLiteral("Pages/spellCheck");
+const QString PreloadPagesKey = QStringLiteral("Pages/preload");
 const QString GlassEffectKey = QStringLiteral("Appearance/glassEffect");
 const QString GlassToneKey = QStringLiteral("Appearance/glassTone");
 const QString LanguagesKey = QStringLiteral("Pages/languages");
@@ -220,6 +221,17 @@ void Settings::setHideScrollbars(bool value)
         emit hideScrollbarsChanged();
 }
 
+bool Settings::preloadPages() const
+{
+    return flag(PreloadPagesKey, false);
+}
+
+void Settings::setPreloadPages(bool value)
+{
+    if (storeBool(PreloadPagesKey, value, false))
+        emit preloadPagesChanged();
+}
+
 bool Settings::spellCheck() const
 {
     return flag(SpellCheckKey, true);
@@ -229,6 +241,7 @@ void Settings::setSpellCheck(bool value)
 {
     if (storeBool(SpellCheckKey, value, true))
         emit spellCheckChanged();
+    emit preloadPagesChanged();
 }
 
 bool Settings::navigationGestures() const
@@ -514,7 +527,7 @@ void Settings::resetPreferences()
 {
     const QStringList keys = {
         SearchEngineKey, NewTabBackgroundKey, DownloadFolderKey, DevToolsKey, PerformanceMonitorKey, RestoreSessionKey,
-        StartupModeKey, StartupUrlKey, DefaultZoomKey, DarkPagesKey, HideScrollbarsKey, NavigationGesturesKey, SpellCheckKey, GlassEffectKey, GlassToneKey, LanguagesKey,
+        StartupModeKey, StartupUrlKey, DefaultZoomKey, DarkPagesKey, HideScrollbarsKey, NavigationGesturesKey, SpellCheckKey, PreloadPagesKey, GlassEffectKey, GlassToneKey, LanguagesKey,
         BlockThirdPartyCookiesKey, ClearOnExitKey, DoNotTrackKey, HideLocalIpKey, HttpsUpgradeKey,
         JavascriptKey, ImagesKey, BlockPopupsKey, AutoplayKey, BlockedPermissionsKey, AskDownloadFolderKey,
         SuspendAfterKey, BlockAdsKey, StripTrackingParamsKey, ThemeKey,

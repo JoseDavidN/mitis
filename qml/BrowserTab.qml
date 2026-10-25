@@ -320,13 +320,34 @@ Item {
     function requestPrint() {
         root.printRequested()
     }
-    // La página como PDF para imprimirla o guardarla: `done(datos)`, con los
-    // bytes del PDF. paper: "a4", "letter" o "legal"
-    function printToPdf(done, landscape, paper, backgrounds) {
+    // La página como PDF en `filePath`, para imprimirla o guardarla:
+    // `done(filePath)`, o `done("")` si no se pudo. paper: "a4", "letter" o
+    // "legal". Una sola a la vez: el motor rechaza otra mientras dura una, así
+    // que la que llegue entretanto espera (solo la última). Siempre la versión
+    // que escribe un archivo: la que entrega los bytes a una función tumba a
+    // Mitis si el motor la rechaza (Qt 6.11 usa el resultado vacío sin
+    // comprobarlo; CLAUDE.md, problemas resueltos)
+    function printToPdf(filePath, done, landscape, paper, backgrounds) {
+        const job = { filePath: filePath, done: done, landscape: landscape, paper: paper, backgrounds: backgrounds }
+        if (root._pdfJob)
+            root._pdfNext = job
+        else
+            root._startPdf(job)
+    }
+    // Quien pidió el PDF ya no lo quiere (la ventana de imprimir se cerró)
+    function cancelPdf() {
+        if (root._pdfJob)
+            root._pdfJob.done = null
+        root._pdfNext = null
+    }
+    property var _pdfJob: null
+    property var _pdfNext: null
+    function _startPdf(job) {
         const sizes = { a4: WebEngineView.A4, letter: WebEngineView.Letter, legal: WebEngineView.Legal }
-        view.settings.printElementBackgrounds = backgrounds
-        view.printToPdf(data => done(data), sizes[paper] ?? WebEngineView.A4,
-                        landscape ? WebEngineView.Landscape : WebEngineView.Portrait)
+        root._pdfJob = job
+        view.settings.printElementBackgrounds = job.backgrounds
+        view.printToPdf(job.filePath, sizes[job.paper] ?? WebEngineView.A4,
+                        job.landscape ? WebEngineView.Landscape : WebEngineView.Portrait)
     }
 
     // Corrector: cambia la palabra mal escrita del menú contextual por `word`
@@ -783,6 +804,9 @@ Item {
         settings.playbackRequiresUserGesture: !Settings.autoplay
         settings.forceDarkMode: Settings.darkPages
         settings.webRTCPublicInterfacesOnly: Settings.hideLocalIp
+        // Precarga de páginas: también los nombres de dominio de los enlaces
+        // (el resto, preload.js); nunca en ventanas privadas
+        settings.dnsPrefetchEnabled: Settings.preloadPages && !root.privateMode
 
         onFindTextFinished: result => {
             findState.matches = result.numberOfMatches
@@ -940,6 +964,17 @@ Item {
         }
         // window.print(): la ventana de imprimir propia, no la del motor
         onPrintRequested: root.printRequested()
+        onPdfPrintingFinished: (filePath, success) => {
+            const job = root._pdfJob
+            root._pdfJob = null
+            if (job && job.done)
+                job.done(success ? filePath : "")
+            if (root._pdfNext) {
+                const next = root._pdfNext
+                root._pdfNext = null
+                root._startPdf(next)
+            }
+        }
 
         onFullScreenRequested: request => {
             request.accept()

@@ -30,17 +30,17 @@ Al terminar una tarea, quitarla de aquí y apuntar el cambio en `CHANGELOG.md`
 
 ## Motor web
 
-- [ ] **Contenido protegido en Windows: HBO Max y Apple Music no reproducen** (2026-10-22; el sonido y el resto de vídeos sí). HBO Max: «Código de error: 1k-0003». Apple Music: no suena; en la consola solo aparece el informe de error que la página intenta mandar a `xp.apple.com` (bloqueado por ser telemetría, `ERR_ACCESS_DENIED`), que es consecuencia del fallo y no su causa. A investigar; causas probables, que pueden sumarse:
+- [x] **Contenido protegido en Windows: HBO Max y Apple Music no reproducen** (2026-10-22; el sonido y el resto de vídeos sí). HBO Max: «Código de error: 1k-0003». Apple Music: no suena; en la consola solo aparece el informe de error que la página intenta mandar a `xp.apple.com` (bloqueado por ser telemetría, `ERR_ACCESS_DENIED`), que es consecuencia del fallo y no su causa. A investigar; causas probables, que pueden sumarse:
   - Bloqueador descartado en Apple Music: con «Permitir en apple.com» tampoco suena (sale el aviso propio de Apple Music de que no puede reproducir el contenido). Con el bloqueador activo ese aviso no aparecía: revisar si alguna regla impide que la página muestre sus errores. En HBO Max, falta probarlo con «Permitir en».
   - **Siguiente paso:** probar los dos servicios con la 0.11.0, que ya lleva los códecs propietarios (H.264, AAC; el contenido de los servicios de streaming suele ir en esos formatos y Apple Music transmite la música en AAC), antes de investigar más.
   - Widevine: comprobar que Mitis lo encuentra en ese equipo (Configuración → Acerca de Mitis) y que la licencia se concede. Servicios como HBO Max, Netflix o Disney+ exigen además que el navegador esté firmado para Widevine (VMP, *Verified Media Path*): Chrome, Edge y Firefox lo están; un navegador con Qt WebEngine no. Investigar si se puede firmar (por ejemplo, el servicio EVS de castlabs, que lo hace para Electron) y qué exige.
-- [ ] **Códecs propietarios (H.264, AAC) en Windows y macOS: queda comprobarlo en los paquetes.** Compilados (2026-10-24) con Qt **6.11.2** en Windows y en macOS (universal), probados en el Mac con `prueba-codecs.html` y publicados en el release `qt-codecs-6.11.2` del repositorio privado `mitis-qt`, con las variables del workflow puestas (`docs/codecs.md`). Pendiente:
+- [x] **Códecs propietarios (H.264, AAC) en Windows y macOS: queda comprobarlo en los paquetes.** Compilados (2026-10-24) con Qt **6.11.2** en Windows y en macOS (universal), probados en el Mac con `prueba-codecs.html` y publicados en el release `qt-codecs-6.11.2` del repositorio privado `mitis-qt`, con las variables del workflow puestas (`docs/codecs.md`). Pendiente:
   - Ver en la primera compilación de GitHub que el paso «Qt WebEngine con códecs propietarios» se ejecuta (no *skipped*) en Windows y macOS, e instalar el instalador y el `.dmg` en equipos **sin** Qt para repetir la prueba (paso 4 de «Comprobar que funcionan»).
   - Revisar las patentes de esos códecs para los países de distribución (nota en `docs/codecs.md`).
 
 ## Distribución
 
-- [ ] **Servidor de descargas y actualizaciones** (desde 2026-10-23). De momento, por IP y sin cifrar: `http://100.67.58.55/mitis` (`/srv/docker/mitis-releases`, en la red de Tailscale: solo llega a los equipos de esa red, y Tailscale cifra el tráfico).
+- [x] **Servidor de descargas y actualizaciones** (desde 2026-10-23). De momento, por IP y sin cifrar: `http://100.67.58.55/mitis` (`/srv/docker/mitis-releases`, en la red de Tailscale: solo llega a los equipos de esa red, y Tailscale cifra el tráfico).
   - Pendiente: subir a `releases/` el artefacto `mitis-servidor` de la versión (ver `docs/versiones.md`, «Publicar una versión»).
   - Probar en Windows: actualizar desde Mitis (que descargue el instalador, se cierre, se actualice y se vuelva a abrir con sus pestañas) y que no quede nada en la carpeta temporal tras el siguiente arranque.
   - Probar en macOS: actualizar desde Mitis con la app en Aplicaciones (que se cierre, se cambie y se abra sin el aviso de Gatekeeper).
@@ -60,12 +60,6 @@ Mejoras propuestas tras revisar el código; se irán eligiendo. Al elegir una, p
 
 ### Rendimiento y memoria
 
-- [ ] **Crear los paneles al abrirlos** (`Loader`): `Main.qml` crea al arrancar, en cada
-  ventana (también las privadas), Configuración entera, las listas de historial,
-  marcadores, descargas y pestañas, el monitor de rendimiento, la captura de pantalla y la
-  pestaña de novedades, aunque no se abran nunca. Cargarlos al abrirlos y soltarlos al
-  cerrarlos ahorra memoria y acelera el arranque. Medir antes y después
-  (`tools/medir_ram.py`).
 - [ ] **Tope a la caché de disco** del perfil (`httpCacheMaximumSize`, ahora sin poner:
   decide Chromium), p. ej. 250 MB, y un botón en Configuración para vaciarla.
 - [ ] **Dormir pestañas según la memoria libre del equipo:** con la memoria justa,
@@ -94,8 +88,6 @@ Mejoras propuestas tras revisar el código; se irán eligiendo. Al elegir una, p
 - [ ] **Aceleración por hardware** (activar o desactivar; `--disable-gpu` al arrancar, como
   las demás opciones de `setupChromiumFlags()`): para pantallas negras o parpadeos con
   controladores de gráficos problemáticos.
-- [ ] **Precarga de páginas** (`dnsPrefetchEnabled` y similares): abre antes los enlaces
-  pero gasta datos y privacidad; apagada por defecto.
 
 ---
 

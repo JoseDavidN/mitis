@@ -343,10 +343,14 @@ QtObject {
     readonly property int miniPlayerWidth: 270
     readonly property int findBarWidth: 440
     readonly property int zoomLabelWidth: 52
-    // Flecha de deslizar entre páginas (SwipeIndicator): tamaño y cuánto
-    // crece cuando soltar ya navega
-    readonly property int swipeIndicatorSize: 44
-    readonly property real swipeIndicatorReadyScale: 1.1
+    // Relieve de deslizar entre páginas (SwipeIndicator): cuánto sale del
+    // borde como mucho, su largo (largo y poco hondo: se ve redondo), la
+    // tensión de su curva (fracción del largo con la que sale del borde y
+    // llega a la cima, ambas en vertical) y el tamaño de su flecha
+    readonly property int swipeBumpDepth: 44
+    readonly property int swipeBumpLength: 220
+    readonly property real swipeBumpCurve: 0.24
+    readonly property int swipeArrowSize: 22
     // Ventana de imprimir (PrintDialog): tamaño máximo, columna de opciones,
     // alto de sus filas y copias como mucho. La hoja de la vista previa es
     // blanca en todos los temas, como el papel
