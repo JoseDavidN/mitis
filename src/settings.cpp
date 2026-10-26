@@ -43,6 +43,7 @@ const QString AskDownloadFolderKey = QStringLiteral("Downloads/askFolder");
 const QString SuspendAfterKey = QStringLiteral("Performance/suspendAfter");
 const QString CacheSizeKey = QStringLiteral("Performance/cacheSize");
 const QString MemorySaverKey = QStringLiteral("Performance/memorySaver");
+const QString ControlsRevealKey = QStringLiteral("Appearance/controlsReveal");
 const QString SecureDnsKey = QStringLiteral("Privacy/secureDns");
 const QString SecureDnsProviderKey = QStringLiteral("Privacy/secureDnsProvider");
 
@@ -563,6 +564,20 @@ void Settings::setMemorySaver(bool value)
         emit memorySaverChanged();
 }
 
+QString Settings::controlsReveal() const
+{
+    return m_settings.value(ControlsRevealKey).toString() == QLatin1String("hover") ? QStringLiteral("hover")
+                                                                                   : QStringLiteral("click");
+}
+
+void Settings::setControlsReveal(const QString &value)
+{
+    if (controlsReveal() == value)
+        return;
+    m_settings.setValue(ControlsRevealKey, value);
+    emit controlsRevealChanged();
+}
+
 QString Settings::secureDns() const
 {
     // De serie, automático: cifrado y, si el servidor no responde, el del sistema
@@ -640,7 +655,7 @@ void Settings::resetPreferences()
         BlockThirdPartyCookiesKey, ClearOnExitKey, DoNotTrackKey, HideLocalIpKey, HttpsUpgradeKey,
         JavascriptKey, ImagesKey, BlockPopupsKey, AutoplayKey, BlockedPermissionsKey, AskDownloadFolderKey,
         SuspendAfterKey, BlockAdsKey, StripTrackingParamsKey, ThemeKey, SecureDnsKey, SecureDnsProviderKey,
-        CacheSizeKey, MemorySaverKey,
+        CacheSizeKey, MemorySaverKey, ControlsRevealKey,
     };
     for (const QString &key : keys)
         m_settings.remove(key);
@@ -681,4 +696,5 @@ void Settings::resetPreferences()
     emit secureDnsPendingChanged();
     emit cacheSizeChanged();
     emit memorySaverChanged();
+    emit controlsRevealChanged();
 }

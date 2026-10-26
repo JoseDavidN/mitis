@@ -398,24 +398,19 @@ QtObject {
     // Reproductor: pestaña del borde derecho (MediaTab: cuánto sale, y al
     // pasar el ratón; su largo, alargada en vertical; la tensión de su
     // curva, como swipeBumpCurve; y el rebote al aparecer) y reproductor
-    // desplegado (MediaPlayerPopup): ancho, carátula 16:9, icono sin
-    // carátula, barra de progreso (pista, asa y alto que se puede pulsar) y
-    // botones (el de reproducir, más grande)
+    // desplegado (MediaPlayerPopup, compacto): ancho, miniatura de la
+    // carátula y botones (el de reproducir, más grande)
     readonly property int mediaTabDepth: 26
     readonly property int mediaTabHoverDepth: 32
     readonly property int mediaTabLength: 128
     readonly property real mediaTabCurve: 0.26
     readonly property real mediaTabOvershoot: 1.6
-    readonly property int mediaPlayerWidth: 320
-    readonly property real mediaArtworkRatio: 0.5625
-    readonly property int mediaPlaceholderIconSize: 48
-    readonly property int mediaSeekHeight: 4
-    readonly property int mediaSeekKnobSize: 12
-    readonly property int mediaSeekHitHeight: 16
-    readonly property int mediaButtonSize: 36
-    readonly property int mediaPlayButtonSize: 46
-    readonly property int mediaIconSize: 18
-    readonly property int mediaPlayIconSize: 20
+    readonly property int mediaPlayerWidth: 272
+    readonly property int mediaThumbSize: 44
+    readonly property int mediaButtonSize: 30
+    readonly property int mediaPlayButtonSize: 36
+    readonly property int mediaIconSize: 16
+    readonly property int mediaPlayIconSize: 18
     // Panel de descargas, barra de progreso y anillo del botón
     readonly property int downloadPanelWidth: 340
     // Con muchas descargas a la vez, el panel se desplaza a partir de esta altura

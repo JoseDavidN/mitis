@@ -61,6 +61,10 @@ FocusScope {
         { value: 15, label: "15 min" }, { value: 30, label: "30 min" }, { value: 60, label: "1 hora" },
         { value: 120, label: "2 horas" }, { value: 0, label: "Nunca" }
     ]
+    // Cómo vuelven los controles de abajo con la pestaña del borde inferior
+    readonly property var controlsRevealOptions: [
+        { value: "click", label: "Al pulsar su pestaña" }, { value: "hover", label: "Al pasar el ratón" }
+    ]
     // Espacio para la caché de las páginas, en MB (0 = automático)
     readonly property var cacheSizeOptions: [
         { value: 100, label: "100 MB" }, { value: 250, label: "250 MB" },
@@ -848,6 +852,13 @@ FocusScope {
                         checked: Settings.spellCheck
                         onToggled: Settings.spellCheck = checked
                     }
+                }
+                ChoiceRow {
+                    title: "Mostrar los controles de abajo"
+                    description: "Los controles (atrás, adelante, la barra de búsqueda…) se esconden solos mientras navegas y vuelven con la pestaña del borde inferior."
+                    options: root.controlsRevealOptions
+                    isSelected: value => Settings.controlsReveal === value
+                    onChosen: value => Settings.controlsReveal = value
                 }
             }
 

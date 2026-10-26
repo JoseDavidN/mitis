@@ -380,7 +380,7 @@ Item {
         view.runJavaScript("window.__mitisMedia ? window.__mitisMedia.state() : null",
                            result => done(result ?? null))
     }
-    // `action`: "toggle", "next", "previous" o "seek:<segundos>"
+    // `action`: "toggle", "next" o "previous"
     function mediaControl(action, done) {
         view.runJavaScript("window.__mitisMedia ? window.__mitisMedia.control('" + action + "') : null",
                            result => done(result ?? null))

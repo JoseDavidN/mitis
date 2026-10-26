@@ -1004,13 +1004,14 @@ Window {
     // Controles inferiores visibles. Se ocultan solos `controlsHold` después
     // de dejar de usarlos, para no tapar lo que las páginas tienen abajo
     // (avisos de cookies, reproductores…): no vuelven al pasar por el borde
-    // ni al desplazar la página, solo al pulsar la pestaña del borde inferior
-    // (ControlsTab). Los mantiene a la vista tener el ratón encima, escribir
+    // ni al desplazar la página, solo con la pestaña del borde inferior
+    // (ControlsTab): al pulsarla o, con Settings.controlsReveal en «hover»,
+    // al pasar el ratón por ella. Los mantiene a la vista tener el ratón encima, escribir
     // en la dirección o una lista suya abierta; `revealControls` los fuerza
     // (p. ej. Ctrl+L). En F11, como antes: el borde inferior los muestra.
     property bool revealControls: false
     readonly property bool controlsInUse: revealControls || barHover.hovered
-        || bottomBar.editing
+        || (Settings.controlsReveal === "hover" && controlsTab.hovered) || bottomBar.editing
         || tabsPopup.opened || bookmarksPopup.opened || optionsPopup.opened || siteInfoPopup.opened
         || historyPopup.opened || downloadsPopup.opened || downloadPanel.opened || updatePopup.opened
     // A la vista fuera de F11; al abrir Mitis también (para saber dónde están)
@@ -1764,10 +1765,10 @@ Window {
         }
     }
 
-    // Reproductor: mientras algo suena, una cúpula pequeña en el borde
-    // derecho, encima del sitio del gesto de adelante (SwipeIndicator, centrado)
-    // para no chocar con él; al pulsarla se despliega el reproductor a su
-    // izquierda. No en pantalla completa
+    // Reproductor: mientras algo suena en otra pestaña, una cúpula pequeña en
+    // el borde derecho, encima del sitio del gesto de adelante (SwipeIndicator,
+    // centrado) para no chocar con él; al pulsarla se despliega el reproductor
+    // a su izquierda (se cierra con ella). No en pantalla completa
     MediaTab {
         id: mediaTab
         z: 2
@@ -1776,7 +1777,11 @@ Window {
         // el borde; en una ventana baja, no sube más allá de la barra de título
         y: Math.max(Theme.titleBarHeight + Theme.margin,
                     (parent.height - Theme.swipeBumpLength) / 2 - 2 * Theme.margin - height)
-        shown: win.media !== null && !win.immersive
+        // No en la pestaña que suena (ya está su propio reproductor) ni con
+        // Configuración abierta
+        shown: win.media !== null && !win.immersive && !win.settingsOpen
+               && win.mediaView !== win.currentView
+        onShownChanged: if (!shown) mediaPopup.close()
 
         iconSource: win.displayIcon(win.mediaView)
         playing: win.media ? win.media.playing : false
@@ -1794,17 +1799,8 @@ Window {
                 iconSource: win.displayIcon(win.mediaView)
                 site: win.mediaView ? Urls.host(win.mediaView.url.toString()).replace(/^www\./, "") : ""
                 onControlRequested: action => win.mediaControl(action)
-                onSeekRequested: seconds => win.mediaControl("seek:" + seconds.toFixed(2))
                 onActivated: win.selectView(win.mediaView)
             }
-        }
-    }
-    // Sin nada sonando, el reproductor desplegado se cierra
-    Connections {
-        target: win
-        function onMediaChanged() {
-            if (!win.media)
-                mediaPopup.close()
         }
     }
 

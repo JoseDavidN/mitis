@@ -5,6 +5,24 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ## [Sin publicar]
 
+> Un reproductor más ligero
+
+### Añadido
+
+- Puedes elegir cómo vuelven los controles de abajo (atrás, adelante, la barra de búsqueda…) cuando se esconden: al pulsar la pestaña del borde inferior o solo con pasar el ratón por ella. En Configuración → Apariencia e idioma, «Mostrar los controles de abajo».
+
+### Cambiado
+
+- La pestaña del reproductor del borde derecho ya no aparece cuando estás en la pestaña que está sonando (ahí ya tienes el reproductor de la propia página) ni con Configuración abierta.
+- La pestaña del reproductor se ve mejor: ahora lleva los colores de Mitis (en el tema Nocturno, de violeta a rosa) en lugar del tono oscuro de los controles, que casi no se distinguía.
+- El reproductor que se despliega es más ligero y compacto: arriba, una imagen pequeña de lo que suena con el título y el artista; abajo, el tiempo («1:23 / 3:34») y los botones. Ya no tiene barra de progreso.
+
+### Corregido
+
+- En algunos sitios de música, como Apple Music, el reproductor de Mitis funcionaba a ratos: después de pausar no volvía a reproducir, y el tiempo de la canción salía mal (unos pocos segundos). Ahora usa los controles y el tiempo del propio sitio, como las teclas de música del teclado.
+
+## [0.14.0] - 2026-10-26
+
 > El reproductor, arriba y más grande
 
 ### Añadido

@@ -3,8 +3,8 @@ import Mitis.Core
 
 // Pestaña del reproductor: mientras alguna pestaña reproduce algo, una cúpula
 // pequeña, alargada en vertical, que sale del borde derecho (Main la pone
-// encima del sitio del gesto de adelante), con el estilo de ese gesto
-// (SwipeIndicator) y solo el icono de la plataforma (YouTube, Spotify…),
+// encima del sitio del gesto de adelante), con la forma de ese gesto
+// (SwipeIndicator) en el degradado de la marca y solo el icono de la plataforma (YouTube, Spotify…),
 // atenuado en pausa. Al aparecer sale del
 // borde con un pequeño rebote; al pasar el ratón sale un poco más. Al pulsarla
 // se despliega el reproductor (MediaPlayerPopup, lo abre Main). Solo anima al
@@ -43,8 +43,10 @@ Item {
         width: Math.max(0, root.depth)
         height: parent.height
         x: parent.width - width
-        fillStart: Colors.controlsStart
-        fillEnd: Colors.controlsEnd
+        // El degradado de la marca: se distingue de los controles (en Nocturno
+        // el de los controles casi no se veía) y va con cada tema
+        fillStart: Colors.brand1
+        fillEnd: Colors.brand2
         path: {
             const h = height, k = h * Theme.mediaTabCurve, w = width
             return `M ${w} 0 C ${w} ${k} 0 ${h / 2 - k} 0 ${h / 2} `
@@ -76,7 +78,7 @@ Item {
             visible: !favicon.visible
             name: "music"
             size: Theme.iconSize
-            color: root.hovered || root.expanded ? Colors.brandLight1 : Colors.ink
+            color: Colors.onBrand
         }
     }
 

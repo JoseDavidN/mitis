@@ -125,6 +125,9 @@ class Settings : public QObject
     // Con la memoria del equipo justa, descargar antes las pestañas ocultas
     // (Main.relieveMemory). Encendido de serie: solo actúa cuando hace falta
     Q_PROPERTY(bool memorySaver READ memorySaver WRITE setMemorySaver NOTIFY memorySaverChanged)
+    // Cómo vuelven los controles de abajo con la pestaña del borde inferior:
+    // "click" (al pulsarla, de serie) o "hover" (al pasar el ratón)
+    Q_PROPERTY(QString controlsReveal READ controlsReveal WRITE setControlsReveal NOTIFY controlsRevealChanged)
 
 public:
     explicit Settings(QObject *parent = nullptr);
@@ -209,6 +212,8 @@ public:
     void setCacheSize(int value);
     bool memorySaver() const;
     void setMemorySaver(bool value);
+    QString controlsReveal() const;
+    void setControlsReveal(const QString &value);
     QString secureDns() const;
     void setSecureDns(const QString &value);
     QString secureDnsProvider() const;
@@ -270,6 +275,7 @@ signals:
     void suspendAfterChanged();
     void cacheSizeChanged();
     void memorySaverChanged();
+    void controlsRevealChanged();
     void secureDnsChanged();
     void secureDnsProviderChanged();
     void secureDnsPendingChanged();

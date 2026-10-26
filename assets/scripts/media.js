@@ -5,8 +5,7 @@
 //
 // Mitis lo usa con runJavaScript:
 //   window.__mitisMedia.state()           → estado o null si no hay nada
-//   window.__mitisMedia.control(acción)   → "toggle", "next", "previous" o
-//                                           "seek:<segundos>"
+//   window.__mitisMedia.control(acción)   → "toggle", "next" o "previous"
 //   window.__mitisMedia.capture()         → [micrófono, cámara] (ver abajo)
 //
 // Micrófono y cámara, para el aviso del icono de Mitis: 0 sin uso, 1 abierto
@@ -33,6 +32,23 @@
         session.setActionHandler = function (action, handler) {
             handlers[action] = handler || null;
             return original(action, handler);
+        };
+    }
+
+    // Y la posición que publica (setPositionState): la duración y el punto
+    // reales de la canción o el vídeo. Reproductores como Apple Music suenan
+    // por elementos de audio que no son la pista entera (trozos, relleno de
+    // pocos segundos): su duración y su posición engañan. Con la hora en que
+    // llegó, para calcular por dónde va
+    var positionState = null;
+    if (session && typeof session.setPositionState === "function") {
+        var originalPosition = session.setPositionState.bind(session);
+        session.setPositionState = function (value) {
+            positionState = value && isFinite(value.duration)
+                ? { duration: value.duration, position: value.position || 0,
+                    rate: value.playbackRate || 1, at: performance.now() }
+                : null;
+            return originalPosition.apply(null, arguments);
         };
     }
 
@@ -186,48 +202,70 @@
         }
     }
 
+    // ¿Suena? Lo que dice la página (playbackState) si lo dice; si no, el elemento
+    function isPlaying(media) {
+        var declared = session && session.playbackState;
+        if (declared === "playing" || declared === "paused")
+            return declared === "playing";
+        return !media.paused && !media.ended;
+    }
+
+    // [posición, duración] en segundos: la publicada por la página si la hay
+    // (avanzada desde que llegó, si suena); si no, la del elemento. Duración 0
+    // en un directo (Infinity): no se muestra el tiempo total
+    function progress(media, playing) {
+        if (positionState) {
+            var elapsed = playing ? (performance.now() - positionState.at) / 1000 * positionState.rate : 0;
+            return [Math.max(0, Math.min(positionState.duration, positionState.position + elapsed)),
+                    positionState.duration];
+        }
+        return [media.currentTime || 0, isFinite(media.duration) ? media.duration : 0];
+    }
+
     function state() {
         var media = current();
         if (!media)
             return null;
         var meta = session && session.metadata;
-        // Directos: sin duración (Infinity); la barra de progreso no se muestra
-        var duration = isFinite(media.duration) ? media.duration : 0;
+        var playing = isPlaying(media);
+        var point = progress(media, playing);
         return {
             title: (meta && meta.title) || document.title || "",
             artist: (meta && meta.artist) || "",
             artwork: artwork(meta, media),
-            playing: !media.paused && !media.ended,
-            position: media.currentTime || 0,
-            duration: duration,
+            playing: playing,
+            position: point[0],
+            duration: point[1],
             hasNext: !!handlers.nexttrack,
             hasPrevious: true
         };
     }
 
+    // Las acciones van primero a lo que registró la página para los controles
+    // del sistema (como hacen Chrome y los controles de macOS y Windows): su
+    // reproductor lleva su propio estado y puede deshacer un play() o pause()
+    // hecho directamente sobre el elemento. Sin ellas, el elemento.
     function control(action) {
         var media = current();
         if (!media)
             return null;
+        var playing = isPlaying(media);
         if (action === "toggle") {
-            if (media.paused)
-                media.play();
-            else
+            var wanted = playing ? "pause" : "play";
+            if (handlers[wanted])
+                handlers[wanted]({ action: wanted });
+            else if (playing)
                 media.pause();
+            else
+                media.play();
         } else if (action === "next" && handlers.nexttrack) {
             handlers.nexttrack({ action: "nexttrack" });
-        } else if (action.indexOf("seek:") === 0) {
-            var to = parseFloat(action.slice(5));
-            if (isFinite(to) && isFinite(media.duration)) {
-                if (handlers.seekto)
-                    handlers.seekto({ action: "seekto", seekTime: to });
-                else
-                    media.currentTime = Math.max(0, Math.min(media.duration, to));
-            }
         } else if (action === "previous") {
             // Como en cualquier reproductor: si ya avanzó, vuelve al inicio
-            if (handlers.previoustrack && media.currentTime < 3)
+            if (handlers.previoustrack && progress(media, playing)[0] < 3)
                 handlers.previoustrack({ action: "previoustrack" });
+            else if (handlers.seekto)
+                handlers.seekto({ action: "seekto", seekTime: 0 });
             else
                 media.currentTime = 0;
         }
