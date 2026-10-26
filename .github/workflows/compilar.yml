@@ -1,4 +1,5 @@
-# Compila Mitis y crea sus paquetes. En cada push y pull request, Windows
+# Compila Mitis y crea sus paquetes. En cada push a main o a ajustes (la rama
+# de los cambios por probar) y en cada pull request, Windows
 # (instalador propio, installer/) y macOS (.dmg universal: Apple Silicon e
 # Intel); Linux (AppImage) se compila a mano: pestaña Actions → Compilar →
 # Run workflow → «todos». El artefacto «mitis-servidor» junta lo que va en el
@@ -9,7 +10,7 @@ name: Compilar
 
 on:
   push:
-    branches: [main]
+    branches: [main, ajustes]
     tags: ["v*"]
   pull_request:
   # A mano (pestaña Actions → Compilar → Run workflow): Windows y macOS, o
