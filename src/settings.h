@@ -119,6 +119,12 @@ class Settings : public QObject
     // Minutos sin usar tras los que una pestaña se descarga de la memoria
     // (antes se congela); 0 = nunca se suspenden
     Q_PROPERTY(int suspendAfter READ suspendAfter WRITE setSuspendAfter NOTIFY suspendAfterChanged)
+    // Espacio en disco para la caché de las páginas, en MB (0 = lo decide el
+    // motor según el disco libre). 250 de serie
+    Q_PROPERTY(int cacheSize READ cacheSize WRITE setCacheSize NOTIFY cacheSizeChanged)
+    // Con la memoria del equipo justa, descargar antes las pestañas ocultas
+    // (Main.relieveMemory). Encendido de serie: solo actúa cuando hace falta
+    Q_PROPERTY(bool memorySaver READ memorySaver WRITE setMemorySaver NOTIFY memorySaverChanged)
 
 public:
     explicit Settings(QObject *parent = nullptr);
@@ -199,6 +205,10 @@ public:
     void setAskDownloadFolder(bool value);
     int suspendAfter() const;
     void setSuspendAfter(int value);
+    int cacheSize() const;
+    void setCacheSize(int value);
+    bool memorySaver() const;
+    void setMemorySaver(bool value);
     QString secureDns() const;
     void setSecureDns(const QString &value);
     QString secureDnsProvider() const;
@@ -258,6 +268,8 @@ signals:
     void adBlockAllowedSitesChanged();
     void askDownloadFolderChanged();
     void suspendAfterChanged();
+    void cacheSizeChanged();
+    void memorySaverChanged();
     void secureDnsChanged();
     void secureDnsProviderChanged();
     void secureDnsPendingChanged();

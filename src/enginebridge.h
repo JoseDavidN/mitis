@@ -102,6 +102,10 @@ public:
     // Sitio de una dirección para permitir anuncios ("https://www.a.com/x" → "a.com")
     Q_INVOKABLE QString siteOf(const QUrl &url) const;
 
+    // Cuánto ocupa en disco la caché del perfil normal: lo mide en otro hilo
+    // y responde con cacheUsageReady(bytes)
+    Q_INVOKABLE void requestCacheUsage();
+
     // Borra todas las cookies del perfil (QML no llega a su almacén)
     Q_INVOKABLE void clearCookies(QObject *profile);
     // Falló la carga de `url`: true si era una página subida de http a https,
@@ -123,6 +127,7 @@ signals:
     //   issuerName, validFrom, validTo, names: [dominios], protocol } o
     // { error: texto } si no se pudo conectar
     void certificateReady(const QString &host, const QVariantMap &certificate);
+    void cacheUsageReady(double bytes);
 
 private:
     RequestInterceptor *interceptorFor(bool privateProfile) const;

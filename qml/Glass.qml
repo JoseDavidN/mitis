@@ -26,8 +26,8 @@ Item {
     id: root
 
     property real radius: 0
-    // Velo encima de lo difuminado (el mini reproductor, de texto blanco,
-    // usa siempre el oscuro)
+    // Velo encima de lo difuminado (un control de texto blanco puede usar
+    // siempre el oscuro, glassTintDark)
     property color tint: Theme.glassTint
     // Forma propia en lugar del rectángulo redondeado: un Item invisible que
     // se dibuja con esa forma en opaco y con `layer.enabled` (SurfaceShape).

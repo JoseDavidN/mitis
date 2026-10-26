@@ -261,7 +261,7 @@ QtObject {
     // Velo encima de lo difuminado: un morado de la marca, en tres tonos a
     // elegir en Configuración (Settings.glassTone: lavanda, violeta,
     // profundo). En los temas oscuros, sobre oscuro; en el Claro, tonos
-    // claros. El mini reproductor (texto blanco) usa siempre los oscuros
+    // claros. Un control de texto blanco puede usar siempre los oscuros
     readonly property var glassTintsDark: [
         Qt.rgba(0xc0 / 255, 0x84 / 255, 0xfc / 255, 0.18),   // lavanda (brandLight1)
         Qt.rgba(0x7c / 255, 0x3a / 255, 0xed / 255, 0.30),   // violeta
@@ -376,7 +376,6 @@ QtObject {
     readonly property int radioDotSize: 8
     // Casilla de verificación (CheckMark): mismo tamaño que el botón de opción
     readonly property int checkRadius: 5
-    readonly property int miniPlayerWidth: 270
     readonly property int findBarWidth: 440
     readonly property int zoomLabelWidth: 52
     // Relieve de deslizar entre páginas (SwipeIndicator): cuánto sale del
@@ -396,21 +395,27 @@ QtObject {
     readonly property int printRowHeight: 32
     readonly property int printMaxCopies: 99
     readonly property color printPaper: "#ffffff"
-    readonly property int miniPlayerHeight: 34
-    // Mini reproductor: negro en todos los temas (como la paleta de DevTools).
-    // Botones sin fondo: solo el icono, relleno y redondeado, en blanco; al
-    // pasar el ratón se tiñe con el degradado de la marca y crece un poco.
-    // El degradado es fijo (no el del tema): el Oscuro tiene la marca de un
-    // solo color y el Claro, tonos pensados para fondo claro
-    readonly property color miniPlayerBg: "#000000"
-    readonly property color miniPlayerLine: Qt.rgba(1, 1, 1, 0.14)
-    readonly property color miniPlayerInk: "#ffffff"
-    readonly property color miniPlayerInkSoft: Qt.rgba(1, 1, 1, 0.72)
-    readonly property color miniPlayerHoverStart: "#c084fc"
-    readonly property color miniPlayerHoverEnd: "#f472b6"
-    readonly property int miniPlayerButtonSize: 26
-    readonly property int miniPlayerIconSize: 18
-    readonly property real miniPlayerHoverScale: 1.18
+    // Reproductor: pestaña del borde derecho (MediaTab: cuánto sale, y al
+    // pasar el ratón; su largo, alargada en vertical; la tensión de su
+    // curva, como swipeBumpCurve; y el rebote al aparecer) y reproductor
+    // desplegado (MediaPlayerPopup): ancho, carátula 16:9, icono sin
+    // carátula, barra de progreso (pista, asa y alto que se puede pulsar) y
+    // botones (el de reproducir, más grande)
+    readonly property int mediaTabDepth: 26
+    readonly property int mediaTabHoverDepth: 32
+    readonly property int mediaTabLength: 128
+    readonly property real mediaTabCurve: 0.26
+    readonly property real mediaTabOvershoot: 1.6
+    readonly property int mediaPlayerWidth: 320
+    readonly property real mediaArtworkRatio: 0.5625
+    readonly property int mediaPlaceholderIconSize: 48
+    readonly property int mediaSeekHeight: 4
+    readonly property int mediaSeekKnobSize: 12
+    readonly property int mediaSeekHitHeight: 16
+    readonly property int mediaButtonSize: 36
+    readonly property int mediaPlayButtonSize: 46
+    readonly property int mediaIconSize: 18
+    readonly property int mediaPlayIconSize: 20
     // Panel de descargas, barra de progreso y anillo del botón
     readonly property int downloadPanelWidth: 340
     // Con muchas descargas a la vez, el panel se desplaza a partir de esta altura
@@ -502,7 +507,7 @@ QtObject {
     // La barra de título se queda este tiempo tras quitar el ratón
     readonly property int titleBarHold: 1500
     // Los controles inferiores se ocultan este tiempo después de dejar de usarlos
-    readonly property int controlsHold: 2000
+    readonly property int controlsHold: 1000
     // Aviso «Pulsa Esc/F11 para salir de la pantalla completa»
     readonly property int fullscreenHintHold: 3000
     // Una vuelta del anillo de progreso sin total conocido

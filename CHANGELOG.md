@@ -5,6 +5,26 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ## [Sin publicar]
 
+> El reproductor, arriba y más grande
+
+### Añadido
+
+- Al escribir en la barra de búsqueda, si lo que buscas ya está abierto en otra pestaña, aparece primero en las sugerencias con «Ir a la pestaña»: al elegirlo, Mitis te lleva a esa pestaña en vez de abrir la página otra vez. En la ventana privada solo salen sus propias pestañas.
+- En Configuración → Rendimiento ya puedes elegir cuánto espacio del disco usa Mitis para guardar imágenes y archivos de las páginas que visitas (lo que hace que vuelvan a abrirse antes): 100, 250 o 500 MB, o que lo decida Mitis según el espacio libre. Viene en 250 MB. Ahí mismo ves cuánto ocupa ahora y puedes vaciarlo con un botón.
+- Mitis cuida la memoria de tu equipo: si le queda poca (por ejemplo, con muchas pestañas abiertas en un portátil), descarga antes las pestañas que llevas más tiempo sin ver, una a una, hasta que se recupera; al volver a una, se carga de nuevo. Las fijadas, la que suena y las que tienen algo a medio escribir no se tocan. Viene activado y se puede apagar en Configuración → Rendimiento, «Liberar memoria cuando el equipo va justo».
+
+### Cambiado
+
+- El reproductor se muda al borde derecho: mientras algo suena en cualquier pestaña, asoma en el lado derecho de la ventana una pestaña pequeña y redonda con el icono del sitio que suena (más tenue si está en pausa). Al pulsarla se despliega un reproductor más grande, con la imagen de lo que suena (la portada del disco o la del vídeo), el título y el artista, una barra de progreso que puedes pulsar o arrastrar para ir a otro momento, y los botones de anterior, reproducir o pausar y siguiente. Pulsa el título para ir a la pestaña que suena.
+- El botón de pestañas de abajo muestra ahora un icono de pestañas en lugar del número; cuántas tienes abiertas lo ves al pasar el ratón por encima.
+- Los controles de abajo (atrás, adelante, la barra de búsqueda…) ya no aparecen solo con pasar el ratón por la pestaña del borde inferior: ahora hay que pulsarla, así no salen sin querer. Y se esconden antes cuando dejas de usarlos (en un segundo, antes dos).
+
+### Corregido
+
+- Con Configuración abierta, al pasar el ratón por encima podían asomar los avisos de los enlaces de la página que había debajo. Ya no.
+
+## [0.13.0] - 2026-10-25
+
 > Una ventana privada de verdad y DNS cifrado
 
 ### Añadido

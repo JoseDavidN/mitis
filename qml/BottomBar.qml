@@ -13,6 +13,9 @@ Item {
 
     // Estado de la pestaña activa
     property url currentUrl
+    // Pestañas de la ventana y la actual, para las sugerencias de la dirección
+    property var openTabs: null
+    property int currentTabIndex: -1
     property string pageTitle: ""
     property bool canGoBack: false
     property bool canGoForward: false
@@ -48,6 +51,8 @@ Item {
     signal reloadRequested()
     signal stopRequested()
     signal navigateRequested(url target)
+    // «Ir a la pestaña» en las sugerencias de la dirección
+    signal tabRequested(int index, string url)
     signal downloadsRequested()
     signal tabsRequested()
     signal bookmarksRequested()
@@ -134,6 +139,9 @@ Item {
             security: root.security
             onNavigate: target => root.navigateRequested(target)
             onSiteInfoRequested: root.siteInfoRequested()
+            openTabs: root.openTabs
+            currentTabIndex: root.currentTabIndex
+            onTabRequested: (index, url) => root.tabRequested(index, url)
 
             // Se anima solo al empezar o dejar de escribir. Su ancho depende
             // también del de la ventana: animarlo al redimensionar lo hacía ir
@@ -232,8 +240,9 @@ Item {
                 id: tabsButton
                 fillStart: root.tone(rightGroup.x + x)
                 fillEnd: root.tone(rightGroup.x + x + width)
-                glyph: root.tabCount > 99 ? "∞" : root.tabCount.toString()
-                tooltip: "Pestañas"
+                icon: "tabs"
+                // Cuántas hay, en el tooltip (el botón lleva el icono, no el número)
+                tooltip: "Pestañas (" + root.tabCount + ")"
                 shortcut: "Ctrl+Shift+A"
                 onClicked: root.tabsRequested()
             }

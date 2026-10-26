@@ -12,6 +12,8 @@
 #include <tlhelp32.h>
 #elif defined(Q_OS_MACOS)
 #include <libproc.h>
+#include <mach/mach.h>
+#include <sys/sysctl.h>
 #include <mach/mach_time.h>
 #include <sys/resource.h>
 #else
@@ -483,4 +485,67 @@ QVariantMap MemoryMonitor::measure()
             { QStringLiteral("vramTotal"), vramTotal },
         } },
     };
+}
+
+QVariantMap MemoryMonitor::systemMemory() const
+{
+    qint64 total = -1, available = -1;
+    // macOS: nivel de presión del sistema (1 normal, 2 aviso, 4 crítico)
+    int pressure = 0;
+#if defined(Q_OS_WIN)
+    MEMORYSTATUSEX status;
+    status.dwLength = sizeof(status);
+    if (GlobalMemoryStatusEx(&status)) {
+        total = qint64(status.ullTotalPhys);
+        available = qint64(status.ullAvailPhys);
+    }
+#elif defined(Q_OS_MACOS)
+    quint64 bytes = 0;
+    size_t size = sizeof(bytes);
+    if (sysctlbyname("hw.memsize", &bytes, &size, nullptr, 0) == 0)
+        total = qint64(bytes);
+    vm_statistics64_data_t vm;
+    mach_msg_type_number_t count = HOST_VM_INFO64_COUNT;
+    if (host_statistics64(mach_host_self(), HOST_VM_INFO64, host_info64_t(&vm), &count) == KERN_SUCCESS) {
+        const qint64 page = qint64(vm_kernel_page_size);
+        available = (qint64(vm.free_count) + vm.inactive_count + vm.purgeable_count + vm.speculative_count) * page;
+    }
+    size = sizeof(pressure);
+    if (sysctlbyname("kern.memorystatus_vm_pressure_level", &pressure, &size, nullptr, 0) != 0)
+        pressure = 0;
+#else
+    // MemAvailable: lo que se puede usar sin recurrir al disco, contando lo
+    // que el sistema libera si hace falta (caché de archivos)
+    QFile file(QStringLiteral("/proc/meminfo"));
+    if (file.open(QIODevice::ReadOnly)) {
+        const QList<QByteArray> lines = file.readAll().split('\n');
+        for (const QByteArray &line : lines) {
+            const QList<QByteArray> parts = line.simplified().split(' ');
+            if (parts.size() < 2)
+                continue;
+            if (parts[0] == "MemTotal:")
+                total = parts[1].toLongLong() * 1024;
+            else if (parts[0] == "MemAvailable:")
+                available = parts[1].toLongLong() * 1024;
+        }
+    }
+#endif
+    const QByteArray fake = qgetenv("MITIS_MEMORIA_LIBRE");
+    if (!fake.isEmpty())
+        available = fake.toLongLong() * 1024 * 1024;
+
+    constexpr qint64 GB = 1024LL * 1024 * 1024;
+    bool low = false, recovered = true;
+    if (pressure > 0 && fake.isEmpty()) {
+        // macOS: manda el aviso del sistema
+        low = pressure > 1;
+        recovered = pressure == 1;
+    } else if (total > 0 && available >= 0) {
+        low = available < total * 15 / 100 || available < GB;
+        recovered = available > total * 20 / 100 && available > GB * 3 / 2;
+    }
+    return { { QStringLiteral("total"), double(total) },
+             { QStringLiteral("available"), double(available) },
+             { QStringLiteral("low"), low },
+             { QStringLiteral("recovered"), recovered } };
 }

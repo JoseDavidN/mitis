@@ -45,6 +45,15 @@ public:
     // la primera medición (hacen falta dos para la diferencia).
     Q_INVOKABLE QVariantMap measure();
 
+    // Memoria del equipo, para dormir pestañas cuando va justo (Main):
+    // { total, available (bytes, -1 si no se sabe), low, recovered }. `low`: queda
+    // menos del 15 % o de 1 GB (Linux, Windows) o el sistema avisa de presión
+    // de memoria (macOS: la memoria «libre» engaña, comprime). `recovered`:
+    // ya hay más del 20 % y de 1,5 GB (o el aviso pasó): deja de descargar.
+    // Es barato (una lectura): se puede pedir cada pocos segundos.
+    // Para probar, MITIS_MEMORIA_LIBRE=<MB> en el entorno finge la disponible.
+    Q_INVOKABLE QVariantMap systemMemory() const;
+
 private:
     // Tiempos de la medición anterior, para calcular los porcentajes
     QElapsedTimer m_clock;

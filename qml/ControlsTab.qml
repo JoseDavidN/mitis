@@ -2,13 +2,16 @@ import QtQuick
 import Mitis.Core
 
 // Pestaña del borde inferior cuando los controles están ocultos: un relieve
-// pequeño que sale del borde, centrado, con el título de la página. Al pasar el
-// ratón por encima, los controles vuelven (`hovered`, lo atiende Main).
+// pequeño que sale del borde, centrado, con el título de la página. Al pulsarlo,
+// los controles vuelven (`clicked`, lo atiende Main); pasar el ratón solo la
+// resalta, para que no salgan sin querer al acercarse al borde.
 Item {
     id: root
 
     property string title: ""
     readonly property bool hovered: hover.hovered
+
+    signal clicked()
 
     // Los lados son curvas suaves de `controlsTabSlope` de ancho que salen del
     // borde de la ventana: el título va en la parte plana de arriba
@@ -43,5 +46,9 @@ Item {
     HoverHandler {
         id: hover
         cursorShape: Qt.PointingHandCursor
+    }
+    TapHandler {
+        gesturePolicy: TapHandler.ReleaseWithinBounds
+        onTapped: root.clicked()
     }
 }

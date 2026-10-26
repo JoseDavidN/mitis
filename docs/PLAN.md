@@ -60,11 +60,6 @@ Mejoras propuestas tras revisar el código; se irán eligiendo. Al elegir una, p
 
 ### Rendimiento y memoria
 
-- [ ] **Tope a la caché de disco** del perfil (`httpCacheMaximumSize`, ahora sin poner:
-  decide Chromium), p. ej. 250 MB, y un botón en Configuración para vaciarla.
-- [ ] **Dormir pestañas según la memoria libre del equipo:** con la memoria justa,
-  descargar antes las pestañas más antiguas (además del tiempo de `suspendAfter`), con
-  lo que ya mide `MemoryMonitor`.
 - [ ] **Vidrio experimental más barato:** cada `Glass` redibuja lo de detrás en cada
   fotograma (`live: true`). Si se queda, actualizarlo solo cuando cambie la página o el
   control se mueva; si no, gasta GPU y batería en portátiles.
@@ -78,7 +73,6 @@ Mejoras propuestas tras revisar el código; se irán eligiendo. Al elegir una, p
   JSON en la carpeta del perfil de cada uno).
 - [ ] **Ajustes por sitio** en Configuración: el zoom, los permisos y los sitios
   permitidos en el bloqueador, en una lista para revisarlos y quitarlos.
-- [ ] **Buscar entre las pestañas abiertas** desde la lista de pestañas.
 
 ### Ajustes
 

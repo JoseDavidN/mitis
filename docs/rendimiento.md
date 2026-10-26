@@ -132,6 +132,19 @@ memoria no cambia de forma apreciable (proceso principal 225 → 215 MB, dentro
 de lo que varía de una prueba a otra). El coste es de datos: cada enlace en
 el que el ratón se para se descarga (como mucho 20 por página).
 
+## Liberar memoria con el equipo justo (2026-10-26, versión 0.14.0)
+
+`Main.relieveMemory()` con `MITIS_MEMORIA_LIBRE=500` (finge 500 MB libres: «justa»), perfil limpio, cuatro pestañas de Wikipedia (una a la vista), modo `--dev` en el servidor sin GPU. Monitor de rendimiento a los 100 s; sin la variable, el mismo arranque como referencia.
+
+| | Memoria normal | Memoria justa |
+|---|---|---|
+| Pestañas ocultas | 3 activas | 3 descargadas (dos ciclos de 10 s cada una: congelar y descargar) |
+| Procesos | 8 | 5 |
+| Páginas de esta ventana | 265 MB | 146 MB |
+| Mitis en total | 574 MB | 468 MB |
+
+Cada pestaña de Wikipedia descargada libera unos 50 MB; la que se ve sube algo (99 → 146 MB) porque deja de compartir proceso con las demás. Sin la variable no se descarga nada antes de tiempo.
+
 ## Repetir la medición
 
 ```bash

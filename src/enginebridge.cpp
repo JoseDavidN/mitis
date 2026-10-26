@@ -4,9 +4,11 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QPointer>
+#include <QDirIterator>
 #include <QSslCertificate>
 #include <QSslCipher>
 #include <QSslSocket>
+#include <QThreadPool>
 #include <QTimer>
 #include <QWindow>
 #include <QQmlEngine>
@@ -17,6 +19,7 @@
 #include <QtDebug>
 
 #include "contentblocker.h"
+#include "settings.h"
 #include "notifier.h"
 #include "windowstyle.h"
 #include "requestinterceptor.h"
@@ -55,6 +58,9 @@ EngineBridge::EngineBridge(const QString &widevinePath, QObject *parent)
     // que usaba el perfil creado en QML, así se conservan cookies y permisos
     m_profile = newProfile(QStringLiteral("Mitis"), this);
     m_profile->setHttpCacheType(QQuickWebEngineProfile::DiskHttpCache);
+    // Tope de la caché (Configuración → Rendimiento), ya antes de la primera
+    // petición; si cambia, BrowserProfile se lo pone al perfil al momento
+    m_profile->setHttpCacheMaximumSize(Settings().cacheSize() * 1024 * 1024);
     m_profile->setPersistentCookiesPolicy(QQuickWebEngineProfile::AllowPersistentCookies);
     // Permisos concedidos o bloqueados (ubicación, notificaciones…): los
     // guarda el motor, por sitio. Cámara y micrófono: BrowserProfile.qml.
@@ -397,6 +403,23 @@ void EngineBridge::confirmHttps(const QUrl &url, bool privateProfile)
     RequestInterceptor *interceptor = interceptorFor(privateProfile);
     if (url.scheme() == QLatin1String("https") && interceptor)
         interceptor->confirmHttps(url.host());
+}
+
+void EngineBridge::requestCacheUsage()
+{
+    const QString path = m_profile->cachePath();
+    QPointer<EngineBridge> self(this);
+    QThreadPool::globalInstance()->start([path, self] {
+        qint64 total = 0;
+        QDirIterator it(path, QDir::Files | QDir::Hidden | QDir::NoSymLinks, QDirIterator::Subdirectories);
+        while (it.hasNext())
+            total += it.nextFileInfo().size();
+        // La respuesta, en el hilo de la interfaz
+        QMetaObject::invokeMethod(QCoreApplication::instance(), [self, total] {
+            if (self)
+                emit self->cacheUsageReady(double(total));
+        });
+    });
 }
 
 void EngineBridge::clearCookies(QObject *profile)

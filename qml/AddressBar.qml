@@ -50,6 +50,9 @@ TextField {
     signal navigate(url target)
     // Pulsaron el botón del sitio (candado): panel del sitio
     signal siteInfoRequested()
+    // Se eligió «Ir a la pestaña»: la de índice `index` (con dirección `url`,
+    // por si entretanto cambió el orden)
+    signal tabRequested(int index, string url)
 
     function focusAndSelect() {
         forceActiveFocus()
@@ -57,8 +60,16 @@ TextField {
     }
 
     // ── Sugerencias ──────────────────────────────────────────────────
-    // [{ url, title, bookmark }]: primero marcadores, luego historial
+    // [{ url, title, bookmark, tab }]: primero las pestañas abiertas que
+    // coinciden («Ir a la pestaña»: `tab` es su índice; -1 en las demás),
+    // luego marcadores y luego historial. Una dirección sale una sola vez
     property var suggestions: []
+    // Pestañas de esta ventana (el modelo de Main: roles url, title, special)
+    // y la actual, que no se sugiere. Solo las de esta ventana: una privada
+    // no ve las de la normal ni al revés
+    property var openTabs: null
+    property int currentTabIndex: -1
+    readonly property int openTabSuggestionsMax: 3
     // La elegida con las flechas; -1 = lo escrito
     property int suggestionIndex: -1
     readonly property int suggestionsMax: 6
@@ -72,6 +83,17 @@ TextField {
         }
         const list = []
         const seen = {}
+        const key = fold(query)
+        for (let i = 0; openTabs && i < openTabs.count && list.length < openTabSuggestionsMax; i++) {
+            const tab = openTabs.get(i)
+            const address = String(tab.url)
+            if (i === currentTabIndex || tab.special !== "" || address === "" || seen[address])
+                continue
+            if (fold(tab.title + "\n" + address).includes(key)) {
+                seen[address] = true
+                list.push({ url: address, title: tab.title, bookmark: false, tab: i })
+            }
+        }
         const take = (items, bookmark) => {
             for (const item of items) {
                 if (list.length >= suggestionsMax)
@@ -79,12 +101,26 @@ TextField {
                 if (seen[item.url])
                     continue
                 seen[item.url] = true
-                list.push({ url: item.url, title: item.title, bookmark: bookmark })
+                list.push({ url: item.url, title: item.title, bookmark: bookmark, tab: -1 })
             }
         }
         take(Bookmarks.search(query, 3), true)
         take(History.suggest(query, suggestionsMax), false)
         suggestions = list
+    }
+
+    // Sin acentos ni mayúsculas, como el buscador de la lista de pestañas
+    function fold(value) {
+        return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    }
+
+    // Abre una sugerencia: cambia a la pestaña o navega a su dirección
+    function openSuggestion(item) {
+        focus = false
+        if (item.tab >= 0)
+            tabRequested(item.tab, item.url)
+        else
+            navigate(item.url)
     }
 
     function moveSuggestion(step) {
@@ -252,8 +288,11 @@ TextField {
     onTextEdited: updateSuggestions()
 
     onAccepted: {
-        const target = suggestionIndex >= 0 ? suggestions[suggestionIndex].url
-                                            : SearchEngines.resolve(text)
+        if (suggestionIndex >= 0) {
+            openSuggestion(suggestions[suggestionIndex])
+            return
+        }
+        const target = SearchEngines.resolve(text)
         if (target !== "") {
             focus = false
             navigate(target)
@@ -310,7 +349,8 @@ TextField {
                         anchors.left: parent.left
                         anchors.leftMargin: Theme.margin
                         anchors.verticalCenter: parent.verticalCenter
-                        name: suggestion.modelData.bookmark ? "bookmark" : "history"
+                        name: suggestion.modelData.tab >= 0 ? "switch-tab"
+                            : (suggestion.modelData.bookmark ? "bookmark" : "history")
                         color: suggestion.selected ? Colors.brandLight1 : Colors.inkMuted
                     }
 
@@ -333,8 +373,11 @@ TextField {
                         anchors.right: parent.right
                         anchors.rightMargin: Theme.margin
                         anchors.verticalCenter: parent.verticalCenter
-                        text: suggestion.modelData.url.replace(/^https?:\/\/(www\.)?/, "")
-                        color: Colors.inkMuted
+                        // Pestaña abierta: lo que hará al elegirla, alineado a la derecha
+                        horizontalAlignment: suggestion.modelData.tab >= 0 ? Text.AlignRight : Text.AlignLeft
+                        text: suggestion.modelData.tab >= 0 ? "Ir a la pestaña"
+                              : suggestion.modelData.url.replace(/^https?:\/\/(www\.)?/, "")
+                        color: suggestion.modelData.tab >= 0 ? Colors.brandLight1 : Colors.inkMuted
                         font.pixelSize: Theme.fontSizeSmall
                         elide: Text.ElideRight
                     }
@@ -345,10 +388,7 @@ TextField {
                     }
                     TapHandler {
                         gesturePolicy: TapHandler.ReleaseWithinBounds
-                        onTapped: {
-                            root.focus = false
-                            root.navigate(suggestion.modelData.url)
-                        }
+                        onTapped: root.openSuggestion(suggestion.modelData)
                     }
                 }
             }

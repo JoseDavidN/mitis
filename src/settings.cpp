@@ -41,6 +41,8 @@ const QString StripTrackingParamsKey = QStringLiteral("Blocker/stripParams");
 const QString AdBlockAllowedSitesKey = QStringLiteral("Blocker/allowedSites");
 const QString AskDownloadFolderKey = QStringLiteral("Downloads/askFolder");
 const QString SuspendAfterKey = QStringLiteral("Performance/suspendAfter");
+const QString CacheSizeKey = QStringLiteral("Performance/cacheSize");
+const QString MemorySaverKey = QStringLiteral("Performance/memorySaver");
 const QString SecureDnsKey = QStringLiteral("Privacy/secureDns");
 const QString SecureDnsProviderKey = QStringLiteral("Privacy/secureDnsProvider");
 
@@ -537,6 +539,30 @@ QVariant Settings::value(const QString &key, const QVariant &defaultValue) const
     return m_settings.value(key, defaultValue);
 }
 
+int Settings::cacheSize() const
+{
+    return qMax(0, m_settings.value(CacheSizeKey, 250).toInt());
+}
+
+void Settings::setCacheSize(int value)
+{
+    if (cacheSize() == value)
+        return;
+    m_settings.setValue(CacheSizeKey, value);
+    emit cacheSizeChanged();
+}
+
+bool Settings::memorySaver() const
+{
+    return flag(MemorySaverKey, true);
+}
+
+void Settings::setMemorySaver(bool value)
+{
+    if (storeBool(MemorySaverKey, value, true))
+        emit memorySaverChanged();
+}
+
 QString Settings::secureDns() const
 {
     // De serie, automático: cifrado y, si el servidor no responde, el del sistema
@@ -614,6 +640,7 @@ void Settings::resetPreferences()
         BlockThirdPartyCookiesKey, ClearOnExitKey, DoNotTrackKey, HideLocalIpKey, HttpsUpgradeKey,
         JavascriptKey, ImagesKey, BlockPopupsKey, AutoplayKey, BlockedPermissionsKey, AskDownloadFolderKey,
         SuspendAfterKey, BlockAdsKey, StripTrackingParamsKey, ThemeKey, SecureDnsKey, SecureDnsProviderKey,
+        CacheSizeKey, MemorySaverKey,
     };
     for (const QString &key : keys)
         m_settings.remove(key);
@@ -652,4 +679,6 @@ void Settings::resetPreferences()
     emit secureDnsChanged();
     emit secureDnsProviderChanged();
     emit secureDnsPendingChanged();
+    emit cacheSizeChanged();
+    emit memorySaverChanged();
 }

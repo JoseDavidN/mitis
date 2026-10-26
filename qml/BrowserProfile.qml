@@ -175,6 +175,31 @@ QtObject {
     function clearCache() {
         root.profile.clearHttpCache()
     }
+
+    // Cuánto ocupa la caché en disco, en bytes (-1: aún no se sabe). Se mide
+    // en otro hilo solo al pedirlo (Configuración) y después de vaciarla
+    property real cacheUsage: -1
+    function refreshCacheUsage() {
+        // qmllint disable unqualified
+        if (typeof MitisEngine.requestCacheUsage === "function")
+            MitisEngine.requestCacheUsage()
+        // qmllint enable unqualified
+    }
+    // qmllint disable unqualified
+    readonly property Connections _cacheUsage: Connections {
+        target: MitisEngine
+        ignoreUnknownSignals: true
+        function onCacheUsageReady(bytes) {
+            root.cacheUsage = bytes
+        }
+    }
+    // qmllint enable unqualified
+    readonly property Connections _cacheCleared: Connections {
+        target: root.profile
+        function onClearHttpCacheCompleted() {
+            root.refreshCacheUsage()
+        }
+    }
     // Lo decidido para cada sitio: lo que guarda el motor y cámara y micrófono
     function clearPermissions() {
         for (const permission of root.profile.listAllPermissions())
@@ -245,6 +270,9 @@ QtObject {
         engine.stripTrackingParams = Qt.binding(() => Settings.stripTrackingParams)
         // El último: al activarse carga las listas (y las descarga si faltan)
         engine.adBlock = Qt.binding(() => Settings.blockAds)
+        // Tope de la caché: C++ ya lo puso al crear el perfil; esto lo cambia
+        // al momento si se elige otro en Configuración (0 = automático)
+        root.profile.httpCacheMaximumSize = Qt.binding(() => Settings.cacheSize * 1024 * 1024)
         // «Borrar cookies y caché al cerrar»: se borran al cerrar la ventana
         // (Main) y, por si el cierre no llegó a terminar, también al abrir
         if (Settings.clearOnExit) {
@@ -302,7 +330,7 @@ QtObject {
         profile.spellCheckLanguages = ["es"]
         profile.spellCheckEnabled = Qt.binding(() => Settings.spellCheck)
 
-        // Puente con el contenido multimedia (mini reproductor), en todas las páginas
+        // Puente con el contenido multimedia (reproductor), en todas las páginas
         const script = WebEngine.script()
         script.name = "mitis-media"
         script.sourceUrl = "qrc:/scripts/media.js"

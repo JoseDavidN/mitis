@@ -5,7 +5,8 @@
 //
 // Mitis lo usa con runJavaScript:
 //   window.__mitisMedia.state()           → estado o null si no hay nada
-//   window.__mitisMedia.control(acción)   → "toggle", "next", "previous"
+//   window.__mitisMedia.control(acción)   → "toggle", "next", "previous" o
+//                                           "seek:<segundos>"
 //   window.__mitisMedia.capture()         → [micrófono, cámara] (ver abajo)
 //
 // Micrófono y cámara, para el aviso del icono de Mitis: 0 sin uso, 1 abierto
@@ -163,15 +164,42 @@
         return lastPlayed && lastPlayed.isConnected && !isStream(lastPlayed) ? lastPlayed : null;
     }
 
+    // Carátula: la más grande que declare la página en la Media Session (la
+    // de YouTube es la miniatura del vídeo, la de Spotify la del disco); si no
+    // hay, la imagen de portada del vídeo. Dirección completa o ""
+    function artwork(meta, media) {
+        var best = "", bestSize = -1;
+        var list = (meta && meta.artwork) || [];
+        for (var i = 0; i < list.length; i++) {
+            var size = parseInt(String(list[i].sizes || "0").split("x")[0], 10) || 0;
+            if (list[i].src && size > bestSize) {
+                best = list[i].src;
+                bestSize = size;
+            }
+        }
+        if (!best && media.poster)
+            best = media.poster;
+        try {
+            return best ? new URL(best, location.href).href : "";
+        } catch (e) {
+            return "";
+        }
+    }
+
     function state() {
         var media = current();
         if (!media)
             return null;
         var meta = session && session.metadata;
+        // Directos: sin duración (Infinity); la barra de progreso no se muestra
+        var duration = isFinite(media.duration) ? media.duration : 0;
         return {
             title: (meta && meta.title) || document.title || "",
             artist: (meta && meta.artist) || "",
+            artwork: artwork(meta, media),
             playing: !media.paused && !media.ended,
+            position: media.currentTime || 0,
+            duration: duration,
             hasNext: !!handlers.nexttrack,
             hasPrevious: true
         };
@@ -188,6 +216,14 @@
                 media.pause();
         } else if (action === "next" && handlers.nexttrack) {
             handlers.nexttrack({ action: "nexttrack" });
+        } else if (action.indexOf("seek:") === 0) {
+            var to = parseFloat(action.slice(5));
+            if (isFinite(to) && isFinite(media.duration)) {
+                if (handlers.seekto)
+                    handlers.seekto({ action: "seekto", seekTime: to });
+                else
+                    media.currentTime = Math.max(0, Math.min(media.duration, to));
+            }
         } else if (action === "previous") {
             // Como en cualquier reproductor: si ya avanzó, vuelve al inicio
             if (handlers.previoustrack && media.currentTime < 3)

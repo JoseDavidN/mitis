@@ -61,6 +61,19 @@ FocusScope {
         { value: 15, label: "15 min" }, { value: 30, label: "30 min" }, { value: 60, label: "1 hora" },
         { value: 120, label: "2 horas" }, { value: 0, label: "Nunca" }
     ]
+    // Espacio para la caché de las páginas, en MB (0 = automático)
+    readonly property var cacheSizeOptions: [
+        { value: 100, label: "100 MB" }, { value: 250, label: "250 MB" },
+        { value: 500, label: "500 MB" }, { value: 0, label: "Automático" }
+    ]
+    // 0,4 MB, 172 MB o 1,2 GB
+    function formatSize(bytes) {
+        const locale = Qt.locale("es_ES")
+        const mb = bytes / (1024 * 1024)
+        if (mb >= 1024)
+            return (mb / 1024).toLocaleString(locale, "f", 1) + " GB"
+        return mb.toLocaleString(locale, "f", mb < 10 ? 1 : 0) + " MB"
+    }
     // Idiomas que se pueden pedir a las páginas (código de Accept-Language)
     readonly property var languageOptions: [
         { value: "es", label: "Español" }, { value: "en", label: "Inglés" },
@@ -347,6 +360,7 @@ FocusScope {
         startupField.text = Settings.startupUrl
         profileNameField.text = Settings.profileName
         refreshSitePermissions()
+        BrowserProfile.refreshCacheUsage()
         forceActiveFocus()
     }
 
@@ -357,9 +371,12 @@ FocusScope {
 
     Keys.onEscapePressed: root.closeRequested()
 
-    // Bloquea el ratón: nada llega a la página de debajo
+    // Bloquea el ratón: nada llega a la página de debajo, tampoco el paso
+    // por encima (sin hoverEnabled, la página seguía viéndolo y mostraba sus
+    // avisos de enlaces sobre Configuración)
     MouseArea {
         anchors.fill: parent
+        hoverEnabled: true
         acceptedButtons: Qt.AllButtons
         onWheel: wheel => wheel.accepted = true
     }
@@ -1382,12 +1399,40 @@ FocusScope {
                     onChosen: value => Settings.suspendAfter = value
                 }
                 SettingRow {
+                    title: "Liberar memoria cuando el equipo va justo"
+                    description: "Si al equipo le queda poca memoria, Mitis descarga antes las pestañas que llevas más tiempo sin ver, aunque no haya pasado el tiempo de arriba, hasta que se recupera. Con las mismas excepciones."
+
+                    Toggle {
+                        checked: Settings.memorySaver
+                        onToggled: Settings.memorySaver = checked
+                    }
+                }
+                SettingRow {
                     title: "Precargar páginas"
                     description: "Cuando dejas el ratón un momento sobre un enlace, Mitis empieza a cargar esa página para que se abra antes al pulsarlo. Gasta algo más de datos y el sitio sabe sobre qué enlaces pasas el ratón. Nunca en las ventanas privadas."
 
                     Toggle {
                         checked: Settings.preloadPages
                         onToggled: Settings.preloadPages = checked
+                    }
+                }
+                ChoiceRow {
+                    title: "Espacio para la caché"
+                    description: "Mitis guarda en el disco imágenes y archivos de las páginas para que vuelvan a abrirse antes. Cuando llega al límite, borra solo lo más antiguo. Con «Automático», el límite lo decide el motor según el espacio libre del disco."
+                    options: root.cacheSizeOptions
+                    isSelected: value => Settings.cacheSize === value
+                    onChosen: value => Settings.cacheSize = value
+                }
+                SettingRow {
+                    title: "Caché de las páginas"
+                    description: BrowserProfile.cacheUsage < 0 ? "Calculando cuánto ocupa…"
+                                 : "Ocupa " + root.formatSize(BrowserProfile.cacheUsage)
+                                   + ". Al vaciarla no se pierde nada: las páginas solo tardarán algo más la primera vez."
+
+                    TextButton {
+                        text: "Vaciar"
+                        enabled: BrowserProfile.cacheUsage > 0
+                        onClicked: BrowserProfile.clearCache()
                     }
                 }
             }

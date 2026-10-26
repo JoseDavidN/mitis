@@ -16,7 +16,7 @@ Rectangle {
     property color fill: "transparent"
     property color fillStart: fill
     property color fillEnd: fillStart
-    // Velo del vidrio (el mini reproductor, de texto blanco, usa siempre el oscuro)
+    // Velo del vidrio (un control de texto blanco puede usar siempre el oscuro)
     property alias glassTint: glass.tint
     // Se está viendo el vidrio en lugar del relleno
     readonly property bool glassActive: glass.active

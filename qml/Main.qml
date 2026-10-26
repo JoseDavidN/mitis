@@ -412,7 +412,7 @@ Window {
     // Para ahorrar memoria, las pestañas que no se ven se congelan a los
     // cinco minutos y se descargan a los de Configuración → Rendimiento
     // (BrowserTab.suspend() pone el resto de excepciones). Nunca las fijadas
-    // ni la del mini reproductor (sus botones dejarían de responder).
+    // ni la del reproductor (sus botones dejarían de responder).
     readonly property int freezeAfter: 5 * 60 * 1000
     function suspendIdleTabs() {
         const discardAfter = Settings.suspendAfter * 60 * 1000
@@ -433,6 +433,54 @@ Window {
         repeat: true
         running: Settings.suspendAfter > 0 && tabs.count > 1
         onTriggered: win.suspendIdleTabs()
+    }
+
+    // Con la memoria del equipo justa (Configuración → Rendimiento, «Liberar
+    // memoria cuando el equipo va justo»), además del tiempo: descarga una
+    // pestaña oculta cada vez, la que lleva más tiempo sin verse, hasta que
+    // la memoria se recupera (MemoryMonitor.systemMemory: entre «justa» y
+    // «recuperada» hay margen, para no descargar y recargar en bucle). Las
+    // excepciones son las de siempre (BrowserTab.suspend). El motor va por
+    // pasos: a una activa solo deja congelarla y, ya congelada, descargarla
+    // (recommendedState), así que una pestaña se vuelve a intentar si cambió
+    // de estado; la que no cambia (no se deja) no se reintenta mientras dure
+    // la falta de memoria. Las que aún no se han cargado (restauradas) no
+    // ocupan: se saltan.
+    property bool memoryTight: false
+    // Intentadas: [{ tab, lifecycle }] (el estado con el que se intentó)
+    property var _memoryTried: []
+    function relieveMemory() {
+        const memory = MemoryMonitor.systemMemory()
+        if (memory.low)
+            memoryTight = true
+        else if (memory.recovered)
+            memoryTight = false
+        if (!memoryTight) {
+            _memoryTried = []
+            return
+        }
+        let oldest = null
+        for (let i = 0; i < tabs.count; i++) {
+            const tab = views.itemAt(i) as BrowserTab
+            if (!tab || tab.hiddenSince === 0 || tabs.get(i).pinned || tab === mediaView
+                    || tab.lifecycle === "discarded" || tab.deferred
+                    || _memoryTried.some(tried => tried.tab === tab && tried.lifecycle === tab.lifecycle))
+                continue
+            if (!oldest || tab.hiddenSince < oldest.hiddenSince)
+                oldest = tab
+        }
+        if (!oldest)
+            return
+        _memoryTried.push({ tab: oldest, lifecycle: oldest.lifecycle })
+        console.info("Memoria del equipo justa (" + Math.round(memory.available / 1048576)
+                     + " MB libres): se suspende una pestaña oculta (" + oldest.lifecycle + ")")
+        oldest.suspend(true)
+    }
+    Timer {
+        interval: 10 * 1000
+        repeat: true
+        running: Settings.memorySaver && tabs.count > 1
+        onTriggered: win.relieveMemory()
     }
 
     // ── Monitor de rendimiento ───────────────────────────────────────
@@ -887,6 +935,22 @@ Window {
     function selectTab(index) {
         currentIndex = (index + tabs.count) % tabs.count
     }
+    // «Ir a la pestaña» (sugerencias de la dirección): la de `index` si sigue
+    // teniendo esa dirección; si no (se cerró o se movió otra), la primera
+    // con ella. Si ya no está abierta, se abre aquí
+    function switchToTab(index, url) {
+        if (index >= 0 && index < tabs.count && String(tabs.get(index).url) === url) {
+            selectTab(index)
+            return
+        }
+        for (let i = 0; i < tabs.count; i++) {
+            if (String(tabs.get(i).url) === url) {
+                selectTab(i)
+                return
+            }
+        }
+        currentView.navigate(url)
+    }
 
     // Las fijadas son siempre las primeras `pinnedCount` filas del modelo,
     // en el orden en que se fijaron. Solo lo cambia setTabPinned().
@@ -940,13 +1004,13 @@ Window {
     // Controles inferiores visibles. Se ocultan solos `controlsHold` después
     // de dejar de usarlos, para no tapar lo que las páginas tienen abajo
     // (avisos de cookies, reproductores…): no vuelven al pasar por el borde
-    // ni al desplazar la página, solo con la pestaña del borde inferior
+    // ni al desplazar la página, solo al pulsar la pestaña del borde inferior
     // (ControlsTab). Los mantiene a la vista tener el ratón encima, escribir
     // en la dirección o una lista suya abierta; `revealControls` los fuerza
     // (p. ej. Ctrl+L). En F11, como antes: el borde inferior los muestra.
     property bool revealControls: false
-    readonly property bool controlsInUse: revealControls || barHover.hovered || playerHover.hovered
-        || controlsTab.hovered || bottomBar.editing
+    readonly property bool controlsInUse: revealControls || barHover.hovered
+        || bottomBar.editing
         || tabsPopup.opened || bookmarksPopup.opened || optionsPopup.opened || siteInfoPopup.opened
         || historyPopup.opened || downloadsPopup.opened || downloadPanel.opened || updatePopup.opened
     // A la vista fuera de F11; al abrir Mitis también (para saber dónde están)
@@ -1048,7 +1112,7 @@ Window {
     // ── Multimedia ───────────────────────────────────────────────────
     // La última pestaña que sonó y lo que reproduce, según el script
     // assets/scripts/media.js inyectado en cada página. `media` es null si
-    // no hay nada: entonces el mini reproductor se oculta.
+    // no hay nada: entonces la pestaña del reproductor se oculta.
     property BrowserTab mediaView: null
     property var media: null
 
@@ -1199,6 +1263,9 @@ Window {
         }
         onDownloadsRequested: downloadPanel.opened ? downloadPanel.close() : downloadPanel.show()
         onTabsRequested: tabsPopup.opened ? tabsPopup.close() : tabsPopup.open()
+        openTabs: tabs
+        currentTabIndex: win.currentIndex
+        onTabRequested: (index, url) => win.switchToTab(index, url)
         onBookmarksRequested: bookmarksPopup.opened ? bookmarksPopup.close() : bookmarksPopup.open()
         onSiteInfoRequested: siteInfoPopup.opened ? siteInfoPopup.close() : siteInfoPopup.open()
         // Conexión de la página para el botón del sitio (candado)
@@ -1282,7 +1349,7 @@ Window {
                 onAudibleChanged: {
                     tabs.setProperty(index, "audible", tab.audible)
                     // Solo si tiene algo que reproducir: una llamada (Meet,
-                    // Zoom…) suena pero no se lleva el mini reproductor
+                    // Zoom…) suena pero no se lleva el reproductor
                     if (tab.audible && tab !== win.mediaView) {
                         tab.mediaState(state => {
                             if (state && tab.audible) {
@@ -1679,8 +1746,8 @@ Window {
         onResetRequested: win.zoomBy(0)
     }
 
-    // Con los controles ocultos: pestaña con el título de la página que los
-    // vuelve a mostrar (no en pantalla completa ni con Configuración)
+    // Con los controles ocultos: pestaña con el título de la página que, al
+    // pulsarla, los vuelve a mostrar (no en pantalla completa ni con Configuración)
     ControlsTab {
         id: controlsTab
         z: 1
@@ -1690,33 +1757,55 @@ Window {
         visible: opacity > 0
         opacity: !win.controlsShown && !win.immersive && !win.settingsOpen ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: Theme.durationBase } }
+        // Vuelven como al abrir Mitis: se van solos si no se usan
+        onClicked: {
+            win.controlsAwake = true
+            controlsHold.restart()
+        }
     }
 
-    MiniPlayer {
-        z: 1
-        anchors.horizontalCenter: parent.horizontalCenter
-        // Pegado a la barra inferior, a la misma distancia que sus controles
-        anchors.bottom: bottomBar.top
-        anchors.bottomMargin: Theme.spacing - Theme.floatingMargin
-        visible: opacity > 0
-        // Va con los controles inferiores: en pantalla completa se oculta con
-        // ellos. En la pestaña que suena no hace falta (está su propio
-        // reproductor), salvo con Configuración abierta encima
-        opacity: win.media && win.controlsShown
-                 && (win.mediaView !== win.currentView || win.settingsOpen) ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: Theme.durationBase } }
-        HoverHandler { id: playerHover }
+    // Reproductor: mientras algo suena, una cúpula pequeña en el borde
+    // derecho, encima del sitio del gesto de adelante (SwipeIndicator, centrado)
+    // para no chocar con él; al pulsarla se despliega el reproductor a su
+    // izquierda. No en pantalla completa
+    MediaTab {
+        id: mediaTab
+        z: 2
+        anchors.right: parent.right
+        // Separada del gesto lo bastante para que sus curvas no se junten en
+        // el borde; en una ventana baja, no sube más allá de la barra de título
+        y: Math.max(Theme.titleBarHeight + Theme.margin,
+                    (parent.height - Theme.swipeBumpLength) / 2 - 2 * Theme.margin - height)
+        shown: win.media !== null && !win.immersive
 
         iconSource: win.displayIcon(win.mediaView)
-        title: win.media ? (win.media.artist ? win.media.title + " · " + win.media.artist
-                                             : win.media.title) : ""
         playing: win.media ? win.media.playing : false
-        hasNext: win.media ? win.media.hasNext : false
-        hasPrevious: win.media ? win.media.hasPrevious : false
-        onToggleRequested: win.mediaControl("toggle")
-        onNextRequested: win.mediaControl("next")
-        onPreviousRequested: win.mediaControl("previous")
-        onActivated: win.selectView(win.mediaView)
+        expanded: mediaPopup.opened
+        onClicked: mediaPopup.toggle()
+    }
+    LazyPopup {
+        id: mediaPopup
+        popup: Component {
+            MediaPlayerPopup {
+                parent: mediaTab
+                x: -width - Theme.spacing
+                y: (parent.height - height) / 2
+                media: win.media
+                iconSource: win.displayIcon(win.mediaView)
+                site: win.mediaView ? Urls.host(win.mediaView.url.toString()).replace(/^www\./, "") : ""
+                onControlRequested: action => win.mediaControl(action)
+                onSeekRequested: seconds => win.mediaControl("seek:" + seconds.toFixed(2))
+                onActivated: win.selectView(win.mediaView)
+            }
+        }
+    }
+    // Sin nada sonando, el reproductor desplegado se cierra
+    Connections {
+        target: win
+        function onMediaChanged() {
+            if (!win.media)
+                mediaPopup.close()
+        }
     }
 
     // F11: franja fina del borde inferior que muestra los controles. No

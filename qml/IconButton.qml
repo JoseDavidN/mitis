@@ -2,7 +2,7 @@ import QtQuick
 import Mitis.Core
 
 // Botón base de Mitis: flotante y redondeado, con un icono SVG (`icon`)
-// o un texto corto (`glyph`, p. ej. el contador de pestañas).
+// o un texto corto (`glyph`, p. ej. «−» y «+» de las copias al imprimir).
 Item {
     id: root
 

@@ -28,10 +28,11 @@ Historial con este esquema (ver [CHANGELOG.md](../CHANGELOG.md)):
 | 0.10.1 | Corrige la caída al volver a una pestaña que se había descargado (iconos de pestañas que se descargaron alguna vez) | `0d25aba` |
 | 0.11.0 | Atrás y adelante con gestos de macOS y botones del ratón, corrector en español, imprimir y guardar como PDF con ventana propia, códecs propietarios en Windows y macOS | `6fa68b2` |
 | 0.12.0 | Precargar páginas, paneles creados al abrirlos, relieve redondo del gesto, corrige la caída al cambiar opciones de impresión | `be19b71` |
+| 0.13.0 | Ventana privada negro mate con privacidad siempre activa y sin Configuración, DNS cifrado (automático de serie), lista de atajos de teclado | `eec1a98` |
 
 Las fases 0–2 van juntas en 0.2.0 porque entraron en un solo commit. Esas versiones no tienen etiqueta ni release: son anteriores al workflow de publicación. Si se quieren marcar, basta con etiquetas ligeras (`git tag v0.4.0 d6cfa89`); al subirlas no se publica nada porque esos commits no tienen `.github/workflows/`.
 
-**Versión actual: 0.13.0-beta** (en desarrollo; la 0.12.0 ya tiene commit y se da por publicada). Cambia la ventana privada (negro mate, privacidad siempre activa, sin Configuración) y trae funciones nuevas (DNS cifrado, lista de atajos de teclado en Configuración): sube MENOR. Se publica al subir la etiqueta `v0.13.0`.
+**Versión actual: 0.14.0-beta** (en desarrollo, en la rama `ajustes`; la 0.13.0 ya tiene commit y se da por publicada). Cambia el reproductor (pestaña en el borde derecho y reproductor desplegable con carátula y barra de progreso), los controles de abajo salen al pulsar su pestaña y trae el tope de la caché (250 MB de serie) la descarga de pestañas con la memoria del equipo justa e «Ir a la pestaña» en las sugerencias de la dirección: sube MENOR. Se publica al subir la etiqueta `v0.14.0`.
 
 **Regla:** una versión con commit ya está desplegada. Lo siguiente que se haga va en una versión nueva, subida según lo que traiga (MENOR con funciones nuevas, PARCHE con solo correcciones), y su sección del CHANGELOG se escribe en lenguaje claro para quien no sabe de tecnología: es lo que se ve en la pestaña de novedades.
 
