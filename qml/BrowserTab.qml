@@ -21,6 +21,11 @@ Item {
     property bool deferred: false
     // De una ventana privada: usa el perfil sin disco. Solo al crearla.
     property bool privateMode: false
+    // Atrás y adelante al instante: al irse, la página se queda congelada en
+    // memoria (caché de páginas anteriores) y Atrás la devuelve sin recargar.
+    // Cuántas y cuánto tiempo, main.cpp (Settings.instantBackPages). Apagarlo
+    // no vacía las ya guardadas: dejan de guardarse y caducan solas. Lo pone Main
+    property bool instantBack: false
     // Página propia de Mitis que muestra esta pestaña, sin dirección ni web
     // ("notes": novedades tras actualizar; "" en las demás). La pone Main.qml
     property string special: ""
@@ -64,9 +69,11 @@ Item {
     readonly property alias findMatches: findState.matches
     readonly property alias findActive: findState.active
 
-    // Zoom de esta pestaña (1 = 100 %). Se mantiene al navegar dentro de ella.
-    // Para cambiarlo, setZoom(); hasta entonces (y tras resetZoom()) sigue al
-    // zoom predeterminado de Configuración.
+    // Zoom de la página (1 = 100 %), por sitio como en Chrome: el guardado
+    // para su host (BrowserProfile.siteZooms) o, si no hay, el predeterminado
+    // de Configuración. Se cambia con setZoom() y se olvida con resetZoom().
+    // En la ventana privada no se guarda: vale para esta pestaña (por host)
+    // mientras dure.
     readonly property alias zoom: zoomState.level
 
     // La página está en pantalla completa (p. ej. el botón de un vídeo)
@@ -251,13 +258,27 @@ Item {
         findState.matches = 0
         findState.active = 0
     }
-    // Cambia el zoom de esta pestaña (1 = 100 %)
+    // Cambia el zoom del sitio de la página (1 = 100 %)
     function setZoom(level) {
-        zoomState.level = level
+        const host = zoomState.host
+        if (privateMode || host === "") {
+            const own = Object.assign({}, zoomState.own)
+            own[host] = level
+            zoomState.own = own
+        } else {
+            BrowserProfile.setSiteZoom(host, level)
+        }
     }
     // Vuelve al zoom predeterminado (y lo sigue si cambia)
     function resetZoom() {
-        zoomState.level = Qt.binding(() => Settings.defaultZoom)
+        const host = zoomState.host
+        if (host in zoomState.own) {
+            const own = Object.assign({}, zoomState.own)
+            delete own[host]
+            zoomState.own = own
+        }
+        if (!privateMode)
+            BrowserProfile.forgetSiteZoom(host)
     }
     // Saca la página de pantalla completa sin esperar a que ella responda
     function exitFullScreen() {
@@ -745,7 +766,17 @@ Item {
 
     QtObject {
         id: zoomState
-        property real level: Settings.defaultZoom
+        // Host de la página que se ve (el zoom cambia al pasar a otro sitio)
+        readonly property string host: root._hostOf(view.url.toString())
+        // Los de esta pestaña que no se guardan (ventana privada, páginas sin
+        // host como archivos): host → nivel
+        property var own: ({})
+        readonly property real level: {
+            if (host in own)
+                return own[host]
+            const saved = root.privateMode || host === "" ? undefined : BrowserProfile.siteZooms[host]
+            return saved !== undefined ? saved : Settings.defaultZoom
+        }
         onLevelChanged: {
             if (Math.abs(view.zoomFactor - level) > 0.001)
                 view.zoomFactor = level
@@ -795,6 +826,7 @@ Item {
         // navegador sin él parece un motor embebido)
         settings.pluginsEnabled: true
         settings.pdfViewerEnabled: true
+        settings.backForwardCacheEnabled: root.instantBack
         // Sin esto el motor rechaza la pantalla completa de vídeos y páginas
         settings.fullScreenSupportEnabled: true
         // Preferencias de Configuración; el motor las aplica sin recargar
@@ -814,16 +846,16 @@ Item {
             findState.matches = result.numberOfMatches
             findState.active = result.activeMatch
         }
-        // El motor puede volver al 100 % al cambiar de página: el zoom es de
-        // la pestaña, así que se vuelve a aplicar. Con la página ya cargada,
-        // un cambio es del usuario (p. ej. Ctrl+rueda) y se acepta.
+        // El motor puede volver al 100 % al cambiar de página: el zoom es el
+        // del sitio (zoomState), así que se vuelve a aplicar. Con la página ya
+        // cargada, un cambio es del usuario (p. ej. Ctrl+rueda) y se guarda.
         onZoomFactorChanged: {
             if (Math.abs(view.zoomFactor - zoomState.level) <= 0.001)
                 return
             if (view.loading)
                 view.zoomFactor = zoomState.level
             else
-                zoomState.level = view.zoomFactor
+                root.setZoom(view.zoomFactor)
         }
         onLoadingChanged: loadingInfo => {
             if (!view.loading && certState.backAfterError) {

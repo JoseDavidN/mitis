@@ -11,6 +11,8 @@ Item {
     property alias fillStart: button.fillStart
     property alias fillEnd: button.fillEnd
     readonly property alias hovered: button.hovered
+    // El del icono de un botón normal (el anillo le quita su ancho)
+    property int iconSize: Theme.iconSize
 
     signal clicked()
 
@@ -70,7 +72,7 @@ Item {
         anchors.fill: parent
         anchors.margins: Theme.updateRingWidth
         icon: "update"
-        iconSize: Theme.iconSize - Theme.updateRingWidth
+        iconSize: root.iconSize - Theme.updateRingWidth
         highlighted: true
         tooltip: "Actualizar Mitis"
         onClicked: root.clicked()

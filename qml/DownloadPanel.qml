@@ -84,8 +84,10 @@ T.Popup {
         ending = false
         close()
         shownIds = shownIds.filter(id => Downloads.isActive(Downloads.get(id)?.state ?? ""))
-        refresh()
+        // Antes de refresh(): con la lista vacía y `active` aún verdadero,
+        // refresh() volvería a llamar a expire() sin fin y el botón no se iría
         active = shownIds.length > 0
+        refresh()
     }
 
     Connections {

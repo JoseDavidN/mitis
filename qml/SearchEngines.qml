@@ -71,6 +71,35 @@ QtObject {
         return Urls.searchUrl(text, current.url)
     }
 
+    // Lo buscado en una página de resultados de cualquiera de los buscadores
+    // (también el personalizado): "https://duckduckgo.com/?q=gatos+negros"
+    // → "gatos negros". "" si no es una búsqueda. Solo plantillas con el
+    // texto en un parámetro (…?q=%s)
+    function queryOf(address) {
+        const templates = engines.map(engine => engine.url)
+        if (hasCustom)
+            templates.push(customUrl)
+        const page = address.split(/[?#]/)[0].replace(/^(https?:\/\/)www\./i, "$1").replace(/\/$/, "").toLowerCase()
+        for (const template of templates) {
+            const head = template.slice(0, template.indexOf("%s"))
+            const param = /[?&]([^?&=]+)=$/.exec(head)
+            if (!param)
+                continue
+            const base = head.slice(0, param.index).replace(/^(https?:\/\/)www\./i, "$1").replace(/\/$/, "").toLowerCase()
+            if (page !== base)
+                continue
+            const value = new RegExp("[?&]" + param[1] + "=([^&#]*)").exec(address)
+            if (!value)
+                continue
+            try {
+                return decodeURIComponent(value[1].replace(/\+/g, " ")).trim()
+            } catch (e) {
+                return ""
+            }
+        }
+        return ""
+    }
+
     // Lo escrito por el usuario → URL (o búsqueda en el elegido)
     function resolve(input) {
         return Urls.resolve(input, current.url)

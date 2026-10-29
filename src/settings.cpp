@@ -43,7 +43,8 @@ const QString AskDownloadFolderKey = QStringLiteral("Downloads/askFolder");
 const QString SuspendAfterKey = QStringLiteral("Performance/suspendAfter");
 const QString CacheSizeKey = QStringLiteral("Performance/cacheSize");
 const QString MemorySaverKey = QStringLiteral("Performance/memorySaver");
-const QString ControlsRevealKey = QStringLiteral("Appearance/controlsReveal");
+const QString InstantBackPagesKey = QStringLiteral("Performance/instantBackPages");
+const QString ControlsSizeKey = QStringLiteral("Appearance/controlsSize");
 const QString SecureDnsKey = QStringLiteral("Privacy/secureDns");
 const QString SecureDnsProviderKey = QStringLiteral("Privacy/secureDnsProvider");
 
@@ -63,6 +64,14 @@ const DnsProvider DnsProviders[] = {
 };
 // Con qué arrancó el motor ("modo:servidor" o "off"); vacío = aún no se sabe
 QString secureDnsStarted;
+// Páginas guardadas por pestaña con las que arrancó el motor (0 = aún no)
+int instantBackStarted = 0;
+
+// Solo 0, 1 o 3 (lo que ofrece Configuración); cualquier otro, el de serie
+int validInstantBackPages(int value)
+{
+    return value == 0 || value == 3 ? value : 1;
+}
 
 const QStringList DefaultLanguages = { QStringLiteral("es"), QStringLiteral("en") };
 }
@@ -72,6 +81,9 @@ const QStringList DefaultLanguages = { QStringLiteral("es"), QStringLiteral("en"
 Settings::Settings(QObject *parent)
     : QObject(parent)
 {
+    // De la 0.15.0: elegir si los controles de abajo vuelven al pasar el
+    // ratón por su pestaña. Ya solo vuelven al pulsarla
+    m_settings.remove(QStringLiteral("Appearance/controlsReveal"));
 }
 
 bool Settings::store(const QString &key, const QVariant &value)
@@ -564,18 +576,49 @@ void Settings::setMemorySaver(bool value)
         emit memorySaverChanged();
 }
 
-QString Settings::controlsReveal() const
+QString Settings::controlsSize() const
 {
-    return m_settings.value(ControlsRevealKey).toString() == QLatin1String("hover") ? QStringLiteral("hover")
-                                                                                   : QStringLiteral("click");
+    const QString value = m_settings.value(ControlsSizeKey).toString();
+    return value == QLatin1String("large") || value == QLatin1String("larger") ? value : QStringLiteral("normal");
 }
 
-void Settings::setControlsReveal(const QString &value)
+void Settings::setControlsSize(const QString &value)
 {
-    if (controlsReveal() == value)
+    if (controlsSize() == value)
         return;
-    m_settings.setValue(ControlsRevealKey, value);
-    emit controlsRevealChanged();
+    m_settings.setValue(ControlsSizeKey, value);
+    emit controlsSizeChanged();
+}
+
+int Settings::instantBackPages() const
+{
+    return validInstantBackPages(m_settings.value(InstantBackPagesKey, 1).toInt());
+}
+
+void Settings::setInstantBackPages(int value)
+{
+    if (instantBackPages() == value)
+        return;
+    m_settings.setValue(InstantBackPagesKey, value);
+    emit instantBackPagesChanged();
+}
+
+bool Settings::instantBackPending() const
+{
+    const int pages = instantBackPages();
+    return instantBackStarted > 0 && pages > 0 && pages != instantBackStarted;
+}
+
+int Settings::instantBackPagesSaved()
+{
+    // Antes de que exista la aplicación: QSettings con los nombres explícitos
+    return validInstantBackPages(QSettings(QStringLiteral("Mitis"), QStringLiteral("Mitis"))
+                                     .value(InstantBackPagesKey, 1).toInt());
+}
+
+void Settings::setInstantBackStarted(int pages)
+{
+    instantBackStarted = pages;
 }
 
 QString Settings::secureDns() const
@@ -655,7 +698,7 @@ void Settings::resetPreferences()
         BlockThirdPartyCookiesKey, ClearOnExitKey, DoNotTrackKey, HideLocalIpKey, HttpsUpgradeKey,
         JavascriptKey, ImagesKey, BlockPopupsKey, AutoplayKey, BlockedPermissionsKey, AskDownloadFolderKey,
         SuspendAfterKey, BlockAdsKey, StripTrackingParamsKey, ThemeKey, SecureDnsKey, SecureDnsProviderKey,
-        CacheSizeKey, MemorySaverKey, ControlsRevealKey,
+        CacheSizeKey, MemorySaverKey, InstantBackPagesKey, ControlsSizeKey,
     };
     for (const QString &key : keys)
         m_settings.remove(key);
@@ -696,5 +739,6 @@ void Settings::resetPreferences()
     emit secureDnsPendingChanged();
     emit cacheSizeChanged();
     emit memorySaverChanged();
-    emit controlsRevealChanged();
+    emit instantBackPagesChanged();
+    emit controlsSizeChanged();
 }

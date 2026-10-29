@@ -5,6 +5,8 @@ import QtQuick.Controls.Basic
 import QtQuick.Dialogs
 import Mitis.Core
 
+import "urls.js" as Urls
+
 // Página de nueva pestaña, en QML: buscador en el centro, accesos rápidos
 // y noticias de tecnología, sobre el fondo del tema o una imagen propia.
 // Una sola instancia para todas las pestañas (ver Main.qml).
@@ -18,6 +20,76 @@ Item {
 
     function focusSearch() {
         search.forceActiveFocus()
+    }
+
+    // ── Sugerencias del buscador ─────────────────────────────────────
+    // [{ query, url, title, bookmark }]: primero lo buscado antes (`query`:
+    // páginas de resultados del historial, la más reciente primero); al
+    // escribir, las que coinciden y luego marcadores e historial. Sin
+    // escribir, solo las búsquedas recientes (no en la ventana privada)
+    property var suggestions: []
+    // La elegida con las flechas; -1 = lo escrito
+    property int suggestionIndex: -1
+    readonly property int suggestionsMax: 6
+    readonly property int searchSuggestionsMax: 4
+    // Páginas del historial que se revisan para encontrar búsquedas
+    readonly property int searchHistoryScan: 300
+
+    function updateSuggestions() {
+        suggestionIndex = -1
+        const typed = search.text.trim()
+        if (!search.activeFocus || (typed === "" && privateMode)) {
+            suggestions = []
+            return
+        }
+        const key = fold(typed)
+        const list = []
+        const seenQueries = {}
+        const searchesMax = typed === "" ? suggestionsMax : searchSuggestionsMax
+        for (const row of History.recent(searchHistoryScan)) {
+            if (list.length >= searchesMax)
+                break
+            const query = SearchEngines.queryOf(String(row.url))
+            const folded = fold(query)
+            if (query === "" || seenQueries[folded] || folded === key || !folded.includes(key))
+                continue
+            seenQueries[folded] = true
+            list.push({ query: query, url: "", title: "", bookmark: false })
+        }
+        if (typed !== "") {
+            const seenUrls = {}
+            const take = (items, bookmark) => {
+                for (const item of items) {
+                    if (list.length >= suggestionsMax)
+                        return
+                    // Las páginas de resultados ya salen como búsquedas
+                    if (seenUrls[item.url] || SearchEngines.queryOf(item.url) !== "")
+                        continue
+                    seenUrls[item.url] = true
+                    list.push({ query: "", url: item.url, title: item.title, bookmark: bookmark })
+                }
+            }
+            take(Bookmarks.search(typed, 3), true)
+            take(History.suggest(typed, suggestionsMax), false)
+        }
+        suggestions = list
+    }
+
+    // Sin acentos ni mayúsculas, como las sugerencias de la dirección
+    function fold(value) {
+        return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    }
+
+    function moveSuggestion(step) {
+        if (suggestions.length === 0)
+            return
+        suggestionIndex = Math.max(-1, Math.min(suggestions.length - 1, suggestionIndex + step))
+    }
+
+    // Una búsqueda se repite en el buscador elegido; una página se abre
+    function openSuggestion(item) {
+        search.text = ""
+        root.navigate(item.query !== "" ? SearchEngines.searchUrl(item.query) : item.url)
     }
 
     readonly property var defaultLinks: [
@@ -155,10 +227,112 @@ Item {
                     }
 
                     onAccepted: {
+                        if (root.suggestionIndex >= 0) {
+                            root.openSuggestion(root.suggestions[root.suggestionIndex])
+                            return
+                        }
                         const target = SearchEngines.resolve(text)
                         if (target !== "") {
                             text = ""
                             root.navigate(target)
+                        }
+                    }
+                    onActiveFocusChanged: root.updateSuggestions()
+                    onTextEdited: root.updateSuggestions()
+                    Keys.onUpPressed: root.moveSuggestion(-1)
+                    Keys.onDownPressed: root.moveSuggestion(1)
+                    // Con sugerencias, Esc las cierra; sin ellas, deja el campo
+                    Keys.onEscapePressed: {
+                        if (root.suggestions.length > 0)
+                            root.suggestions = []
+                        else
+                            search.focus = false
+                    }
+
+                    // Bajo el campo, con su ancho. No se queda el foco: se
+                    // sigue escribiendo en el campo
+                    Popup {
+                        id: suggestionList
+                        visible: search.activeFocus && root.suggestions.length > 0
+                        y: search.height + Theme.spacing
+                        width: search.width
+                        padding: Theme.spacing / 2
+                        focus: false
+                        closePolicy: Popup.NoAutoClose
+
+                        background: PopupBackground {}
+
+                        contentItem: Column {
+                            Repeater {
+                                model: root.suggestions
+
+                                delegate: Item {
+                                    id: suggestion
+
+                                    required property var modelData
+                                    required property int index
+                                    readonly property bool selected: index === root.suggestionIndex
+                                    readonly property bool isSearch: modelData.query !== ""
+
+                                    width: suggestionList.availableWidth
+                                    height: Theme.popupRowHeight
+
+                                    Rectangle {
+                                        anchors.fill: parent
+                                        radius: Theme.radiusSmall
+                                        color: suggestion.selected ? Colors.tintActive
+                                                                   : (suggestionHover.hovered ? Colors.tintHover : "transparent")
+                                        Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+                                    }
+
+                                    Icon {
+                                        id: suggestionIcon
+                                        anchors.left: parent.left
+                                        anchors.leftMargin: Theme.margin
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        name: suggestion.isSearch ? "search"
+                                            : (suggestion.modelData.bookmark ? "bookmark" : "history")
+                                        color: suggestion.selected ? Colors.brandLight1 : Colors.inkMuted
+                                    }
+
+                                    Text {
+                                        id: suggestionTitle
+                                        anchors.left: suggestionIcon.right
+                                        anchors.leftMargin: Theme.spacing
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        width: Math.min(implicitWidth, (parent.width - x - Theme.margin)
+                                                                       * (suggestion.isSearch ? 1 : 0.6))
+                                        text: suggestion.isSearch ? suggestion.modelData.query
+                                            : (suggestion.modelData.title || Urls.host(suggestion.modelData.url))
+                                        color: Colors.ink
+                                        font.pixelSize: Theme.fontSize
+                                        font.weight: suggestion.selected ? Font.DemiBold : Font.Normal
+                                        elide: Text.ElideRight
+                                    }
+
+                                    Text {
+                                        visible: !suggestion.isSearch
+                                        anchors.left: suggestionTitle.right
+                                        anchors.leftMargin: Theme.spacing
+                                        anchors.right: parent.right
+                                        anchors.rightMargin: Theme.margin
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: suggestion.modelData.url.replace(/^https?:\/\/(www\.)?/, "")
+                                        color: Colors.inkMuted
+                                        font.pixelSize: Theme.fontSizeSmall
+                                        elide: Text.ElideRight
+                                    }
+
+                                    HoverHandler {
+                                        id: suggestionHover
+                                        cursorShape: Qt.PointingHandCursor
+                                    }
+                                    TapHandler {
+                                        gesturePolicy: TapHandler.ReleaseWithinBounds
+                                        onTapped: root.openSuggestion(suggestion.modelData)
+                                    }
+                                }
+                            }
                         }
                     }
                 }

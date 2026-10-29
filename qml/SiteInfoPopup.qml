@@ -283,11 +283,11 @@ Popup {
         PopupAction {
             width: parent.width
             visible: !root.privateMode
-            icon: "permissions"
-            text: "Permisos de sitios"
+            icon: "sites"
+            text: "Ajustes del sitio"
             onTriggered: {
                 root.close()
-                root.settingsRequested("permissions")
+                root.settingsRequested("sites")
             }
         }
     }

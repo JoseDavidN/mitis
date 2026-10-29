@@ -1005,13 +1005,11 @@ Window {
     // de dejar de usarlos, para no tapar lo que las páginas tienen abajo
     // (avisos de cookies, reproductores…): no vuelven al pasar por el borde
     // ni al desplazar la página, solo con la pestaña del borde inferior
-    // (ControlsTab): al pulsarla o, con Settings.controlsReveal en «hover»,
-    // al pasar el ratón por ella. Los mantiene a la vista tener el ratón encima, escribir
+    // (ControlsTab), al pulsarla. Los mantiene a la vista tener el ratón encima, escribir
     // en la dirección o una lista suya abierta; `revealControls` los fuerza
     // (p. ej. Ctrl+L). En F11, como antes: el borde inferior los muestra.
     property bool revealControls: false
-    readonly property bool controlsInUse: revealControls || barHover.hovered
-        || (Settings.controlsReveal === "hover" && controlsTab.hovered) || bottomBar.editing
+    readonly property bool controlsInUse: revealControls || barHover.hovered || bottomBar.editing
         || tabsPopup.opened || bookmarksPopup.opened || optionsPopup.opened || siteInfoPopup.opened
         || historyPopup.opened || downloadsPopup.opened || downloadPanel.opened || updatePopup.opened
     // A la vista fuera de F11; al abrir Mitis también (para saber dónde están)
@@ -1312,6 +1310,8 @@ Window {
                 anchors.fill: parent
                 visible: current
                 privateMode: win.privateMode
+                // Con la memoria del equipo justa no se guardan páginas nuevas
+                instantBack: Settings.instantBackPages > 0 && !(Settings.memorySaver && win.memoryTight)
 
                 // Una restaurada carga al seleccionarla. Se mira un momento
                 // después: al mover filas (moveTab) otra pestaña puede ser «la

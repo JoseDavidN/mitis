@@ -36,6 +36,13 @@ Item {
     // Hay una versión nueva de Mitis: botón de actualizar tras Opciones
     property bool updateAvailable: false
 
+    // Tamaño elegido (Configuración → Apariencia): factor sobre las medidas
+    // de Theme para botones, iconos y campo de dirección
+    readonly property real sizeScale: Theme.controlsScales[Settings.controlsSize] ?? 1
+    readonly property int buttonSize: Math.round(Theme.buttonSize * sizeScale)
+    readonly property int iconSize: Math.round(Theme.iconSize * sizeScale)
+    readonly property int controlHeight: Math.round(Theme.controlHeight * sizeScale)
+
     // Botones para anclar las listas desplegables
     readonly property Item downloadsButton: downloadsButton
     readonly property Item tabsButton: tabsButton
@@ -73,7 +80,7 @@ Item {
                        a.b + (b.b - a.b) * t, a.a + (b.a - a.a) * t)
     }
 
-    implicitHeight: Theme.controlHeight + 2 * Theme.floatingMargin
+    implicitHeight: root.controlHeight + 2 * Theme.floatingMargin
 
     // Espacio máximo que puede ocupar el grupo
     readonly property real maxWidth: Math.min(width - 2 * Theme.floatingMargin, Theme.bottomBarMaxWidth)
@@ -89,7 +96,7 @@ Item {
 
         anchors.centerIn: parent
         width: leftGroup.width + address.width + downloadsSlot.width + rightGroup.width + 2 * gap
-        height: Theme.controlHeight
+        height: root.controlHeight
 
         Row {
             id: leftGroup
@@ -97,6 +104,9 @@ Item {
             spacing: Theme.spacing
 
             IconButton {
+                width: root.buttonSize
+                height: root.buttonSize
+                iconSize: root.iconSize
                 fillStart: root.tone(leftGroup.x + x)
                 fillEnd: root.tone(leftGroup.x + x + width)
                 icon: "back"
@@ -106,6 +116,9 @@ Item {
                 onClicked: root.backRequested()
             }
             IconButton {
+                width: root.buttonSize
+                height: root.buttonSize
+                iconSize: root.iconSize
                 fillStart: root.tone(leftGroup.x + x)
                 fillEnd: root.tone(leftGroup.x + x + width)
                 icon: "forward"
@@ -115,6 +128,9 @@ Item {
                 onClicked: root.forwardRequested()
             }
             IconButton {
+                width: root.buttonSize
+                height: root.buttonSize
+                iconSize: root.iconSize
                 fillStart: root.tone(leftGroup.x + x)
                 fillEnd: root.tone(leftGroup.x + x + width)
                 icon: root.loading ? "close" : "reload"
@@ -127,6 +143,7 @@ Item {
         // Ocupa todo el espacio al escribir; en reposo se encoge al título
         AddressBar {
             id: address
+            sizeScale: root.sizeScale
             anchors.verticalCenter: parent.verticalCenter
             width: editing ? cluster.available : Math.min(compactWidth, cluster.available)
             x: leftGroup.width + cluster.gap
@@ -184,8 +201,8 @@ Item {
 
             anchors.right: rightGroup.left
             anchors.verticalCenter: parent.verticalCenter
-            width: reveal * (Theme.buttonSize + Theme.spacing)
-            height: Theme.buttonSize
+            width: reveal * (root.buttonSize + Theme.spacing)
+            height: root.buttonSize
             // Solo recorta mientras se anima (el recorte también corta los clics)
             clip: reveal < 1
 
@@ -195,6 +212,9 @@ Item {
 
             IconButton {
                 id: downloadsButton
+                width: root.buttonSize
+                height: root.buttonSize
+                iconSize: root.iconSize
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 opacity: downloadsSlot.reveal
@@ -238,6 +258,9 @@ Item {
 
             IconButton {
                 id: tabsButton
+                width: root.buttonSize
+                height: root.buttonSize
+                iconSize: root.iconSize
                 fillStart: root.tone(rightGroup.x + x)
                 fillEnd: root.tone(rightGroup.x + x + width)
                 icon: "tabs"
@@ -248,6 +271,9 @@ Item {
             }
             IconButton {
                 id: bookmarksButton
+                width: root.buttonSize
+                height: root.buttonSize
+                iconSize: root.iconSize
                 fillStart: root.tone(rightGroup.x + x)
                 fillEnd: root.tone(rightGroup.x + x + width)
                 icon: "bookmarks"
@@ -257,6 +283,9 @@ Item {
             }
             IconButton {
                 id: optionsButton
+                width: root.buttonSize
+                height: root.buttonSize
+                iconSize: root.iconSize
                 fillStart: root.tone(rightGroup.x + x)
                 fillEnd: root.tone(rightGroup.x + x + width)
                 icon: "options"
@@ -265,6 +294,9 @@ Item {
             }
             UpdateButton {
                 id: updateButton
+                width: root.buttonSize
+                height: root.buttonSize
+                iconSize: root.iconSize
                 visible: root.updateAvailable
                 fillStart: root.tone(rightGroup.x + x)
                 fillEnd: root.tone(rightGroup.x + x + width)

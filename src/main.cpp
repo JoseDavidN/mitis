@@ -82,6 +82,13 @@ void setupDictionaries()
 // puede cambiar cualquiera (la última gana).
 void setupChromiumFlags()
 {
+    // Atrás y adelante al instante (caché de páginas anteriores; la enciende
+    // cada vista, BrowserTab): cuántas páginas guarda cada pestaña y durante
+    // cuánto. Chromium guarda de serie 6 durante 10 min; aquí, las elegidas
+    // en Configuración (al menos 1: apagada no guarda ninguna) durante 3 min
+    // (docs/rendimiento.md)
+    const int backPages = qMax(1, Settings::instantBackPagesSaved());
+    Settings::setInstantBackStarted(backPages);
     const QByteArray flags =
         // Peticiones que el motor hace por su cuenta en segundo plano, sin
         // que ninguna página las pida
@@ -94,6 +101,8 @@ void setupChromiumFlags()
         "--disable-features=BrowsingTopics,InterestGroupStorage,AdInterestGroupAPI,Fledge,"
         "AttributionReportingCrossAppWeb,ConversionMeasurement,SharedStorageAPI,"
         "PrivateAggregationApi,FencedFrames,PrivacySandboxAdsAPIsOverride "
+        "--enable-features=BackForwardCacheSize:cache_size/" + QByteArray::number(backPages)
+        + ",BackForwardCacheTimeToLiveControl:time_to_live_seconds/180 "
         // Las páginas con versión oscura (prefers-color-scheme) la usan con
         // los temas oscuros de Mitis (Theme.qml: todos menos «claro»). Qt
         // WebEngine no deja cambiarlo en marcha: vale desde el próximo arranque.

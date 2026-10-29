@@ -26,6 +26,12 @@ TextField {
 
     readonly property bool editing: activeFocus
 
+    // Tamaño de los controles de abajo (BottomBar.sizeScale): alto, letra,
+    // iconos y botón del sitio crecen con él
+    property real sizeScale: 1
+    readonly property int siteButtonSize: Math.round(Theme.buttonSizeSmall * sizeScale)
+    readonly property int smallIconSize: Math.round(Theme.iconSizeSmall * sizeScale)
+
     // Estado de la conexión de la página: "secure" (https), "insecure"
     // (http), "overridden" (certificado no válido aceptado) o "" (páginas
     // propias, archivos): sin botón del sitio
@@ -45,7 +51,7 @@ TextField {
     // del sitio, si lo hay)
     readonly property real compactWidth: Math.ceil(titleMetrics.advanceWidth)
                                          + 2 * (Theme.margin + Theme.spacing)
-                                         + (security !== "" ? Theme.buttonSizeSmall : 0)
+                                         + (security !== "" ? root.siteButtonSize : 0)
 
     signal navigate(url target)
     // Pulsaron el botón del sitio (candado): panel del sitio
@@ -130,8 +136,8 @@ TextField {
     }
 
 
-    implicitHeight: Theme.controlHeight
-    leftPadding: Theme.margin + Theme.iconSizeSmall + Theme.spacing
+    implicitHeight: Math.round(Theme.controlHeight * sizeScale)
+    leftPadding: Theme.margin + root.smallIconSize + Theme.spacing
     rightPadding: Theme.margin + Theme.spacing / 2
     verticalAlignment: TextInput.AlignVCenter
     color: Colors.ink
@@ -140,7 +146,7 @@ TextField {
     placeholderTextColor: Colors.inkMuted
     selectionColor: Colors.selection
     selectedTextColor: Colors.ink
-    font.pixelSize: Theme.fontSize
+    font.pixelSize: Math.round(Theme.fontSize * sizeScale)
     font.weight: Theme.fontWeightInput
     selectByMouse: true
 
@@ -153,8 +159,8 @@ TextField {
         anchors.left: parent.left
         anchors.leftMargin: Theme.spacing / 2
         anchors.verticalCenter: parent.verticalCenter
-        width: Theme.buttonSizeSmall
-        height: Theme.buttonSizeSmall
+        width: root.siteButtonSize
+        height: root.siteButtonSize
         visible: opacity > 0
         opacity: root.siteButtonShown ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: Theme.durationFast } }
@@ -168,7 +174,7 @@ TextField {
         Icon {
             anchors.centerIn: parent
             name: root.security === "secure" ? "site-secure" : "site-insecure"
-            size: Theme.iconSizeSmall
+            size: root.smallIconSize
             color: root.security === "secure" ? (siteHover.hovered ? Colors.ink : Colors.inkSoft)
                  : root.security === "insecure" ? Colors.warn : Colors.danger
         }
@@ -222,7 +228,7 @@ TextField {
                 anchors.leftMargin: Theme.margin
                 anchors.verticalCenter: parent.verticalCenter
                 name: "search"
-                size: Theme.iconSizeSmall
+                size: root.smallIconSize
                 color: Colors.brandLight1
                 opacity: root.editing ? 1 : 0
                 Behavior on opacity { NumberAnimation { duration: Theme.durationFast } }
@@ -231,7 +237,7 @@ TextField {
             // Título corto de la página: solo en reposo
             Text {
                 anchors.fill: parent
-                anchors.leftMargin: Theme.margin + Theme.spacing + (root.security !== "" ? Theme.buttonSizeSmall : 0)
+                anchors.leftMargin: Theme.margin + Theme.spacing + (root.security !== "" ? root.siteButtonSize : 0)
                 anchors.rightMargin: Theme.margin + Theme.spacing
                 text: root.shortTitle || "Buscar"
                 color: root.shortTitle ? Colors.inkStrong : Colors.inkMuted

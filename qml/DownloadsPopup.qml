@@ -115,8 +115,9 @@ Popup {
                     id: clearHover
                     cursorShape: Qt.PointingHandCursor
                 }
+                // Agarre pasivo (el de serie): con ReleaseWithinBounds la
+                // pulsación se cancelaba al momento y «Limpiar» no hacía nada
                 TapHandler {
-                    gesturePolicy: TapHandler.ReleaseWithinBounds
                     onTapped: Downloads.clearFinished()
                 }
             }

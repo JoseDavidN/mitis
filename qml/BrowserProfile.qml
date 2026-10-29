@@ -89,6 +89,29 @@ QtObject {
     }
     // qmllint enable unqualified
 
+    // Zoom de cada sitio, como Chrome: host → nivel (1 = 100 %). Lo pone
+    // BrowserTab al cambiar el zoom de una página (no en las ventanas
+    // privadas) y se quita al volver al predeterminado. Se reasigna entero
+    // para que las pestañas enlazadas se actualicen
+    property var siteZooms: JSON.parse(Settings.value("Zoom/sites", "{}"))
+    function setSiteZoom(host, level) {
+        const zooms = Object.assign({}, siteZooms)
+        if (Math.abs(level - Settings.defaultZoom) < 0.001)
+            delete zooms[host]
+        else
+            zooms[host] = level
+        siteZooms = zooms
+        Settings.setValue("Zoom/sites", JSON.stringify(zooms))
+    }
+    function forgetSiteZoom(host) {
+        if (!(host in siteZooms))
+            return
+        const zooms = Object.assign({}, siteZooms)
+        delete zooms[host]
+        siteZooms = zooms
+        Settings.setValue("Zoom/sites", JSON.stringify(zooms))
+    }
+
     // Cámara y micrófono: el motor no guarda la respuesta (para él valen solo
     // mientras dura la página) y preguntaría en cada visita. Mitis la guarda
     // aquí, como Chrome: "origen tipo" → true (permitido) o false (bloqueado).

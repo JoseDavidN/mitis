@@ -145,6 +145,20 @@ el que el ratón se para se descarga (como mucho 20 por página).
 
 Cada pestaña de Wikipedia descargada libera unos 50 MB; la que se ve sube algo (99 → 146 MB) porque deja de compartir proceso con las demás. Sin la variable no se descarga nada antes de tiempo.
 
+## Atrás y adelante al instante: caché de páginas anteriores (2026-10-29, versión 0.16.0 en desarrollo)
+
+**¿Vuelve al instante hoy?** No. Prueba con dos páginas locales (A pasa sola a B y B hace `history.back()`; A muestra `pageshow.persisted`, cuántas veces cargó y `notRestoredReasons` de la entrada de navegación): A se **recarga** entera (`persisted=false`, 2 cargas) y el motivo es `masked` (interno, sin detalle). Encender la función de Chromium (`QTWEBENGINE_CHROMIUM_FLAGS=--enable-features=BackForwardCache`) no cambia nada: Qt WebEngine decide en `WebContentsDelegateQt::IsBackForwardCacheSupported()`, que devuelve el ajuste de la vista `QWebEngineSettings::BackForwardCacheEnabled` (en QML, `settings.backForwardCacheEnabled`), **apagado de serie**. Con `settings.backForwardCacheEnabled: true` en `BrowserTab` (solo QML, sin compilar), A vuelve de la caché sin recargarse (`persisted=true`, 1 carga).
+
+**Memoria:** perfil limpio, una pestaña, `--dev` sin GPU; Wikipedia Gato y, en la misma pestaña, escritos en la dirección, Perro, Caballo, Vaca y Oveja (9 s cada uno); medida 10 s después: PSS de Mitis y todos sus procesos (`/proc/*/smaps_rollup`). Dos rondas:
+
+| | Sin la caché | Con la caché |
+|---|---|---|
+| Páginas | 344 / 350 MB | 373 / 375 MB |
+| Mitis (interfaz) | 274 / 269 MB | 285 / 293 MB |
+| Total | 618 / 620 MB | 659 / 668 MB |
+
+Unos **+45 MB** por pestaña con 4 páginas guardadas de Wikipedia (unos 10-12 MB cada una; páginas pesadas como vídeos o redes sociales costarían bastante más). Con los valores de serie de Chromium se guardan hasta 6 páginas por pestaña durante 10 min. **Implementado en la 0.16.0** con límite (Configuración → Rendimiento, `Settings.instantBackPages`: 0, 1 de serie o 3) y 3 minutos: `setupChromiumFlags()` pasa `BackForwardCacheSize:cache_size/N` y `BackForwardCacheTimeToLiveControl:time_to_live_seconds/180` (nombres de Chromium 140, `back_forward_cache_impl.cc`). Comprobado con una cadena de páginas 1 → 2 → 3 y Atrás dos veces: con 1, la 2 vuelve de la caché y la 1 se recarga; con 3, vuelven las dos. Con la memoria justa (`Main.memoryTight`) la vista deja de guardar páginas nuevas; las guardadas caducan solas.
+
 ## Repetir la medición
 
 ```bash

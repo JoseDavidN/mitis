@@ -5,6 +5,27 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ## [Sin publicar]
 
+> Ajustes por sitio, atrás al instante y tus búsquedas a mano
+
+### Añadido
+
+- El buscador de la página de nueva pestaña recuerda lo que buscaste: al pulsarlo aparecen tus búsquedas recientes y, mientras escribes, las que coinciden junto con páginas de tus marcadores y tu historial. Se eligen con el ratón o con las flechas y Intro. En la ventana privada solo aparecen al escribir.
+- Atrás al instante: al volver con Atrás a la página anterior, aparece al momento, tal como la dejaste (sin volver a cargarse y con lo que hubieras escrito). Mitis la guarda durante 3 minutos. En Configuración → Rendimiento, «Atrás y adelante al instante», puedes guardar solo la anterior (de serie), las 3 anteriores o ninguna. Si al equipo le queda poca memoria, deja de guardarlas. Como hasta ahora, al cerrar Mitis no se guarda nada de esto.
+- Ajustes por sitio, en Configuración: cada sitio con lo que Mitis recuerda de él (el zoom, los permisos que decidiste y si le permites los anuncios) en un solo sitio, para revisarlo y quitar lo que quieras. Desde el candado de la barra de búsqueda, «Ajustes del sitio» lleva directo al de la página.
+- El zoom ahora se recuerda por sitio: si agrandas una página, el sitio se verá así cada vez que vuelvas, en cualquier pestaña. Ctrl+0 lo devuelve al de siempre. En la ventana privada no se recuerda.
+- Puedes hacer más grandes los controles de abajo (atrás, adelante, la barra de búsqueda, pestañas, marcadores y opciones): en Configuración → Apariencia e idioma, «Tamaño de los controles de abajo», elige entre Normal (el de siempre), Grande o Más grande.
+
+### Cambiado
+
+- Los controles de abajo vuelven siempre al pulsar la pestaña del borde inferior. Ya no está la opción de que vuelvan solo con pasar el ratón por ella.
+
+### Corregido
+
+- Después de una descarga, el botón de descargas de abajo se quedaba para siempre. Ahora, como antes, desaparece solo unos segundos después de que terminen todas las descargas.
+- En Opciones → Descargas, el botón «Limpiar» no borraba la lista. Ya funciona.
+
+## [0.15.0] - 2026-10-28
+
 > Un reproductor más ligero
 
 ### Añadido

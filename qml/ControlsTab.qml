@@ -3,8 +3,8 @@ import Mitis.Core
 
 // Pestaña del borde inferior cuando los controles están ocultos: un relieve
 // pequeño que sale del borde, centrado, con el título de la página. Al pulsarlo,
-// los controles vuelven (`clicked`, lo atiende Main); con «Al pasar el ratón»
-// (Configuración → Apariencia, Settings.controlsReveal), también con `hovered`.
+// los controles vuelven (`clicked`, lo atiende Main). Su tamaño es siempre el
+// mismo, elijan el que elijan para los controles (Settings.controlsSize).
 Item {
     id: root
 

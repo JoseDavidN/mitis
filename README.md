@@ -62,5 +62,5 @@ Solo hay que recompilar al cambiar código C++ o `CMakeLists.txt`.
 
 ## Estado
 
-Versión 0.15.0 (beta, en desarrollo; la última publicada es la 0.14.0). Lo pendiente está en `docs/PLAN.md`; lo hecho en cada versión, en `CHANGELOG.md`. Windows y macOS usan Qt WebEngine con códecs propietarios (H.264, AAC), compilado aparte (`docs/codecs.md`).
+Versión 0.16.0 (beta, en desarrollo; la última publicada es la 0.15.0). Lo pendiente está en `docs/PLAN.md`; lo hecho en cada versión, en `CHANGELOG.md`. Windows y macOS usan Qt WebEngine con códecs propietarios (H.264, AAC), compilado aparte (`docs/codecs.md`).
 

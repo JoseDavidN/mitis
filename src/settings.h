@@ -125,9 +125,16 @@ class Settings : public QObject
     // Con la memoria del equipo justa, descargar antes las pestañas ocultas
     // (Main.relieveMemory). Encendido de serie: solo actúa cuando hace falta
     Q_PROPERTY(bool memorySaver READ memorySaver WRITE setMemorySaver NOTIFY memorySaverChanged)
-    // Cómo vuelven los controles de abajo con la pestaña del borde inferior:
-    // "click" (al pulsarla, de serie) o "hover" (al pasar el ratón)
-    Q_PROPERTY(QString controlsReveal READ controlsReveal WRITE setControlsReveal NOTIFY controlsRevealChanged)
+    // Atrás y adelante al instante: páginas anteriores que cada pestaña guarda
+    // congeladas en memoria (caché de páginas anteriores): 0 (apagado), 1 (de
+    // serie) o 3. Cuántas, el motor lo toma al arrancar (main.cpp,
+    // setupChromiumFlags): un cambio de número vale desde el siguiente arranque
+    // (instantBackPending); apagarla y encenderla, al momento (BrowserTab)
+    Q_PROPERTY(int instantBackPages READ instantBackPages WRITE setInstantBackPages NOTIFY instantBackPagesChanged)
+    Q_PROPERTY(bool instantBackPending READ instantBackPending NOTIFY instantBackPagesChanged)
+    // Tamaño de los controles de abajo (botones y campo de dirección):
+    // "normal" (de serie), "large" o "larger" (Theme.controlsScales)
+    Q_PROPERTY(QString controlsSize READ controlsSize WRITE setControlsSize NOTIFY controlsSizeChanged)
 
 public:
     explicit Settings(QObject *parent = nullptr);
@@ -212,8 +219,14 @@ public:
     void setCacheSize(int value);
     bool memorySaver() const;
     void setMemorySaver(bool value);
-    QString controlsReveal() const;
-    void setControlsReveal(const QString &value);
+    int instantBackPages() const;
+    void setInstantBackPages(int value);
+    bool instantBackPending() const;
+    // Lo que se le pasó al motor al arrancar (lo llama main.cpp)
+    static int instantBackPagesSaved();
+    static void setInstantBackStarted(int pages);
+    QString controlsSize() const;
+    void setControlsSize(const QString &value);
     QString secureDns() const;
     void setSecureDns(const QString &value);
     QString secureDnsProvider() const;
@@ -275,7 +288,8 @@ signals:
     void suspendAfterChanged();
     void cacheSizeChanged();
     void memorySaverChanged();
-    void controlsRevealChanged();
+    void instantBackPagesChanged();
+    void controlsSizeChanged();
     void secureDnsChanged();
     void secureDnsProviderChanged();
     void secureDnsPendingChanged();

@@ -213,6 +213,9 @@ QtObject {
     // Ventana la primera vez (sin tamaño guardado): esta parte de la pantalla
     readonly property real windowDefaultRatio: 0.75
     readonly property int bottomBarMaxWidth: 1100
+    // Tamaño de los controles de abajo (Settings.controlsSize): cuánto crecen
+    // botones, iconos, campo de dirección y su letra. Su pestaña no cambia
+    readonly property var controlsScales: ({ normal: 1, large: 1.15, larger: 1.3 })
     readonly property int floatingMargin: 10
     readonly property int buttonSize: 32
     readonly property int titleButtonSize: 24
@@ -439,6 +442,8 @@ QtObject {
     readonly property int downloadRowHeight: 52
     // Fila de una página (marcadores, historial): título y detalle
     readonly property int pageRowHeight: 48
+    // Ajustes por sitio (Configuración): sitios a la vista antes de «Mostrar todos»
+    readonly property int settingsSitesPage: 8
     // Pantalla completa (F11): franja del borde inferior que muestra los controles
     readonly property int fullscreenRevealEdge: 4
     // Barra de título que se oculta sola: con la ventana sin maximizar, la

@@ -42,6 +42,7 @@ FocusScope {
         { key: "blocker", title: "Anuncios y rastreadores", icon: "blocker" },
         { key: "security", title: "Seguridad", icon: "security" },
         { key: "permissions", title: "Permisos de sitios", icon: "permissions" },
+        { key: "sites", title: "Ajustes por sitio", icon: "sites" },
         { key: "content", title: "Contenido", icon: "open-image" },
         { key: "history", title: "Borrar datos", icon: "history" },
         { key: "downloads", title: "Descargas", icon: "downloads" },
@@ -61,9 +62,14 @@ FocusScope {
         { value: 15, label: "15 min" }, { value: 30, label: "30 min" }, { value: 60, label: "1 hora" },
         { value: 120, label: "2 horas" }, { value: 0, label: "Nunca" }
     ]
-    // Cómo vuelven los controles de abajo con la pestaña del borde inferior
-    readonly property var controlsRevealOptions: [
-        { value: "click", label: "Al pulsar su pestaña" }, { value: "hover", label: "Al pasar el ratón" }
+    // Tamaño de los controles de abajo (factores en Theme.controlsScales)
+    readonly property var controlsSizeOptions: [
+        { value: "normal", label: "Normal" }, { value: "large", label: "Grande" },
+        { value: "larger", label: "Más grande" }
+    ]
+    // Páginas anteriores que guarda cada pestaña para volver al instante
+    readonly property var instantBackOptions: [
+        { value: 0, label: "No" }, { value: 1, label: "La anterior" }, { value: 3, label: "Las 3 anteriores" }
     ]
     // Espacio para la caché de las páginas, en MB (0 = automático)
     readonly property var cacheSizeOptions: [
@@ -119,11 +125,65 @@ FocusScope {
 
     // Permisos guardados por sitio: se leen al abrir y tras olvidar uno
     property var sitePermissions: []
-    // Listas largas, plegadas: se despliegan con su fila
-    property bool allowedSitesOpen: false
-    property bool sitePermissionsOpen: false
     function refreshSitePermissions() {
         sitePermissions = BrowserProfile.sitePermissions()
+    }
+
+    // ── Ajustes por sitio ────────────────────────────────────────────
+    // Cada sitio (el de BrowserProfile.siteOf: «a.com» para www.a.com y
+    // blog.a.com) con lo que tiene propio, en filas: zoom (por host),
+    // permisos guardados (por origen) y anuncios permitidos en el bloqueador.
+    // [{ site, items: [{ type, icon, title, detail, warn, host, origin, kind }] }]
+    readonly property var siteSettings: {
+        const groups = {}
+        const group = site => groups[site] ?? (groups[site] = { site: site, items: [] })
+        const hostOf = address => address.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").replace(/\/$/, "")
+        const zooms = BrowserProfile.siteZooms
+        for (const host in zooms) {
+            const site = BrowserProfile.siteOf("https://" + host) || host
+            group(site).items.push({ type: "zoom", icon: "search", host: host,
+                                     title: host === site ? "Zoom" : "Zoom en " + host,
+                                     detail: Math.round(zooms[host] * 100) + " %", warn: false })
+        }
+        for (const permission of sitePermissions) {
+            const host = hostOf(permission.origin)
+            const site = BrowserProfile.siteOf(permission.origin) || host
+            const info = permissionInfo(permission.kind)
+            group(site).items.push({ type: "permission", icon: info.icon, origin: permission.origin,
+                                     kind: permission.kind,
+                                     title: host === site ? info.title : info.title + " en " + host,
+                                     detail: permission.allowed ? "Permitido" : "Bloqueado",
+                                     warn: !permission.allowed })
+        }
+        for (const site of Settings.adBlockAllowedSites)
+            group(site).items.push({ type: "ads", icon: "blocker", title: "Anuncios y rastreadores",
+                                     detail: "Permitidos: el bloqueador no actúa", warn: true })
+        return Object.keys(groups).sort().map(site => groups[site])
+    }
+    // Sitio desplegado ("" = ninguno) y cuántos se ven (la lista puede ser larga)
+    property string openSite: ""
+    property int sitesShown: Theme.settingsSitesPage
+    // Resumen de un sitio: «Zoom 125 % · Ubicación · Anuncios permitidos»
+    function siteSummary(group) {
+        return group.items.map(item => item.type === "zoom" ? item.title + " " + item.detail
+                                     : item.type === "ads" ? "Anuncios permitidos"
+                                     : item.title + " " + item.detail.toLowerCase()).join(" · ")
+    }
+    function forgetSiteItem(item) {
+        if (item.type === "zoom") {
+            BrowserProfile.forgetSiteZoom(item.host)
+        } else if (item.type === "permission") {
+            BrowserProfile.forgetSitePermission(item.origin, item.kind)
+            refreshSitePermissions()
+        } else {
+            Settings.adBlockAllowedSites = Settings.adBlockAllowedSites.filter(site => site !== item.site)
+        }
+    }
+    function forgetSite(group) {
+        for (const item of group.items)
+            forgetSiteItem(Object.assign({ site: group.site }, item))
+        if (openSite === group.site)
+            openSite = ""
     }
 
     // Bloqueador: sitio de la pestaña activa (para «Permitir en…») y estado de las listas
@@ -276,6 +336,7 @@ FocusScope {
         case "blocker": return blockerSection
         case "security": return securitySection
         case "permissions": return permissionsSection
+        case "sites": return sitesSection
         case "content": return contentSection
         case "history": return historySection
         case "downloads": return downloadsSection
@@ -293,6 +354,11 @@ FocusScope {
     // cambie de un fotograma al siguiente (durante el fundido de entrada se
     // pintan varios). Desde entonces se va directamente
     function showSection(key) {
+        // Desde el panel del sitio: el de la pestaña activa, desplegado
+        if (key === "sites" && siteSettings.some(group => group.site === currentSite)) {
+            openSite = currentSite
+            sitesShown = Math.max(sitesShown, siteSettings.findIndex(group => group.site === currentSite) + 1)
+        }
         if (root._laidOut)
             root.scrollTo(key)
         else
@@ -854,11 +920,11 @@ FocusScope {
                     }
                 }
                 ChoiceRow {
-                    title: "Mostrar los controles de abajo"
-                    description: "Los controles (atrás, adelante, la barra de búsqueda…) se esconden solos mientras navegas y vuelven con la pestaña del borde inferior."
-                    options: root.controlsRevealOptions
-                    isSelected: value => Settings.controlsReveal === value
-                    onChosen: value => Settings.controlsReveal = value
+                    title: "Tamaño de los controles de abajo"
+                    description: "Los botones y la barra de búsqueda de abajo (atrás, adelante, pestañas, marcadores, opciones…)."
+                    options: root.controlsSizeOptions
+                    isSelected: value => Settings.controlsSize === value
+                    onChosen: value => Settings.controlsSize = value
                 }
             }
 
@@ -1101,19 +1167,18 @@ FocusScope {
                         onClicked: root.allowAdsOn(root.currentSite)
                     }
                 }
-                ExpandRow {
+                SettingRow {
                     visible: Settings.adBlockAllowedSites.length > 0
                     title: "Sitios permitidos"
-                    description: Settings.adBlockAllowedSites.length === 1
-                                 ? "1 sitio: en él no se bloquea nada"
-                                 : Settings.adBlockAllowedSites.length + " sitios: en ellos no se bloquea nada"
-                    expanded: root.allowedSitesOpen
-                    onToggled: root.allowedSitesOpen = !root.allowedSitesOpen
-                }
-                Repeater {
-                    model: root.allowedSitesOpen ? Settings.adBlockAllowedSites : []
+                    description: (Settings.adBlockAllowedSites.length === 1
+                                  ? "1 sitio: en él no se bloquea nada."
+                                  : Settings.adBlockAllowedSites.length + " sitios: en ellos no se bloquea nada.")
+                                 + " Se revisan y se quitan en Ajustes por sitio."
 
-                    delegate: AllowedSiteRow {}
+                    TextButton {
+                        text: "Ver"
+                        onClicked: root.scrollTo("sites")
+                    }
                 }
             }
 
@@ -1186,20 +1251,81 @@ FocusScope {
                     }
                 }
 
-                // Lo decidido para cada sitio, plegado
-                ExpandRow {
+                // Lo decidido para cada sitio está en Ajustes por sitio
+                SettingRow {
                     title: "Sitios con permisos guardados"
-                    description: root.sitePermissions.length === 0 ? "Ningún sitio tiene permisos guardados."
-                               : root.sitePermissions.length === 1 ? "1 permiso decidido para un sitio"
-                               : root.sitePermissions.length + " permisos decididos para sitios concretos"
-                    expandable: root.sitePermissions.length > 0
-                    expanded: root.sitePermissionsOpen && expandable
-                    onToggled: root.sitePermissionsOpen = !root.sitePermissionsOpen
+                    description: (root.sitePermissions.length === 0 ? "Ningún sitio tiene permisos guardados."
+                                : root.sitePermissions.length === 1 ? "1 permiso decidido para un sitio."
+                                : root.sitePermissions.length + " permisos decididos para sitios concretos.")
+                                 + (root.sitePermissions.length > 0 ? " Se revisan y se quitan en Ajustes por sitio." : "")
+
+                    TextButton {
+                        visible: root.sitePermissions.length > 0
+                        text: "Ver"
+                        onClicked: root.scrollTo("sites")
+                    }
+                }
+            }
+
+            // Lo propio de cada sitio, junto: zoom, permisos y bloqueador
+            SettingsSection {
+                id: sitesSection
+                title: "Ajustes por sitio"
+                icon: "sites"
+                description: "Lo que Mitis recuerda de cada sitio: el zoom que le pusiste, los permisos que decidiste y si le permites los anuncios. Despliega un sitio para quitar algo; volverá a lo de siempre."
+
+                SettingRow {
+                    visible: root.siteSettings.length === 0
+                    divider: false
+                    title: "Ningún sitio tiene ajustes propios"
+                    description: "Aparecerán aquí al cambiar el zoom de una página, responder a un permiso o permitir los anuncios en un sitio."
                 }
                 Repeater {
-                    model: root.sitePermissionsOpen ? root.sitePermissions : []
+                    model: root.siteSettings.slice(0, root.sitesShown)
 
-                    delegate: SitePermissionRow {}
+                    delegate: Column {
+                        id: siteGroup
+
+                        required property var modelData
+                        required property int index
+                        readonly property bool open: root.openSite === modelData.site
+
+                        width: parent ? parent.width : 0
+
+                        ExpandRow {
+                            title: siteGroup.modelData.site
+                            description: root.siteSummary(siteGroup.modelData)
+                            expanded: siteGroup.open
+                            onToggled: root.openSite = siteGroup.open ? "" : siteGroup.modelData.site
+                        }
+                        Repeater {
+                            model: siteGroup.open ? siteGroup.modelData.items : []
+
+                            delegate: SiteItemRow {
+                                site: siteGroup.modelData.site
+                            }
+                        }
+                        SettingRow {
+                            visible: siteGroup.open && siteGroup.modelData.items.length > 1
+                            title: "Todo lo de " + siteGroup.modelData.site
+                            description: "Quita su zoom, sus permisos y los anuncios permitidos."
+
+                            TextButton {
+                                text: "Quitar todo"
+                                danger: true
+                                onClicked: root.forgetSite(siteGroup.modelData)
+                            }
+                        }
+                    }
+                }
+                SettingRow {
+                    visible: root.siteSettings.length > root.sitesShown
+                    title: "Hay " + (root.siteSettings.length - root.sitesShown) + " sitios más"
+
+                    TextButton {
+                        text: "Mostrar todos"
+                        onClicked: root.sitesShown = root.siteSettings.length
+                    }
                 }
             }
 
@@ -1417,6 +1543,20 @@ FocusScope {
                         checked: Settings.memorySaver
                         onToggled: Settings.memorySaver = checked
                     }
+                }
+                ChoiceRow {
+                    title: "Atrás y adelante al instante"
+                    description: "Al salir de una página, Mitis la guarda tal como estaba durante 3 minutos: si vuelves con Atrás, aparece al momento, sin volver a cargarse y con lo que hubieras escrito. Cada página guardada usa algo de memoria (unos 10 MB una página sencilla). Si al equipo le queda poca memoria, deja de guardarlas."
+                    options: root.instantBackOptions
+                    isSelected: value => Settings.instantBackPages === value
+                    onChosen: value => Settings.instantBackPages = value
+                }
+                // Cuántas guarda, el motor lo toma al arrancar
+                SettingRow {
+                    visible: Settings.instantBackPending
+                    icon: "reload"
+                    title: "Se aplicará al volver a abrir Mitis"
+                    description: "Cuántas páginas se guardan se elige al arrancar. Cierra Mitis y ábrelo de nuevo para usar el cambio."
                 }
                 SettingRow {
                     title: "Precargar páginas"
@@ -2189,12 +2329,13 @@ FocusScope {
         }
     }
 
-    // Un permiso decidido para un sitio: sitio, permiso y respuesta; olvidar
-    component SitePermissionRow: Item {
-        id: site
+    // Un ajuste de un sitio (Ajustes por sitio): icono, qué es y cómo está;
+    // la ✕, al pasar por encima, lo quita
+    component SiteItemRow: Item {
+        id: siteItem
 
         required property var modelData
-        readonly property var info: root.permissionInfo(modelData.kind)
+        property string site: ""
 
         width: parent ? parent.width : 0
         height: Theme.pageRowHeight
@@ -2204,29 +2345,29 @@ FocusScope {
             anchors.leftMargin: Theme.spacing / 2
             anchors.rightMargin: Theme.spacing / 2
             radius: Theme.radiusSmall
-            color: siteHover.hovered ? Colors.tintHover : "transparent"
+            color: siteItemHover.hovered ? Colors.tintHover : "transparent"
             Behavior on color { ColorAnimation { duration: Theme.durationFast } }
         }
 
         Icon {
-            id: siteIcon
+            id: siteItemIcon
             anchors.left: parent.left
             anchors.leftMargin: Theme.margin + Theme.spacing
             anchors.verticalCenter: parent.verticalCenter
-            name: site.info.icon
+            name: siteItem.modelData.icon
             color: Colors.inkSoft
         }
 
         Column {
-            anchors.left: siteIcon.right
+            anchors.left: siteItemIcon.right
             anchors.leftMargin: Theme.margin
-            anchors.right: forget.left
+            anchors.right: siteItemForget.left
             anchors.rightMargin: Theme.margin
             anchors.verticalCenter: parent.verticalCenter
 
             Text {
                 width: parent.width
-                text: site.modelData.origin.replace(/^https?:\/\//, "").replace(/\/$/, "")
+                text: siteItem.modelData.title
                 color: Colors.ink
                 font.pixelSize: Theme.fontSize
                 font.weight: Font.DemiBold
@@ -2234,15 +2375,15 @@ FocusScope {
             }
             Text {
                 width: parent.width
-                text: site.info.title + " · " + (site.modelData.allowed ? "Permitido" : "Bloqueado")
-                color: site.modelData.allowed ? Colors.inkMuted : Colors.warn
+                text: siteItem.modelData.detail
+                color: siteItem.modelData.warn ? Colors.warn : Colors.inkMuted
                 font.pixelSize: Theme.fontSizeSmall
                 elide: Text.ElideRight
             }
         }
 
         IconButton {
-            id: forget
+            id: siteItemForget
             anchors.right: parent.right
             anchors.rightMargin: Theme.margin
             anchors.verticalCenter: parent.verticalCenter
@@ -2251,16 +2392,15 @@ FocusScope {
             flat: true
             icon: "close"
             iconSize: Theme.iconSizeSmall
-            tooltip: "Olvidar: el sitio volverá a preguntar"
-            opacity: siteHover.hovered ? 1 : 0
-            onClicked: {
-                BrowserProfile.forgetSitePermission(site.modelData.origin, site.modelData.kind)
-                root.refreshSitePermissions()
-            }
+            tooltip: siteItem.modelData.type === "zoom" ? "Quitar: volverá al zoom predeterminado"
+                   : siteItem.modelData.type === "ads" ? "Volver a bloquear"
+                   : "Olvidar: el sitio volverá a preguntar"
+            opacity: siteItemHover.hovered ? 1 : 0
+            onClicked: root.forgetSiteItem(Object.assign({ site: siteItem.site }, siteItem.modelData))
         }
 
         HoverHandler {
-            id: siteHover
+            id: siteItemHover
         }
     }
 
@@ -2526,77 +2666,6 @@ FocusScope {
         }
         TapHandler {
             onTapped: Settings.theme = tile.modelData.key
-        }
-    }
-
-    // Sitio con el bloqueador desactivado; la ✕ lo vuelve a activar
-    component AllowedSiteRow: Item {
-        id: allowed
-
-        required property string modelData
-
-        width: parent ? parent.width : 0
-        height: Theme.pageRowHeight
-
-        Rectangle {
-            anchors.fill: parent
-            anchors.leftMargin: Theme.spacing / 2
-            anchors.rightMargin: Theme.spacing / 2
-            radius: Theme.radiusSmall
-            color: allowedHover.hovered ? Colors.tintHover : "transparent"
-            Behavior on color { ColorAnimation { duration: Theme.durationFast } }
-        }
-
-        Icon {
-            id: allowedIcon
-            anchors.left: parent.left
-            anchors.leftMargin: Theme.margin + Theme.spacing
-            anchors.verticalCenter: parent.verticalCenter
-            name: "blocker"
-            color: Colors.inkSoft
-        }
-
-        Column {
-            anchors.left: allowedIcon.right
-            anchors.leftMargin: Theme.margin
-            anchors.right: unblock.left
-            anchors.rightMargin: Theme.margin
-            anchors.verticalCenter: parent.verticalCenter
-
-            Text {
-                width: parent.width
-                text: allowed.modelData
-                color: Colors.ink
-                font.pixelSize: Theme.fontSize
-                font.weight: Font.DemiBold
-                elide: Text.ElideRight
-            }
-            Text {
-                width: parent.width
-                text: "Anuncios y rastreadores permitidos"
-                color: Colors.warn
-                font.pixelSize: Theme.fontSizeSmall
-                elide: Text.ElideRight
-            }
-        }
-
-        IconButton {
-            id: unblock
-            anchors.right: parent.right
-            anchors.rightMargin: Theme.margin
-            anchors.verticalCenter: parent.verticalCenter
-            width: Theme.buttonSizeSmall
-            height: Theme.buttonSizeSmall
-            flat: true
-            icon: "close"
-            iconSize: Theme.iconSizeSmall
-            tooltip: "Volver a bloquear"
-            opacity: allowedHover.hovered ? 1 : 0
-            onClicked: Settings.adBlockAllowedSites = Settings.adBlockAllowedSites.filter(site => site !== allowed.modelData)
-        }
-
-        HoverHandler {
-            id: allowedHover
         }
     }
 

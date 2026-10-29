@@ -63,16 +63,11 @@ Mejoras propuestas tras revisar el código; se irán eligiendo. Al elegir una, p
 - [ ] **Vidrio experimental más barato:** cada `Glass` redibuja lo de detrás en cada
   fotograma (`live: true`). Si se queda, actualizarlo solo cuando cambie la página o el
   control se mueva; si no, gasta GPU y batería en portátiles.
-- [ ] **Atrás y adelante al instante:** medir si al volver la página se recarga o sale de
-  la caché de páginas anteriores (*back-forward cache*) y, si se recarga, ver si Qt
-  WebEngine permite activarla.
 
 ### Funciones
 
 - [ ] **Importar desde Chrome y Firefox** marcadores e historial (sus archivos SQLite y
   JSON en la carpeta del perfil de cada uno).
-- [ ] **Ajustes por sitio** en Configuración: el zoom, los permisos y los sitios
-  permitidos en el bloqueador, en una lista para revisarlos y quitarlos.
 
 ### Ajustes
 

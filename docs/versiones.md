@@ -30,10 +30,11 @@ Historial con este esquema (ver [CHANGELOG.md](../CHANGELOG.md)):
 | 0.12.0 | Precargar páginas, paneles creados al abrirlos, relieve redondo del gesto, corrige la caída al cambiar opciones de impresión | `be19b71` |
 | 0.13.0 | Ventana privada negro mate con privacidad siempre activa y sin Configuración, DNS cifrado (automático de serie), lista de atajos de teclado | `eec1a98` |
 | 0.14.0 | Reproductor en el borde derecho con carátula y barra de progreso, controles inferiores al pulsar su pestaña, tope de la caché, liberar memoria con el equipo justo, «Ir a la pestaña», icono de pestañas | `adf02d1` |
+| 0.15.0 | Reproductor compacto con el tiempo y pestaña con los colores de la marca, opción para mostrar los controles de abajo al pasar el ratón, corrige el reproductor en Apple Music | `71248ec` |
 
 Las fases 0–2 van juntas en 0.2.0 porque entraron en un solo commit. Esas versiones no tienen etiqueta ni release: son anteriores al workflow de publicación. Si se quieren marcar, basta con etiquetas ligeras (`git tag v0.4.0 d6cfa89`); al subirlas no se publica nada porque esos commits no tienen `.github/workflows/`.
 
-**Versión actual: 0.15.0-beta** (en desarrollo, en la rama `ajustes`; la 0.14.0 ya tiene commit y se da por publicada). Trae una opción nueva (cómo vuelven los controles de abajo) y aligera el reproductor (sin barra de progreso, pestaña con la marca, corregido en Apple Music): sube MENOR. Se publica al subir la etiqueta `v0.15.0`.
+**Versión actual: 0.16.0-beta** (en desarrollo, en la rama `ajustes`; la 0.15.0 ya tiene commit y se da por publicada). Trae ajustes por sitio (con el zoom recordado por sitio), atrás al instante, búsquedas recientes en el buscador de la nueva pestaña y una opción nueva (tamaño de los controles de abajo, en lugar de elegir cómo vuelven) y corrige el botón de descargas, que no desaparecía tras una descarga, y «Limpiar» del listado de descargas: sube MENOR. Se publica al subir la etiqueta `v0.16.0`.
 
 **Regla:** una versión con commit ya está desplegada. Lo siguiente que se haga va en una versión nueva, subida según lo que traiga (MENOR con funciones nuevas, PARCHE con solo correcciones), y su sección del CHANGELOG se escribe en lenguaje claro para quien no sabe de tecnología: es lo que se ve en la pestaña de novedades.
 
