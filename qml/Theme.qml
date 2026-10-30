@@ -408,6 +408,16 @@ QtObject {
     readonly property int mediaTabLength: 128
     readonly property real mediaTabCurve: 0.26
     readonly property real mediaTabOvershoot: 1.6
+    // Esenciales: como mucho 4 (Ctrl+1…4); su pestaña del borde izquierdo
+    // (EssentialsTab) tiene la forma y las medidas de la del reproductor.
+    // Botones del panel (EssentialsPopup): rectángulos redondeados con el
+    // icono de la página
+    readonly property int essentialsMax: 4
+    readonly property int essentialButtonWidth: 52
+    readonly property int essentialButtonHeight: 40
+    // ✕ de quitar, en la esquina del botón
+    readonly property int essentialRemoveSize: 18
+    readonly property int essentialRemoveIconSize: 10
     readonly property int mediaPlayerWidth: 272
     readonly property int mediaThumbSize: 44
     readonly property int mediaButtonSize: 30

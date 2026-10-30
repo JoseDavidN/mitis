@@ -191,7 +191,7 @@ Window {
             return
         releaseNotes = notes
         tabs.append({ initialUrl: "", url: "", title: "Novedades de Mitis", icon: "qrc:/branding/mitis.png",
-                      audible: false, muted: false, microphone: 0, camera: 0, pinned: false, lifecycle: "active",
+                      audible: false, muted: false, microphone: 0, camera: 0, pinned: false, essential: false, lifecycle: "active",
                       deferred: false, special: "notes" })
         currentIndex = tabs.count - 1
     }
@@ -281,7 +281,7 @@ Window {
     }
 
     // ── Sesión ───────────────────────────────────────────────────────
-    // Las pestañas (dirección, título, icono, fijada) y la activa, en
+    // Las pestañas (dirección, título, icono, fijada o esencial) y la activa, en
     // Settings ("Session/tabs"). Se guarda un momento después de cada cambio
     // y al cerrar. Al abrir, solo carga la activa: las demás esperan a que se
     // seleccionen (BrowserTab.deferred) y no gastan un proceso del motor.
@@ -353,7 +353,8 @@ Window {
                 continue
             if (i <= currentIndex)
                 current = list.length
-            list.push({ url: tab.url, title: tab.title, icon: sessionIcon(tab.icon, tab.url), pinned: tab.pinned })
+            list.push({ url: tab.url, title: tab.title, icon: sessionIcon(tab.icon, tab.url), pinned: tab.pinned,
+                        essential: tab.essential })
         }
         Settings.setValue("Session/tabs", JSON.stringify({ current: current, tabs: list }))
     }
@@ -374,11 +375,16 @@ Window {
         for (let i = 0; i < saved.tabs.length; i++) {
             const tab = saved.tabs[i]
             const url = typeof tab.url === "string" ? tab.url : ""
-            const pinned = tab.pinned === true
+            // Se guardan en orden (esenciales, fijadas, el resto): una que
+            // no siga ese orden pasa a normal
+            const essential = tab.essential === true && i === essentialCount && essentialCount < Theme.essentialsMax
+            const pinned = !essential && tab.pinned === true && i === essentialCount + pinnedCount
             tabs.append({ initialUrl: url, url: url, title: tab.title ?? "", icon: sessionIcon(tab.icon, url),
-                          audible: false, muted: false, microphone: 0, camera: 0, pinned: pinned, lifecycle: "active",
-                          deferred: (deferAll === true || i !== currentIndex) && url !== "", special: "" })
-            if (pinned)
+                          audible: false, muted: false, microphone: 0, camera: 0, pinned: pinned, essential: essential,
+                          lifecycle: "active", deferred: (deferAll === true || i !== currentIndex) && url !== "", special: "" })
+            if (essential)
+                essentialCount++
+            else if (pinned)
                 pinnedCount++
         }
         if (showingNewTabPage)
@@ -411,15 +417,20 @@ Window {
     // ── Suspensión de pestañas ───────────────────────────────────────
     // Para ahorrar memoria, las pestañas que no se ven se congelan a los
     // cinco minutos y se descargan a los de Configuración → Rendimiento
-    // (BrowserTab.suspend() pone el resto de excepciones). Nunca las fijadas
-    // ni la del reproductor (sus botones dejarían de responder).
+    // (BrowserTab.suspend() pone el resto de excepciones). Nunca las fijadas,
+    // las esenciales ni la del reproductor (sus botones dejarían de responder).
     readonly property int freezeAfter: 5 * 60 * 1000
+    // Fijada o esencial: no se suspende
+    function kept(index) {
+        const tab = tabs.get(index)
+        return tab.pinned || tab.essential
+    }
     function suspendIdleTabs() {
         const discardAfter = Settings.suspendAfter * 60 * 1000
         const now = Date.now()
         for (let i = 0; i < tabs.count; i++) {
             const tab = views.itemAt(i) as BrowserTab
-            if (!tab || tab.hiddenSince === 0 || tabs.get(i).pinned || tab === mediaView)
+            if (!tab || tab.hiddenSince === 0 || kept(i) || tab === mediaView)
                 continue
             const hidden = now - tab.hiddenSince
             if (hidden >= discardAfter)
@@ -462,7 +473,7 @@ Window {
         let oldest = null
         for (let i = 0; i < tabs.count; i++) {
             const tab = views.itemAt(i) as BrowserTab
-            if (!tab || tab.hiddenSince === 0 || tabs.get(i).pinned || tab === mediaView
+            if (!tab || tab.hiddenSince === 0 || kept(i) || tab === mediaView
                     || tab.lifecycle === "discarded" || tab.deferred
                     || _memoryTried.some(tried => tried.tab === tab && tried.lifecycle === tab.lifecycle))
                 continue
@@ -511,7 +522,9 @@ Window {
             const tab = views.itemAt(i) as BrowserTab
             const process = byPid[tab.renderProcessPid]
             let detail = i === currentIndex ? "En pantalla" : tab.deferred ? "Sin cargar" : states[tab.lifecycle]
-            if (tabs.get(i).pinned)
+            if (tabs.get(i).essential)
+                detail = "Esencial · " + detail
+            else if (tabs.get(i).pinned)
                 detail = "Fijada · " + detail
             if (process && sharing[process.pid] > 1)
                 detail += " · proceso compartido con " + (sharing[process.pid] - 1)
@@ -568,14 +581,14 @@ Window {
 
     // `position` es opcional: sin ella, la pestaña va al final
     function newTab(target, activate, position) {
-        // Una pestaña nueva nunca entra en el grupo de fijadas
-        const at = Math.max(position === undefined ? tabs.count : position, pinnedCount)
+        // Una pestaña nueva nunca entra en los grupos de esenciales ni de fijadas
+        const at = Math.max(position === undefined ? tabs.count : position, essentialCount + pinnedCount)
         // Lo que se abra se ve: la Configuración se cierra
         if (activate !== false)
             closeSettings()
         const address = target ? target.toString() : ""
         tabs.insert(at, { initialUrl: address, url: address, title: "", icon: "",
-                          audible: false, muted: false, microphone: 0, camera: 0, pinned: false, lifecycle: "active",
+                          audible: false, muted: false, microphone: 0, camera: 0, pinned: false, essential: false, lifecycle: "active",
                           deferred: false, special: "" })
         if (activate !== false)
             currentIndex = at
@@ -745,9 +758,10 @@ Window {
             openDevTools(tab)
     }
 
-    // Las fijadas no se cierran (ni con Ctrl+W ni desde la página): hay que desfijarlas antes
+    // Las fijadas y las esenciales no se cierran (ni con Ctrl+W ni desde la
+    // página): hay que desfijarlas o quitarlas de esenciales antes
     function closeTab(index) {
-        if (tabs.get(index).pinned)
+        if (kept(index))
             return
         if (tabs.count <= 1) {
             win.close()
@@ -952,21 +966,29 @@ Window {
         currentView.navigate(url)
     }
 
-    // Las fijadas son siempre las primeras `pinnedCount` filas del modelo,
-    // en el orden en que se fijaron. Solo lo cambia setTabPinned().
+    // Grupos del modelo, en este orden: las esenciales (las primeras
+    // `essentialCount` filas; no salen en la lista de pestañas, sino en su
+    // panel del borde izquierdo), las fijadas (las `pinnedCount` siguientes)
+    // y el resto. Dentro de cada grupo, en el orden en que entraron. Solo los
+    // cambian setTabEssential() y setTabPinned().
+    property int essentialCount: 0
     property int pinnedCount: 0
 
     // Mueve una pestaña sin recrear su página (el Repeater reordena las vistas)
     // y mantiene seleccionada la misma. `to` se limita al grupo de la pestaña:
-    // una fijada no sale de las fijadas ni una normal entra en ellas.
-    // Devuelve la posición final.
+    // ninguna sale del suyo ni entra en otro. Devuelve la posición final.
     function moveTab(from, to) {
-        const pinned = tabs.get(from).pinned
-        const first = pinned ? 0 : pinnedCount
-        const last = pinned ? pinnedCount - 1 : tabs.count - 1
+        const tab = tabs.get(from)
+        const first = tab.essential ? 0 : tab.pinned ? essentialCount : essentialCount + pinnedCount
+        const last = tab.essential ? essentialCount - 1 : tab.pinned ? essentialCount + pinnedCount - 1 : tabs.count - 1
         to = Math.max(first, Math.min(to, last))
+        moveRow(from, to)
+        return to
+    }
+    // El movimiento, sin límites de grupo
+    function moveRow(from, to) {
         if (to === from)
-            return to
+            return
 
         let current = currentIndex
         if (current === from)
@@ -977,17 +999,59 @@ Window {
             current++
         tabs.move(from, to, 1)
         currentIndex = current
-        return to
     }
 
     // Fijar: al final del grupo de fijadas. Desfijar: al principio de las demás.
     function setTabPinned(index, pinned) {
-        if (tabs.get(index).pinned === pinned)
+        const tab = tabs.get(index)
+        if (tab.pinned === pinned || tab.essential)
             return
-        const to = moveTab(index, pinned ? pinnedCount : pinnedCount - 1)
+        const to = moveTab(index, pinned ? essentialCount + pinnedCount : essentialCount + pinnedCount - 1)
         tabs.setProperty(to, "pinned", pinned)
         pinnedCount += pinned ? 1 : -1
     }
+
+    // Esenciales: como mucho Theme.essentialsMax. Al marcarla sale de la
+    // lista de pestañas (y de las fijadas) y va al final de las esenciales;
+    // al quitarla, vuelve al principio de las normales
+    readonly property bool essentialsFull: essentialCount >= Theme.essentialsMax
+    function setTabEssential(index, essential) {
+        const tab = tabs.get(index)
+        if (tab.essential === essential || tab.special !== "" || (essential && essentialsFull))
+            return
+        if (essential) {
+            moveRow(index, essentialCount)
+            if (tabs.get(essentialCount).pinned) {
+                tabs.setProperty(essentialCount, "pinned", false)
+                pinnedCount--
+            }
+            tabs.setProperty(essentialCount, "essential", true)
+            essentialCount++
+        } else {
+            moveRow(index, essentialCount - 1)
+            tabs.setProperty(essentialCount - 1, "essential", false)
+            essentialCount--
+            moveRow(essentialCount, essentialCount + pinnedCount)
+        }
+    }
+    // Ctrl+1…4: la esencial `n` (desde 0), si la hay
+    function selectEssential(n) {
+        if (n < essentialCount)
+            selectTab(n)
+    }
+    // Ctrl+Tab y Ctrl+Mayús+Tab: recorren la lista de pestañas (sin las
+    // esenciales); desde una esencial, a la primera o la última de la lista
+    function stepTab(step) {
+        const first = essentialCount
+        const count = tabs.count - first
+        if (count <= 0)
+            return
+        if (currentIndex < first)
+            selectTab(step > 0 ? first : tabs.count - 1)
+        else
+            selectTab(first + ((currentIndex - first + step) % count + count) % count)
+    }
+    readonly property bool currentEssential: currentIndex < essentialCount
 
     // ── Pantalla completa ────────────────────────────────────────────
     // Dos modos independientes: la de página (un vídeo la pide; la página
@@ -1156,7 +1220,7 @@ Window {
         onTriggered: win.pollMedia()
     }
 
-    // Roles: initialUrl (solo al crear), url, title, icon, audible, muted, microphone, camera, pinned,
+    // Roles: initialUrl (solo al crear), url, title, icon, audible, muted, microphone, camera, pinned, essential,
     // lifecycle ("active", "frozen" o "discarded": BrowserTab.lifecycle)
     ListModel {
         id: tabs
@@ -1233,7 +1297,7 @@ Window {
         canGoForward: win.currentView ? win.currentView.canGoForward : false
         loading: win.currentView ? win.currentView.loading : false
         loadProgress: win.currentView ? win.currentView.loadProgress : 0
-        tabCount: tabs.count
+        tabCount: tabs.count - win.essentialCount
         bookmarked: win.currentView !== null && Bookmarks.urls.indexOf(win.currentView.url.toString()) >= 0
         downloadsShown: downloadPanel.active
         updateAvailable: !win.privateMode && Updates.available !== ""
@@ -1545,7 +1609,10 @@ Window {
                 currentIndex: win.currentIndex
                 closedCount: win.closedTabs.length
                 pinnedCount: win.pinnedCount
+                essentialCount: win.essentialCount
+                essentialsFull: win.essentialsFull
                 onTabPinToggled: index => win.setTabPinned(index, !tabs.get(index).pinned)
+                onTabEssentialRequested: index => win.setTabEssential(index, true)
                 onTabMoveRequested: (from, to) => win.moveTab(from, to)
                 onReopenRequested: win.reopenClosedTab()
                 onTabSelected: index => win.selectTab(index)
@@ -1804,6 +1871,42 @@ Window {
         }
     }
 
+    // Esenciales: mientras haya alguna, una cúpula pequeña en el borde
+    // izquierdo, debajo del sitio del gesto de atrás (SwipeIndicator,
+    // centrado); al pulsarla se despliegan a su derecha. No en pantalla
+    // completa ni con Configuración abierta
+    EssentialsTab {
+        id: essentialsTab
+        z: 2
+        anchors.left: parent.left
+        // En una ventana baja, no baja más allá de los controles
+        y: Math.min(parent.height - 2 * Theme.controlHeight - height,
+                    (parent.height + Theme.swipeBumpLength) / 2 + 2 * Theme.margin)
+        shown: win.essentialCount > 0 && !win.immersive && !win.settingsOpen
+        onShownChanged: if (!shown) essentialsPopup.close()
+        active: win.currentEssential
+        expanded: essentialsPopup.opened
+        onClicked: essentialsPopup.toggle()
+    }
+    LazyPopup {
+        id: essentialsPopup
+        popup: Component {
+            EssentialsPopup {
+                parent: essentialsTab
+                x: essentialsTab.width + Theme.spacing
+                y: (parent.height - height) / 2
+                tabs: tabs
+                essentialCount: win.essentialCount
+                currentIndex: win.currentIndex
+                canAdd: !win.essentialsFull && !win.currentEssential && win.currentView !== null
+                        && win.currentView.special === ""
+                onEssentialSelected: index => win.selectTab(index)
+                onEssentialRemoved: index => win.setTabEssential(index, false)
+                onAddRequested: win.setTabEssential(win.currentIndex, true)
+            }
+        }
+    }
+
     // F11: franja fina del borde inferior que muestra los controles. No
     // bloquea el ratón: la página sigue recibiendo el hover y los clics.
     Item {
@@ -1947,7 +2050,7 @@ Window {
         sequence: "Ctrl+Tab"
         context: Qt.ApplicationShortcut
         enabled: win.ownsShortcuts
-        onActivated: win.selectTab(win.currentIndex + 1)
+        onActivated: win.stepTab(1)
     }
     Shortcut {
         // Una sola secuencia: "Ctrl+Backtab" y similares coinciden con la misma
@@ -1956,8 +2059,33 @@ Window {
         sequence: "Ctrl+Shift+Tab"
         context: Qt.ApplicationShortcut
         enabled: win.ownsShortcuts
-        onActivated: win.selectTab(win.currentIndex - 1)
-        onActivatedAmbiguously: win.selectTab(win.currentIndex - 1)
+        onActivated: win.stepTab(-1)
+        onActivatedAmbiguously: win.stepTab(-1)
+    }
+    // Esenciales: Ctrl+1…4 (en macOS, Cmd)
+    Shortcut {
+        sequence: "Ctrl+1"
+        context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts && win.essentialCount > 0
+        onActivated: win.selectEssential(0)
+    }
+    Shortcut {
+        sequence: "Ctrl+2"
+        context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts && win.essentialCount > 1
+        onActivated: win.selectEssential(1)
+    }
+    Shortcut {
+        sequence: "Ctrl+3"
+        context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts && win.essentialCount > 2
+        onActivated: win.selectEssential(2)
+    }
+    Shortcut {
+        sequence: "Ctrl+4"
+        context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts && win.essentialCount > 3
+        onActivated: win.selectEssential(3)
     }
     Shortcut {
         sequence: "Ctrl+Shift+A"

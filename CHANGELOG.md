@@ -5,6 +5,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ## [Sin publicar]
 
+> Tus pestañas esenciales, siempre a mano
+
+### Añadido
+
+- Pestañas esenciales: hasta 4 páginas que usas a diario, siempre a un clic. Para añadir una, pasa el ratón por ella en la lista de pestañas y pulsa el botón de los cuadritos (o, con el panel abierto, «Añadir esta pestaña a esenciales»). Salen de la lista de pestañas y quedan en una pestaña pequeña en el borde izquierdo: al pulsarla aparecen como botones con el icono de cada página. Ve a ellas al instante con Ctrl+1, Ctrl+2, Ctrl+3 y Ctrl+4 (en Mac, Cmd). Para quitar una, pasa el ratón por su botón y pulsa la ✕: vuelve a la lista. No se cierran por accidente, siguen ahí al volver a abrir Mitis y nunca se suspenden.
+
+## [0.16.0] - 2026-10-30
+
 > Ajustes por sitio, atrás al instante y tus búsquedas a mano
 
 ### Añadido

@@ -231,6 +231,12 @@ FocusScope {
             { action: "Pestaña anterior", keys: ["Ctrl+Shift+Tab"] },
             { action: "Lista de pestañas", keys: ["Ctrl+Shift+A"] }
         ] },
+        { title: "Esenciales", items: [
+            { action: "Primera esencial", keys: ["Ctrl+1"] },
+            { action: "Segunda esencial", keys: ["Ctrl+2"] },
+            { action: "Tercera esencial", keys: ["Ctrl+3"] },
+            { action: "Cuarta esencial", keys: ["Ctrl+4"] }
+        ] },
         { title: "Navegar", items: [
             { action: "Escribir una dirección o buscar", keys: ["Ctrl+L"] },
             { action: "Atrás", keys: ["Alt+Left"] },

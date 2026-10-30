@@ -5,19 +5,25 @@ import Mitis.Core
 
 // Lista desplegable de pestañas abiertas: favicon, título y botones de fijar,
 // sonido y cerrar. Las suspendidas (para ahorrar memoria) salen atenuadas y
-// con una luna. Las fijadas van arriba, separadas del resto.
+// con una luna. Las fijadas van arriba, separadas del resto. Las esenciales
+// no salen (tienen su panel, EssentialsPopup); cada fila puede pasar a serlo.
 // Las filas se reordenan arrastrándolas, cada una dentro de su grupo.
 // Arriba, un campo filtra las pestañas por título o dirección.
 Popup {
     id: root
 
-    // Modelo con los roles: title, icon, url, audible, muted, microphone, camera, pinned, lifecycle
+    // Modelo con los roles: title, icon, url, audible, muted, microphone, camera, pinned, essential, lifecycle
     required property var tabs
     property int currentIndex: 0
     // Pestañas cerradas que se pueden reabrir
     property int closedCount: 0
-    // Las fijadas son las primeras `pinnedCount` filas
+    // Las primeras `essentialCount` filas son las esenciales (ocultas, alto 0);
+    // las `pinnedCount` siguientes, las fijadas
+    property int essentialCount: 0
     property int pinnedCount: 0
+    // Ya hay tantas esenciales como caben
+    property bool essentialsFull: false
+    readonly property int listStart: essentialCount + pinnedCount
     // Reordenar arrastrando. Con un filtro de texto activo va a false:
     // las filas visibles no son consecutivas y el destino sería confuso.
     readonly property bool dragEnabled: !filtering
@@ -46,6 +52,7 @@ Popup {
     signal tabCloseRequested(int index)
     signal tabMuteToggled(int index)
     signal tabPinToggled(int index)
+    signal tabEssentialRequested(int index)
     // Al soltar una fila arrastrada; Main limita `to` al grupo de la pestaña
     signal tabMoveRequested(int from, int to)
     signal newTabRequested()
@@ -68,7 +75,7 @@ Popup {
     // Índices visibles en orden; punto de partida de la navegación por teclado
     function refilter() {
         const rows = []
-        for (let i = 0; i < tabs.count; ++i) {
+        for (let i = essentialCount; i < tabs.count; ++i) {
             const tab = tabs.get(i)
             if (textMatches(tab.title, String(tab.url)))
                 rows.push(i)
@@ -128,6 +135,8 @@ Popup {
     }
     onHighlightedIndexChanged: if (highlightedIndex >= 0) list.positionViewAtIndex(highlightedIndex, ListView.Contain)
     Component.onCompleted: refilter()
+    // Una pasó a esencial (o volvió): sale de la lista o entra en ella
+    onEssentialCountChanged: refilter()
     // Cada vez que se abre, el filtro empieza vacío y con el foco
     // y el resaltado en la pestaña activa
     onAboutToShow: {
@@ -329,9 +338,9 @@ Popup {
                 let i = indexAt(width / 2, y)
                 if (i < 0)
                     i = y < 0 ? 0 : count - 1
-                const pinned = dragFrom < root.pinnedCount
-                const first = pinned ? 0 : root.pinnedCount
-                const last = pinned ? root.pinnedCount - 1 : count - 1
+                const pinned = dragFrom < root.listStart
+                const first = pinned ? root.essentialCount : root.listStart
+                const last = pinned ? root.listStart - 1 : count - 1
                 return Math.max(first, Math.min(i, last))
             }
 
@@ -359,7 +368,7 @@ Popup {
             // Separador entre fijadas y normales: solo sin filtro. Con filtro
             // la lista es una sola tira de resultados y se oculta.
             readonly property bool showSeparator: !root.filtering && root.pinnedCount > 0
-                                                  && root.pinnedCount < count
+                                                  && root.listStart < count
 
             // Si se abre o cierra una pestaña a mitad, los índices ya no valen
             onCountChanged: if (rowDragging) dragCanceled = true
@@ -420,15 +429,16 @@ Popup {
                 required property int microphone
                 required property int camera
                 required property bool pinned
+                required property bool essential
                 required property string lifecycle
 
                 // Congelada o descargada (ver BrowserTab.lifecycle)
                 readonly property bool suspended: lifecycle !== "active"
                 readonly property bool current: index === root.currentIndex
                 // Primera no fijada tras las fijadas: lleva el separador encima
-                readonly property bool groupStart: list.showSeparator && !pinned && index === root.pinnedCount
-                // Coincide con el filtro; si no, la fila se oculta con alto 0
-                readonly property bool matches: root.textMatches(title, url.toString())
+                readonly property bool groupStart: list.showSeparator && !pinned && index === root.listStart
+                // Coincide con el filtro y no es esencial; si no, la fila se oculta con alto 0
+                readonly property bool matches: !essential && root.textMatches(title, url.toString())
                 // Resaltada por teclado (Enter, Supr). Se pinta como el hover
                 readonly property bool highlighted: index === root.highlightedIndex
                 // La que se está arrastrando
@@ -516,7 +526,7 @@ Popup {
                         elide: Text.ElideRight
                     }
 
-                    // Botones de la fila, de izquierda a derecha: fijar, sonido, cerrar
+                    // Botones de la fila, de izquierda a derecha: esencial, fijar, sonido, cerrar
                     // (delante, la luna de las suspendidas, que no es un botón)
                     Row {
                         id: buttons
@@ -569,6 +579,20 @@ Popup {
                                 }
                                 visible: captureHover.hovered
                             }
+                        }
+
+                        // Pasar a esenciales (sale de esta lista): solo al pasar el ratón
+                        IconButton {
+                            width: Theme.buttonSizeSmall
+                            height: Theme.buttonSizeSmall
+                            icon: "essential-add"
+                            iconSize: Theme.iconSizeSmall
+                            tooltip: root.essentialsFull ? "Ya hay " + Theme.essentialsMax + " esenciales"
+                                                         : "Añadir a esenciales"
+                            flat: true
+                            // Lleno: atenuado, y el tooltip dice por qué
+                            opacity: row.hovered ? (root.essentialsFull ? 0.35 : 1) : 0
+                            onClicked: if (!root.essentialsFull) root.tabEssentialRequested(row.index)
                         }
 
                         // En las fijadas se ve siempre: indica que lo está

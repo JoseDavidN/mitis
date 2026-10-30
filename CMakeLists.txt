@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(Mitis
-    VERSION 0.16.0
+    VERSION 0.17.0
     DESCRIPTION "Navegador web ligero, multiplataforma y con interfaz propia"
     LANGUAGES CXX
 )
@@ -211,6 +211,8 @@ set(MITIS_QML_FILES
     qml/NewsCard.qml
     qml/News.qml
     qml/MediaTab.qml
+    qml/EssentialsTab.qml
+    qml/EssentialsPopup.qml
     qml/MediaPlayerPopup.qml
     qml/FindBar.qml
     qml/ZoomIndicator.qml

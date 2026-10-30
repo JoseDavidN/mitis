@@ -300,6 +300,13 @@ Window (bgBase, sin marco)
   - Arriba: **miniatura** de `mediaThumbSize` (44) con `radiusSmall` (la carátula de la Media Session o la portada del vídeo, escalada para cubrir el cuadrado y recortada en un `Canvas`; sin ella, degradado de marca con el favicon o `music` en `onBrand`) y, a su lado, el **título** `fontSize` DemiBold `ink` hasta dos líneas (subrayado al pasar; clic: ir a la pestaña, tooltip «Ir a la pestaña») y el artista (o el sitio) en `fontSizeSmall` `inkMuted`.
   - Abajo: a la izquierda el **tiempo** «1:23 / 3:34» en `fontSizeSmall` `inkMuted` con cifras de ancho fijo (`tnum`; en un directo, «En directo» en `danger` DemiBold), que cambia una vez por segundo solo con el panel abierto y sonando; a la derecha, separados `spacing / 2`, anterior y siguiente (`mediaButtonSize` 30, icono `mediaIconSize` 16 en `inkSecondary`, `ink` y fondo `tintHover` al pasar; al 35 % si la página no lo ofrece) y, en medio, reproducir/pausa: círculo de `mediaPlayButtonSize` (36) con el degradado de marca e icono `onBrand` de `mediaPlayIconSize` (18). Al pulsar, `pressScale`.
 
+### `EssentialsTab` y `EssentialsPopup` — esenciales
+- Hasta `essentialsMax` (4) pestañas esenciales, aparte de las fijadas: **no salen en la lista de pestañas**, solo en su panel. Al marcar una fijada como esencial deja de estar fijada.
+- **Pestaña (`EssentialsTab`):** mientras haya alguna esencial (no en pantalla completa ni con Configuración abierta), la cúpula de `MediaTab` en el **borde izquierdo, debajo del sitio del gesto de atrás** (su borde superior a `2 × margin` del de `SwipeIndicator`; en una ventana baja, no por debajo de `2 × controlHeight` del borde inferior), con el relleno de los controles (`controlsStart → controlsEnd`) y el icono `essentials` (`iconSizeSmall`) en `inkSecondary` (`ink` al pasar; `brandLight1` si se ve una esencial). Mismas medidas, rebote y salida al pasar el ratón que `MediaTab`.
+- **Panel (`EssentialsPopup`, LazyPopup):** a la derecha de la pestaña (a `spacing`), centrado con ella, fondo `PopupBackground`, padding y separación `spacing`. Una columna de botones de `essentialButtonWidth` × `essentialButtonHeight` (52 × 40), `radiusSmall`, fondo `tintSunken` (`tintHover` al pasar; la activa `tintActive` con borde de 1 px `brandLight1`), con el favicon de `iconSize` centrado (sin él, la inicial del sitio en `inkSecondary`). Tooltip a la derecha con el título y su atajo (Ctrl+1…4). Al pasar el ratón, en su esquina superior derecha, una ✕ redonda (`essentialRemoveSize` 18, icono `essentialRemoveIconSize` 10, `danger`): «Quitar de esenciales», vuelve al principio de la lista. Debajo, si cabe otra y la que se ve no lo es, un botón plano `essential-add` («Añadir esta pestaña a esenciales»).
+- En la lista de pestañas, primer botón de la fila (al pasar el ratón): `essential-add`, «Añadir a esenciales»; con 4, al 35 % y con el tooltip «Ya hay 4 esenciales».
+- Como las fijadas: no se cierran (ni con Ctrl+W ni desde la página) y no se suspenden.
+
 ### Pestaña con sonido
 - En la lista de pestañas, un `IconButton` plano `sound` junto a la ✕ mientras la pestaña suena; `muted` si está silenciada (se ve aunque no suene). Pulsarlo alterna el silencio.
 
@@ -308,7 +315,7 @@ Window (bgBase, sin marco)
 
 ### Pestaña fijada
 - Las fijadas van siempre arriba en la lista, en el orden en que se fijaron. Entre ellas y el resto, un separador `line` en un hueco de `spacing`.
-- Botones de la fila, de izquierda a derecha: fijar, sonido, cerrar (`IconButton` planos de `buttonSizeSmall`, icono `iconSizeSmall`).
+- Botones de la fila, de izquierda a derecha: esencial, fijar, sonido, cerrar (`IconButton` planos de `buttonSizeSmall`, icono `iconSizeSmall`).
 - Fijar: icono `pin`, aparece al pasar por la fila ("Fijar pestaña"). En una fijada se ve siempre, como indicador, y al pasar por encima cambia a `unpin` ("Desfijar pestaña").
 - Una fijada no muestra la ✕ ni se cierra con Ctrl+W ni desde la página: hay que desfijarla antes.
 
