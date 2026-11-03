@@ -5,6 +5,20 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ## [Sin publicar]
 
+> Tu gestor de contraseñas
+
+### Añadido
+
+- Gestor de contraseñas: Mitis guarda tus contraseñas, cifradas en tu equipo y protegidas con una contraseña que solo tú conoces. Ábrelo en Opciones → Contraseñas. La primera vez creas tu cuenta del gestor (un usuario y su contraseña); después, al abrir Mitis, se desbloquea con esa contraseña. Si la olvidas, las contraseñas guardadas no se pueden recuperar.
+- Al iniciar sesión o registrarte en un sitio, Mitis pregunta si quieres guardar la contraseña (o actualizarla, si cambió). Puedes corregir el usuario antes de guardarla, dejarlo para otro momento o pedir que no vuelva a preguntar en ese sitio. En las ventanas privadas no pregunta.
+- Autocompletar: al pulsar el campo de usuario o de contraseña de un sitio, aparecen debajo las que tienes guardadas para él; elige una (con el ratón o con las flechas e Intro) y se rellenan el usuario y la contraseña.
+- Generador de contraseñas seguras, de 8 a 16 caracteres, con letras, números y símbolos. Al registrarte en un sitio, el campo de la contraseña te ofrece una; también está en el gestor.
+- En el gestor puedes buscar, añadir, editar y eliminar contraseñas, copiar el usuario o la contraseña (que se borra del portapapeles a los 30 segundos), cambiar la contraseña del gestor y bloquearlo.
+- Importar y exportar contraseñas en archivo CSV, el formato que usan Chrome, Edge, Firefox, Bitwarden y casi todos los gestores. Para exportar se pide otra vez la contraseña del gestor: el archivo no va cifrado, así que bórralo cuando ya no lo necesites.
+- En Configuración → Contraseñas puedes apagar el autocompletado o la pregunta de guardar, y volver a preguntar en los sitios donde dijiste «Nunca aquí».
+
+## [0.18.0] - 2026-11-03
+
 > Proxy, enlaces a tus aplicaciones y páginas sin parpadeos
 
 ### Añadido

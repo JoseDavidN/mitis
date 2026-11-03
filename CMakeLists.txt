@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(Mitis
-    VERSION 0.18.0
+    VERSION 0.19.0
     DESCRIPTION "Navegador web ligero, multiplataforma y con interfaz propia"
-    LANGUAGES CXX
+    LANGUAGES C CXX
 )
 
 set(CMAKE_CXX_STANDARD 17)
@@ -118,7 +118,13 @@ qt_add_qml_module(mitiscore
         src/printing.cpp
         src/themecolors.h
         src/themecolors.cpp
+        src/passwords.h
+        src/passwords.cpp
 )
+# Cifrado del gestor de contraseñas (src/passwords.*): Monocypher, en C, copiado
+# en third_party/ (CC0 o BSD de 2 cláusulas: licencias/AVISOS.md)
+target_sources(mitiscore PRIVATE third_party/monocypher/monocypher.c)
+target_include_directories(mitiscore PRIVATE third_party/monocypher)
 # Deslizar entre páginas: el ajuste del sistema (src/navigationgestures_mac.mm)
 if(APPLE)
     target_sources(mitiscore PRIVATE src/navigationgestures_mac.mm)
@@ -162,7 +168,7 @@ qt_add_resources(mitis "scripts"
     PREFIX "/scripts"
     BASE assets/scripts
     FILES assets/scripts/media.js assets/scripts/devtools.js assets/scripts/drm.js assets/scripts/google.js
-          assets/scripts/swipe.js assets/scripts/preload.js
+          assets/scripts/swipe.js assets/scripts/preload.js assets/scripts/passwords.js
 )
 
 # Cambios de cada versión: la pestaña de novedades tras actualizarse
@@ -248,6 +254,9 @@ set(MITIS_QML_FILES
     qml/PermissionDialog.qml
     qml/CertificateDialog.qml
     qml/ExternalAppDialog.qml
+    qml/CredentialPopup.qml
+    qml/SavePasswordPrompt.qml
+    qml/PasswordManager.qml
     qml/JsDialog.qml
     qml/FilePicker.qml
     qml/ContextMenu.qml

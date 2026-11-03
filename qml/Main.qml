@@ -871,6 +871,36 @@ Window {
 
     property bool settingsOpen: false
 
+    // ── Gestor de contraseñas (Passwords, PasswordManager) ──
+    property bool passwordsOpen: false
+    // Credencial que guardar al crear la cuenta (aviso de guardar sin cuenta)
+    property var passwordsPending: null
+    property string passwordsStart: "list"
+
+    // `view`: "list" o "generator"; `pending`: credencial que guardar en cuanto haya cuenta
+    function openPasswordManager(view, pending) {
+        passwordsStart = view || "list"
+        passwordsPending = pending ?? null
+        passwordsOpen = true
+    }
+    function closePasswordManager() {
+        passwordsOpen = false
+        passwordsPending = null
+        if (showingNewTabPage)
+            newTabPage.focusSearch()
+        else if (currentView)
+            currentView.focusPage()
+    }
+    // Sitios donde no se ofrece guardar («Nunca aquí»), separados por líneas
+    function passwordNeverSites() {
+        return String(Settings.value("Passwords/never", "")).split("\n").filter(host => host !== "")
+    }
+    function neverSavePasswords(host) {
+        const sites = passwordNeverSites()
+        if (!sites.includes(host))
+            Settings.setValue("Passwords/never", sites.concat([host]).join("\n"))
+    }
+
     // `section`: la de Configuración a la que ir ("history"…); sin ella, arriba
     function openSettings(section) {
         // Ventana privada: no se puede entrar en Configuración
@@ -1380,7 +1410,9 @@ Window {
                 // Una restaurada carga al seleccionarla. Se mira un momento
                 // después: al mover filas (moveTab) otra pestaña puede ser «la
                 // actual» un instante, y no debe cargarse por eso
-                onCurrentChanged: if (current) {
+                onCurrentChanged: if (!current) {
+                    credentialList.close()
+                } else {
                     win.currentView = tab
                     Qt.callLater(() => {
                         if (tab.current)
@@ -1390,6 +1422,7 @@ Window {
                 Component.onCompleted: if (current) win.currentView = tab
 
                 onUrlChanged: {
+                    credentialList.close()
                     tabs.setProperty(index, "url", url.toString())
                     // Escribir una dirección en la de novedades la convierte en una normal
                     if (special !== "" && url.toString() !== "") {
@@ -1492,6 +1525,141 @@ Window {
                     onFinished: tab.focusPage()
                 }
 
+                // Gestor de contraseñas en la página (assets/scripts/passwords.js):
+                // la lista bajo el campo con el foco y el aviso de guardar
+                onPasswordEvent: (type, data) => {
+                    if (type === "focus") {
+                        // El generador sale aunque no se autocomplete
+                        if (data.kind !== "new-password" && !Settings.passwordAutofill)
+                            return
+                        // Nada que ofrecer: sin cuenta, o abierto y sin guardadas del sitio
+                        if (data.kind !== "new-password" && (!Passwords.exists
+                                || (Passwords.unlocked && Passwords.matches(tab.url, BrowserProfile.siteOf(tab.url)).length === 0))) {
+                            credentialList.close()
+                            return
+                        }
+                        credentialList.kind = data.kind
+                        credentialList.field = data.rect
+                        credentialList.filter = data.text ?? ""
+                        if (data.kind === "new-password" && credentialList.generated === "")
+                            credentialList.generated = Passwords.generate(Settings.passwordLength)
+                        credentialList.active = true
+                        tab.setPasswordListOpen(true)
+                    } else if (type === "move") {
+                        credentialList.field = data.rect
+                    } else if (type === "filter") {
+                        credentialList.filter = data.text
+                    } else if (type === "key") {
+                        const list = credentialList.item as CredentialPopup
+                        if (list)
+                            list.key(data.key)
+                    } else if (type === "none") {
+                        credentialList.close()
+                    } else if (type === "submit") {
+                        credentialList.close()
+                        savePasswordState.offer(data)
+                    }
+                }
+
+                Loader {
+                    id: credentialList
+                    anchors.fill: parent
+                    z: 9
+                    active: false
+
+                    property string kind: ""
+                    property rect field
+                    property string filter: ""
+                    property string generated: ""
+
+                    function close() {
+                        if (!active)
+                            return
+                        active = false
+                        generated = ""
+                        tab.setPasswordListOpen(false)
+                    }
+
+                    sourceComponent: CredentialPopup {
+                        kind: credentialList.kind
+                        field: credentialList.field
+                        filter: credentialList.filter
+                        generated: credentialList.generated
+                        entries: Passwords.unlocked && Passwords.items.length > 0
+                                 ? Passwords.matches(tab.url, BrowserProfile.siteOf(tab.url)) : []
+                        onEntrySelected: id => {
+                            const entry = Passwords.entry(id)
+                            credentialList.close()
+                            tab.fillCredentials(entry.username, entry.password)
+                        }
+                        onGeneratedAccepted: password => {
+                            credentialList.close()
+                            tab.fillNewPassword(password)
+                        }
+                        onRegenerateRequested: credentialList.generated = Passwords.generate(Settings.passwordLength)
+                        onUnlockRequested: {
+                            credentialList.close()
+                            win.openPasswordManager()
+                        }
+                        onManageRequested: {
+                            credentialList.close()
+                            win.openPasswordManager()
+                        }
+                        onDismissed: credentialList.close()
+                    }
+                }
+
+                // ¿Guardar la contraseña? Se espera un momento tras enviar el
+                // formulario: si la página repite el envío (o se envió con otro
+                // botón), vale el último
+                QtObject {
+                    id: savePasswordState
+                    property var pending: null
+                    property var shown: null
+
+                    function offer(data) {
+                        if (!Settings.passwordOfferSave || win.privateMode || !data.password)
+                            return
+                        const url = tab.url.toString()
+                        const host = Urls.host(url)
+                        if (host === "" || win.passwordNeverSites().includes(host))
+                            return
+                        if (Passwords.unlocked && Passwords.stateFor(url, data.username, data.password) === "same")
+                            return
+                        pending = { url: url, host: host, username: data.username, password: data.password }
+                        savePasswordDelay.restart()
+                    }
+                }
+                Timer {
+                    id: savePasswordDelay
+                    interval: 900
+                    onTriggered: {
+                        savePasswordState.shown = savePasswordState.pending
+                        savePasswordState.pending = null
+                    }
+                }
+                Loader {
+                    anchors.top: parent.top
+                    anchors.right: parent.right
+                    anchors.topMargin: Theme.titleBarHeight + Theme.floatingMargin
+                    anchors.rightMargin: Theme.floatingMargin
+                    z: 9
+                    active: savePasswordState.shown !== null
+
+                    sourceComponent: SavePasswordPrompt {
+                        credential: savePasswordState.shown
+                        onFinished: savePasswordState.shown = null
+                        onNeverRequested: {
+                            win.neverSavePasswords(savePasswordState.shown.host)
+                            savePasswordState.shown = null
+                        }
+                        onCreateRequested: credential => {
+                            savePasswordState.shown = null
+                            win.openPasswordManager("list", credential)
+                        }
+                    }
+                }
+
                 // alert, confirm, prompt y aviso de salir de la página
                 onJavaScriptDialogRequested: dialog => jsDialog.enqueue(dialog)
                 onJavaScriptDialogCancelled: dialog => jsDialog.cancel(dialog)
@@ -1569,12 +1737,29 @@ Window {
             currentPageUrl: win.currentView && !win.privateMode ? win.currentView.url.toString() : ""
             onCloseRequested: win.closeSettings()
             onUpdateRequested: win.installUpdate()
+            onPasswordManagerRequested: win.openPasswordManager()
         }
     }
     Timer {
         id: settingsRelease
         // El fundido de cierre de SettingsPage, y un margen
         interval: Theme.durationBase * 2
+    }
+
+    // Gestor de contraseñas: sobre todo lo demás salvo los avisos. Solo
+    // existe abierto
+    Loader {
+        id: passwordManager
+        z: 1.8
+        anchors.fill: parent
+        active: win.passwordsOpen
+
+        sourceComponent: PasswordManager {
+            pendingCredential: win.passwordsPending
+            startView: win.passwordsStart
+            onCloseRequested: win.closePasswordManager()
+            onFileRequested: dialog => filePicker.ask(null, dialog)
+        }
     }
 
     // «Preguntar dónde guardar» (Configuración → Descargas): la carpeta se
@@ -1722,6 +1907,8 @@ Window {
                         win.openSettings("profile")
                     else if (key === "performance")
                         win.togglePerformancePanel()
+                    else if (key === "passwords")
+                        win.openPasswordManager()
                 }
             }
         }

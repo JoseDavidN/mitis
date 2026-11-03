@@ -4,6 +4,7 @@ import QtQuick.Controls.Basic
 import Mitis.Core
 
 // Menú de opciones. Lo que aún no está disponible sale como «Próximamente».
+// Contraseñas también en la ventana privada: es la cuenta del gestor, no la navegación.
 Popup {
     id: root
 
@@ -19,6 +20,7 @@ Popup {
         { key: "private", label: "Nueva ventana privada", icon: "private", available: true, shortcut: "Ctrl+Shift+N" },
         { key: "history", label: "Historial", icon: "history", available: true },
         { key: "downloads", label: "Descargas", icon: "downloads", available: true },
+        { key: "passwords", label: "Contraseñas", icon: "passwords", available: true },
         { key: "performance", label: "Monitor de rendimiento", icon: "memory", available: true, shortcut: "Shift+Esc" },
         { key: "settings", label: "Configuración", icon: "settings", available: true }
     ].filter(option => (performanceMonitor || option.key !== "performance")

@@ -312,6 +312,14 @@ QtObject {
     readonly property int dialogWidth: 360
     // Aviso de certificado: más texto que un diálogo normal
     readonly property int certificateDialogWidth: 440
+    // Gestor de contraseñas: lista bajo los campos de las páginas (ancho
+    // mínimo y alto de sus filas de dos líneas), aviso de guardar y ventana
+    readonly property int credentialPopupWidth: 290
+    readonly property int credentialRowHeight: 46
+    readonly property int savePasswordWidth: 340
+    readonly property int passwordManagerWidth: 620
+    readonly property int passwordManagerHeight: 600
+    readonly property int passwordRowHeight: 52
     // Página de nueva pestaña
     readonly property int ntpMaxWidth: 720
     readonly property int ntpSearchWidth: 600
@@ -478,6 +486,14 @@ QtObject {
     // que el texto normal y muy grueso, que en Nunito se ve redondeado
     readonly property int fontSizeIcon: 12
     readonly property int fontWeightIcon: Font.ExtraBold
+    // Fuente de la interfaz (main.cpp la pone a toda la aplicación); para
+    // volver a ella tras cambiar a otra
+    readonly property string interfaceFont: "Nunito"
+    // Contraseñas a la vista (generador, mostrar): de ancho fijo, para
+    // distinguir l, I y 1
+    readonly property string monospaceFont: Qt.platform.os === "windows" ? "Consolas"
+                                          : Qt.platform.os === "osx" || Qt.platform.os === "macos" ? "Menlo"
+                                          : "monospace"
     // Texto que se escribe en los buscadores (dirección y nueva pestaña)
     readonly property int fontWeightInput: Font.Medium
 

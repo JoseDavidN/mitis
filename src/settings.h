@@ -55,6 +55,12 @@ class Settings : public QObject
     // nombres de dominio de los enlaces (motor). Apagada por defecto: gasta
     // datos y avisa a los sitios de por dónde pasa el ratón
     Q_PROPERTY(bool preloadPages READ preloadPages WRITE setPreloadPages NOTIFY preloadPagesChanged)
+    // Gestor de contraseñas (Passwords): ofrecer las guardadas en los
+    // formularios, preguntar si guardar al iniciar sesión y largo de las
+    // contraseñas que genera (8 a 16)
+    Q_PROPERTY(bool passwordAutofill READ passwordAutofill WRITE setPasswordAutofill NOTIFY passwordPreferencesChanged)
+    Q_PROPERTY(bool passwordOfferSave READ passwordOfferSave WRITE setPasswordOfferSave NOTIFY passwordPreferencesChanged)
+    Q_PROPERTY(int passwordLength READ passwordLength WRITE setPasswordLength NOTIFY passwordPreferencesChanged)
     // Corrector ortográfico en español al escribir en las páginas; encendido por defecto
     Q_PROPERTY(bool spellCheck READ spellCheck WRITE setSpellCheck NOTIFY spellCheckChanged)
     // Experimental: controles de vidrio esmerilado (Glass), apagado por defecto
@@ -179,6 +185,12 @@ public:
     void setHideScrollbars(bool value);
     bool preloadPages() const;
     void setPreloadPages(bool value);
+    bool passwordAutofill() const;
+    void setPasswordAutofill(bool value);
+    bool passwordOfferSave() const;
+    void setPasswordOfferSave(bool value);
+    int passwordLength() const;
+    void setPasswordLength(int value);
     bool spellCheck() const;
     void setSpellCheck(bool value);
     bool navigationGestures() const;
@@ -293,6 +305,7 @@ signals:
     void navigationGesturesChanged();
     void spellCheckChanged();
     void preloadPagesChanged();
+    void passwordPreferencesChanged();
     void glassEffectChanged();
     void glassToneChanged();
     void languagesChanged();

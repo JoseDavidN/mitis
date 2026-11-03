@@ -54,6 +54,16 @@ licencia que se citan están en esta misma carpeta.
 - Va como archivo aparte, en la carpeta `qtwebengine_dictionaries` (en el
   código, `assets/dictionaries/`).
 
+### Monocypher
+
+- **Qué:** cifrado del gestor de contraseñas (Argon2id para la clave y
+  XChaCha20-Poly1305 para los datos), versión 4.0.2, compilado dentro de Mitis
+  (en el código, `third_party/monocypher/`).
+- **Licencia:** doble a elegir: CC0 1.0 (dominio público) o BSD de 2
+  cláusulas (`Monocypher-BSD-2-CC0.txt`). Copyright (c) 2017-2023 Loup
+  Vaillant, Michael Savage y Fabio Scotoni.
+- **Enlace:** <https://monocypher.org/>
+
 ### Fuente Nunito
 
 - **Licencia:** SIL Open Font License 1.1 (`Nunito-OFL-1.1.txt`; en el

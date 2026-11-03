@@ -33,10 +33,11 @@ Historial con este esquema (ver [CHANGELOG.md](../CHANGELOG.md)):
 | 0.15.0 | Reproductor compacto con el tiempo y pestaña con los colores de la marca, opción para mostrar los controles de abajo al pasar el ratón, corrige el reproductor en Apple Music | `71248ec` |
 | 0.16.0 | Ajustes por sitio (zoom recordado por sitio), atrás y adelante al instante, búsquedas recientes en la nueva pestaña, tamaño de los controles de abajo, corrige el botón de descargas y «Limpiar» | `5f91251` |
 | 0.17.0 | Pestañas esenciales (hasta 4, en el borde izquierdo, con Ctrl+1…4) | `1ec5434` |
+| 0.18.0 | Proxy SOCKS5, compatibilidad gráfica en Windows, enlaces a aplicaciones (Teams, Zoom) | `f046b11` |
 
 Las fases 0–2 van juntas en 0.2.0 porque entraron en un solo commit. Esas versiones no tienen etiqueta ni release: son anteriores al workflow de publicación. Si se quieren marcar, basta con etiquetas ligeras (`git tag v0.4.0 d6cfa89`); al subirlas no se publica nada porque esos commits no tienen `.github/workflows/`.
 
-**Versión actual: 0.18.0-beta** (en desarrollo, en la rama `ajustes`; la 0.17.0 ya tiene commit y se da por publicada). Proxy SOCKS5 para las páginas (Configuración → Privacidad); corrige los enlaces de aplicaciones externas (Teams, Zoom, correo) que la página abre sola, que ahora se preguntan y se abren, y, en Windows, el parpadeo de las páginas animadas con «Compatibilidad gráfica» (Configuración → Rendimiento). Trae una función nueva: sube MENOR. Se publica al subir la etiqueta `v0.18.0`.
+**Versión actual: 0.19.0-beta** (en desarrollo, en la rama `ajustes`; la 0.18.0 ya tiene commit y se da por publicada). Gestor de contraseñas con cuenta y contraseña maestra (cifrado en el equipo), autocompletar en los formularios, aviso para guardar al iniciar sesión, generador de 8 a 16 caracteres e importar/exportar CSV. Trae una función nueva: sube MENOR. Se publica al subir la etiqueta `v0.19.0`.
 
 **Regla:** una versión con commit ya está desplegada. Lo siguiente que se haga va en una versión nueva, subida según lo que traiga (MENOR con funciones nuevas, PARCHE con solo correcciones), y su sección del CHANGELOG se escribe en lenguaje claro para quien no sabe de tecnología: es lo que se ve en la pestaña de novedades.
 

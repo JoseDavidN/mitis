@@ -161,6 +161,16 @@ Item {
     // como Chrome. `request`: { url, scheme, site (dominio de la página que
     // lo pide, "" sin él), open() }. Si no se abre, no hay que avisar a nadie
     signal externalAppRequested(var request)
+    // Gestor de contraseñas (assets/scripts/passwords.js), solo en el marco
+    // principal. `type`:
+    //   "focus"  { kind, rect, text }: el foco entra en un campo de usuario
+    //            ("username"), de contraseña ("password") o de contraseña nueva
+    //            de un registro ("new-password"); rect en coordenadas de la
+    //            pestaña; text, lo escrito en el de usuario
+    //   "move"   { rect }  ·  "filter" { text }  ·  "key" { key: down, up, enter, escape }
+    //   "none"   el foco salió de esos campos
+    //   "submit" { username, password }: se envió un inicio de sesión o registro
+    signal passwordEvent(string type, var data)
     readonly property bool certificateErrorPending: certState.pending !== null
     // Esquemas que abre el propio motor; cualquier otro es de una aplicación externa
     readonly property var _webSchemes: ({ http: true, https: true, file: true, data: true, blob: true,
@@ -403,6 +413,40 @@ Item {
             return
         devTools.item.destroy()
         devTools.item = null
+    }
+
+    // ── Contraseñas (assets/scripts/passwords.js) ────────────────────
+    // Rellena el campo con el foco y su pareja (usuario y contraseña)
+    function fillCredentials(username, password) {
+        view.runJavaScript("window.__mitisPasswords && window.__mitisPasswords.fill("
+                           + JSON.stringify(username) + ", " + JSON.stringify(password) + ")",
+                           WebEngineScript.ApplicationWorld)
+    }
+    // Pone una contraseña generada en los campos de contraseña nueva
+    function fillNewPassword(password) {
+        view.runJavaScript("window.__mitisPasswords && window.__mitisPasswords.fillNew("
+                           + JSON.stringify(password) + ")", WebEngineScript.ApplicationWorld)
+    }
+    // Con la lista abierta, las flechas, Enter y Esc del campo son de ella
+    function setPasswordListOpen(open) {
+        view.runJavaScript("window.__mitisPasswords && window.__mitisPasswords.setOpen(" + (open ? "true" : "false") + ")",
+                           WebEngineScript.ApplicationWorld)
+    }
+    function _passwordMessage(text) {
+        const space = text.indexOf(" ")
+        const type = space < 0 ? text : text.slice(0, space)
+        let data = {}
+        try {
+            data = space < 0 ? {} : JSON.parse(text.slice(space + 1))
+        } catch (e) {
+            return
+        }
+        // De píxeles CSS de la página a los de la pestaña
+        if (data.rect) {
+            const zoom = view.zoomFactor
+            data.rect = Qt.rect(data.rect.x * zoom, data.rect.y * zoom, data.rect.width * zoom, data.rect.height * zoom)
+        }
+        root.passwordEvent(type, data)
     }
 
     // ── Multimedia (assets/scripts/media.js) ─────────────────────────
@@ -1017,9 +1061,15 @@ Item {
                              ["normal", "anormal", "caída", "cerrado por el sistema"][terminationStatus] ?? terminationStatus,
                              "código", exitCode, "en", Urls.host(view.url.toString()))
         }
-        // Avisos de assets/scripts/drm.js y media.js
+        // Avisos de assets/scripts/drm.js, media.js y passwords.js. Los de
+        // contraseñas llevan la clave de BrowserProfile: sin ella son de la
+        // página y no se atienden. Con este manejador, el motor no los
+        // escribe en el registro (ahí irían contraseñas)
         onJavaScriptConsoleMessage: (level, message) => {
-            if (message === "mitis:widevine-unavailable") {
+            const passwords = BrowserProfile.passwordPrefix
+            if (message.startsWith(passwords)) {
+                root._passwordMessage(message.slice(passwords.length))
+            } else if (message === "mitis:widevine-unavailable") {
                 root.protectedContentUnavailable()
             } else if (message.startsWith("mitis:capture ")) {
                 const parts = message.slice(14).split(" ")

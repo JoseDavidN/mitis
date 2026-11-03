@@ -330,6 +330,15 @@ QtObject {
         root._insertScript(root.profile, preload)
     }
 
+    // Gestor de contraseñas (assets/scripts/passwords.js): los avisos llegan
+    // por consola con esta clave, que solo conoce el mundo de Mitis de la
+    // página (otro script la pone antes); así la página no puede fingirlos.
+    // Una por arranque: en --dev, los perfiles (y sus scripts) siguen
+    readonly property string passwordPrefix: "mitis:pw:" + _passwordToken + " "
+    // qmllint disable unqualified
+    readonly property string _passwordToken: MitisEngine.passwordToken
+    // qmllint enable unqualified
+
     // Pone un script en todas las páginas del perfil; si ya estaba (otra
     // recarga de --dev), lo sustituye
     function _insertScript(profile, script) {
@@ -386,6 +395,22 @@ QtObject {
         google.worldId = WebEngineScript.MainWorld
         google.runsOnSubFrames = true
         root._insertScript(profile, google)
+
+        // Gestor de contraseñas: autocompletar, guardar y generar
+        // (assets/scripts/passwords.js), en el mundo de Mitis y solo en el
+        // marco principal. Antes, la clave de sus avisos (passwordPrefix)
+        const token = WebEngine.script()
+        token.name = "mitis-passwords-token"
+        token.sourceCode = "window.__mitisPwToken = " + JSON.stringify(root._passwordToken) + ";"
+        token.injectionPoint = WebEngineScript.DocumentCreation
+        token.worldId = WebEngineScript.ApplicationWorld
+        root._insertScript(profile, token)
+        const passwords = WebEngine.script()
+        passwords.name = "mitis-passwords"
+        passwords.sourceUrl = "qrc:/scripts/passwords.js"
+        passwords.injectionPoint = WebEngineScript.DocumentReady
+        passwords.worldId = WebEngineScript.ApplicationWorld
+        root._insertScript(profile, passwords)
 
         // Deslizar entre páginas (macOS, NavigationGestures): si el gesto
         // horizontal es de la página (assets/scripts/swipe.js). Solo el marco

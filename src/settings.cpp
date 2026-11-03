@@ -1,5 +1,6 @@
 #include "settings.h"
 #include <QRegularExpression>
+#include <algorithm>
 
 namespace {
 const QString SearchEngineKey = QStringLiteral("Search/engine");
@@ -20,6 +21,9 @@ const QString HideScrollbarsKey = QStringLiteral("Pages/hideScrollbars");
 const QString NavigationGesturesKey = QStringLiteral("Pages/navigationGestures");
 const QString SpellCheckKey = QStringLiteral("Pages/spellCheck");
 const QString PreloadPagesKey = QStringLiteral("Pages/preload");
+const QString PasswordAutofillKey = QStringLiteral("Passwords/autofill");
+const QString PasswordOfferSaveKey = QStringLiteral("Passwords/offerSave");
+const QString PasswordLengthKey = QStringLiteral("Passwords/length");
 const QString GlassEffectKey = QStringLiteral("Appearance/glassEffect");
 const QString GlassToneKey = QStringLiteral("Appearance/glassTone");
 const QString LanguagesKey = QStringLiteral("Pages/languages");
@@ -274,6 +278,42 @@ void Settings::setPreloadPages(bool value)
         emit preloadPagesChanged();
 }
 
+bool Settings::passwordAutofill() const
+{
+    return flag(PasswordAutofillKey, true);
+}
+
+void Settings::setPasswordAutofill(bool value)
+{
+    if (storeBool(PasswordAutofillKey, value, true))
+        emit passwordPreferencesChanged();
+}
+
+bool Settings::passwordOfferSave() const
+{
+    return flag(PasswordOfferSaveKey, true);
+}
+
+void Settings::setPasswordOfferSave(bool value)
+{
+    if (storeBool(PasswordOfferSaveKey, value, true))
+        emit passwordPreferencesChanged();
+}
+
+int Settings::passwordLength() const
+{
+    return std::clamp(m_settings.value(PasswordLengthKey, 16).toInt(), 8, 16);
+}
+
+void Settings::setPasswordLength(int value)
+{
+    value = std::clamp(value, 8, 16);
+    if (passwordLength() == value)
+        return;
+    m_settings.setValue(PasswordLengthKey, value);
+    emit passwordPreferencesChanged();
+}
+
 bool Settings::spellCheck() const
 {
     return flag(SpellCheckKey, true);
@@ -283,7 +323,6 @@ void Settings::setSpellCheck(bool value)
 {
     if (storeBool(SpellCheckKey, value, true))
         emit spellCheckChanged();
-    emit preloadPagesChanged();
 }
 
 bool Settings::navigationGestures() const
@@ -640,7 +679,6 @@ void Settings::setGraphicsCompatibility(bool value)
         return;
     m_settings.setValue(GraphicsCompatibilityKey, value);
     emit graphicsCompatibilityChanged();
-    emit proxyChanged();
 }
 
 bool Settings::graphicsCompatibilityPending() const
@@ -798,6 +836,7 @@ void Settings::resetPreferences()
         SuspendAfterKey, BlockAdsKey, StripTrackingParamsKey, ThemeKey, SecureDnsKey, SecureDnsProviderKey,
         CacheSizeKey, MemorySaverKey, InstantBackPagesKey, ControlsSizeKey,
         GraphicsCompatibilityKey, ProxyEnabledKey, ProxyAddressKey,
+        PasswordAutofillKey, PasswordOfferSaveKey, PasswordLengthKey,
     };
     for (const QString &key : keys)
         m_settings.remove(key);
@@ -841,4 +880,6 @@ void Settings::resetPreferences()
     emit instantBackPagesChanged();
     emit controlsSizeChanged();
     emit graphicsCompatibilityChanged();
+    emit proxyChanged();
+    emit passwordPreferencesChanged();
 }

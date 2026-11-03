@@ -2,6 +2,7 @@
 
 #include <QDateTime>
 #include <QObject>
+#include <QRandomGenerator>
 #include <QQuickWebEngineProfile>
 #include <QString>
 #include <QStringList>
@@ -29,6 +30,9 @@ class EngineBridge : public QObject
     Q_PROPERTY(QString widevinePath READ widevinePath CONSTANT)
     // Carpeta de licencias del paquete; vacía en una compilación sin instalar
     Q_PROPERTY(QString licensesPath READ licensesPath CONSTANT)
+    // Clave al azar de los avisos del gestor de contraseñas en las páginas
+    // (BrowserProfile.passwordPrefix); una por arranque
+    Q_PROPERTY(QString passwordToken READ passwordToken CONSTANT)
     // El perfil de navegación (cookies, caché, permisos en disco). Lo crea
     // C++ con su nombre de almacenamiento desde el principio: creado en QML,
     // Qt avisa de que quedará obsoleto y arranca un instante sin disco. Vive
@@ -66,6 +70,7 @@ public:
 
     QString widevinePath() const { return m_widevinePath; }
     QString licensesPath() const;
+    QString passwordToken() const { return m_passwordToken; }
     bool blockThirdPartyCookies() const { return m_blockThirdPartyCookies; }
     void setBlockThirdPartyCookies(bool value);
     bool doNotTrack() const;
@@ -144,6 +149,8 @@ private:
     QHash<QString, QVariantMap> m_certificates;
     QQuickWebEngineProfile *m_profile = nullptr;
     QString m_widevinePath;
+    const QString m_passwordToken = QString::number(QRandomGenerator::system()->generate64(), 36)
+                                    + QString::number(QRandomGenerator::system()->generate64(), 36);
     // Lo lee el filtro de cookies, que el motor puede llamar desde otro hilo
     std::atomic<bool> m_blockThirdPartyCookies { false };
 };

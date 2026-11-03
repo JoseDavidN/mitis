@@ -30,6 +30,8 @@ FocusScope {
     signal closeRequested()
     // «Actualizar» (Acerca de Mitis): lo hace la ventana, que debe cerrarse
     signal updateRequested()
+    // «Abrir el gestor» (Contraseñas): la ventana del gestor es de Main
+    signal passwordManagerRequested()
 
     // Secciones del índice, en el orden de la página
     readonly property var sections: [
@@ -39,6 +41,7 @@ FocusScope {
         { key: "search", title: "Búsqueda", icon: "search" },
         { key: "newtab", title: "Nueva pestaña", icon: "new-tab" },
         { key: "privacy", title: "Privacidad", icon: "privacy" },
+        { key: "passwords", title: "Contraseñas", icon: "passwords" },
         { key: "blocker", title: "Anuncios y rastreadores", icon: "blocker" },
         { key: "security", title: "Seguridad", icon: "security" },
         { key: "permissions", title: "Permisos de sitios", icon: "permissions" },
@@ -348,6 +351,7 @@ FocusScope {
         case "search": return searchSection
         case "newtab": return newTabSection
         case "privacy": return privacySection
+        case "passwords": return passwordsSection
         case "blocker": return blockerSection
         case "security": return securitySection
         case "permissions": return permissionsSection
@@ -1190,6 +1194,59 @@ FocusScope {
                     icon: "reload"
                     title: "Se aplicará al volver a abrir Mitis"
                     description: "El proxy se elige al arrancar. Cierra Mitis y ábrelo de nuevo para usar el cambio."
+                }
+            }
+
+            SettingsSection {
+                id: passwordsSection
+                title: "Contraseñas"
+                icon: "passwords"
+                description: "Tus contraseñas se guardan cifradas en este equipo y se abren con la contraseña de tu gestor."
+
+                SettingRow {
+                    divider: false
+                    title: "Gestor de contraseñas"
+                    description: !Passwords.exists ? "Aún no lo usas: crea tu cuenta para empezar a guardar contraseñas."
+                               : (Passwords.unlocked ? "Abierto" : "Bloqueado") + " · cuenta de " + Passwords.user
+
+                    TextButton {
+                        text: Passwords.exists ? "Abrir el gestor" : "Crear cuenta"
+                        onClicked: root.passwordManagerRequested()
+                    }
+                }
+                SettingRow {
+                    title: "Autocompletar"
+                    description: "Al pulsar un campo de usuario o contraseña, Mitis muestra las guardadas de ese sitio para rellenarlas."
+
+                    Toggle {
+                        checked: Settings.passwordAutofill
+                        onToggled: Settings.passwordAutofill = checked
+                    }
+                }
+                SettingRow {
+                    title: "Ofrecer guardar contraseñas"
+                    description: "Al iniciar sesión o registrarte en un sitio, Mitis pregunta si guardar la contraseña. Nunca en las ventanas privadas."
+
+                    Toggle {
+                        checked: Settings.passwordOfferSave
+                        onToggled: Settings.passwordOfferSave = checked
+                    }
+                }
+                SettingRow {
+                    id: neverSitesRow
+                    // Sitios con «Nunca aquí», separados por líneas
+                    readonly property var sites: String(Settings.value("Passwords/never", "")).split("\n").filter(host => host !== "")
+                    visible: sites.length > 0
+                    title: "Sitios donde no se ofrece guardar"
+                    description: sites.join(", ")
+
+                    TextButton {
+                        text: "Volver a preguntar"
+                        onClicked: {
+                            Settings.setValue("Passwords/never", "")
+                            neverSitesRow.visible = false
+                        }
+                    }
                 }
             }
 
