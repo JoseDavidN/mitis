@@ -213,6 +213,15 @@ FocusScope {
         startupField.text = Settings.startupUrl
     }
 
+    // Proxy SOCKS5: solo se guarda una dirección válida (o vacía)
+    property bool proxyError: false
+    function saveProxy() {
+        const address = proxyField.text.trim()
+        root.proxyError = address !== "" && !Settings.validProxyAddress(address)
+        if (!root.proxyError)
+            Settings.proxyAddress = address
+    }
+
     // DNS cifrado: el del sistema, cifrado con respaldo o solo cifrado
     readonly property var secureDnsModes: [
         { value: "off", label: "Desactivado" }, { value: "auto", label: "Automático" },
@@ -1126,6 +1135,62 @@ FocusScope {
                     title: "Se aplicará al volver a abrir Mitis"
                     description: "El DNS cifrado se elige al arrancar. Cierra Mitis y ábrelo de nuevo para usar el cambio."
                 }
+                SettingRow {
+                    title: "Proxy SOCKS5"
+                    description: Settings.proxyEnabled && Settings.validProxyAddress(Settings.proxyAddress)
+                                 ? "Las páginas se conectan a través de " + Settings.proxyAddress + ". El proxy también resuelve las direcciones de los sitios, así que el DNS cifrado no se usa. Vale para todas las ventanas, también las privadas."
+                                 : "Conecta las páginas a través de un proxy SOCKS5, como el de Tor (127.0.0.1:9050) o un túnel SSH (ssh -D). Sin usuario ni contraseña."
+
+                    Toggle {
+                        checked: Settings.proxyEnabled
+                        onToggled: {
+                            Settings.proxyEnabled = checked
+                            if (checked && Settings.proxyAddress === "")
+                                proxyField.forceActiveFocus()
+                        }
+                    }
+                }
+                // Servidor y puerto del proxy
+                Item {
+                    visible: Settings.proxyEnabled
+                    width: parent.width
+                    height: Theme.settingsRowHeight
+
+                    FormField {
+                        id: proxyField
+                        anchors.left: parent.left
+                        anchors.leftMargin: Theme.margin + Theme.spacing
+                        anchors.right: saveProxy.left
+                        anchors.rightMargin: Theme.spacing
+                        anchors.verticalCenter: parent.verticalCenter
+                        placeholderText: "Servidor y puerto, p. ej. 127.0.0.1:1080"
+                        text: Settings.proxyAddress
+                        color: root.proxyError ? Colors.danger : Colors.ink
+                        onTextEdited: root.proxyError = false
+                        onAccepted: root.saveProxy()
+                    }
+                    TextButton {
+                        id: saveProxy
+                        anchors.right: parent.right
+                        anchors.rightMargin: Theme.margin + Theme.spacing
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Guardar"
+                        enabled: proxyField.text.trim() !== Settings.proxyAddress
+                        onClicked: root.saveProxy()
+                    }
+                }
+                SettingRow {
+                    visible: Settings.proxyEnabled && root.proxyError
+                    title: "Dirección no válida"
+                    description: "Escribe el servidor y el puerto separados por dos puntos, p. ej. 127.0.0.1:1080 o proxy.ejemplo.com:1080."
+                }
+                // El motor solo lo cambia al arrancar
+                SettingRow {
+                    visible: Settings.proxyPending
+                    icon: "reload"
+                    title: "Se aplicará al volver a abrir Mitis"
+                    description: "El proxy se elige al arrancar. Cierra Mitis y ábrelo de nuevo para usar el cambio."
+                }
             }
 
             SettingsSection {
@@ -1563,6 +1628,23 @@ FocusScope {
                     icon: "reload"
                     title: "Se aplicará al volver a abrir Mitis"
                     description: "Cuántas páginas se guardan se elige al arrancar. Cierra Mitis y ábrelo de nuevo para usar el cambio."
+                }
+                // Solo Windows: el arreglo es del motor de dibujo de Windows (main.cpp)
+                SettingRow {
+                    visible: Qt.platform.os === "windows"
+                    title: "Compatibilidad gráfica"
+                    description: "Si alguna página animada parpadea o se ve en negro a ratos, sobre todo con Mitis en segundo plano, actívala: Mitis dibujará las páginas de otra forma. Puede gastar algo más de procesador. Se aplica al volver a abrir Mitis."
+
+                    Toggle {
+                        checked: Settings.graphicsCompatibility
+                        onToggled: Settings.graphicsCompatibility = checked
+                    }
+                }
+                SettingRow {
+                    visible: Settings.graphicsCompatibilityPending
+                    icon: "reload"
+                    title: "Se aplicará al volver a abrir Mitis"
+                    description: "La forma de dibujar las páginas se elige al arrancar. Cierra Mitis y ábrelo de nuevo para usar el cambio."
                 }
                 SettingRow {
                     title: "Precargar páginas"

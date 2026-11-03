@@ -307,6 +307,9 @@ Window (bgBase, sin marco)
 - En la lista de pestañas, primer botón de la fila (al pasar el ratón): `essential-add`, «Añadir a esenciales»; con 4, al 35 % y con el tooltip «Ya hay 4 esenciales».
 - Como las fijadas: no se cierran (ni con Ctrl+W ni desde la página) y no se suspenden.
 
+### `ExternalAppDialog` — abrir una aplicación del equipo
+- `PageDialog` de `dialogWidth` sobre la página de su pestaña, icono `open-link` en `brandLight1`. Título «¿Abrir Microsoft Teams?» (nombre de las aplicaciones conocidas por su esquema; si no, «¿Abrir la aplicación?»), mensaje «teams.microsoft.com quiere abrir un enlace «msteams:» en una aplicación de tu equipo.» Botones «Cancelar» y «Abrir» (principal). Esc cancela; Enter no abre.
+
 ### Pestaña con sonido
 - En la lista de pestañas, un `IconButton` plano `sound` junto a la ✕ mientras la pestaña suena; `muted` si está silenciada (se ve aunque no suene). Pulsarlo alterna el silencio.
 

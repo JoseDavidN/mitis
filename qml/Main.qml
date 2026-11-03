@@ -1484,6 +1484,14 @@ Window {
                     }
                 }
 
+                // Enlaces de aplicaciones del equipo (Teams, Zoom, correo…): se pregunta antes
+                onExternalAppRequested: request => externalAppDialog.ask(request)
+
+                ExternalAppDialog {
+                    id: externalAppDialog
+                    onFinished: tab.focusPage()
+                }
+
                 // alert, confirm, prompt y aviso de salir de la página
                 onJavaScriptDialogRequested: dialog => jsDialog.enqueue(dialog)
                 onJavaScriptDialogCancelled: dialog => jsDialog.cancel(dialog)

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(Mitis
-    VERSION 0.17.0
+    VERSION 0.18.0
     DESCRIPTION "Navegador web ligero, multiplataforma y con interfaz propia"
     LANGUAGES CXX
 )
@@ -247,6 +247,7 @@ set(MITIS_QML_FILES
     qml/PageDialog.qml
     qml/PermissionDialog.qml
     qml/CertificateDialog.qml
+    qml/ExternalAppDialog.qml
     qml/JsDialog.qml
     qml/FilePicker.qml
     qml/ContextMenu.qml

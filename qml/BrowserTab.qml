@@ -156,7 +156,17 @@ Item {
     // Hay que mostrar la ventana de imprimir (PrintDialog): Ctrl+P, Opciones,
     // menú contextual (requestPrint()) o la propia página (window.print())
     signal printRequested()
+    // La página quiere abrir un enlace de una aplicación del equipo
+    // (msteams:, zoommtg:, mailto:…). El motor no la abre: se pregunta antes,
+    // como Chrome. `request`: { url, scheme, site (dominio de la página que
+    // lo pide, "" sin él), open() }. Si no se abre, no hay que avisar a nadie
+    signal externalAppRequested(var request)
     readonly property bool certificateErrorPending: certState.pending !== null
+    // Esquemas que abre el propio motor; cualquier otro es de una aplicación externa
+    readonly property var _webSchemes: ({ http: true, https: true, file: true, data: true, blob: true,
+                                          about: true, javascript: true, "view-source": true, chrome: true,
+                                          devtools: true, qrc: true, filesystem: true, ws: true, wss: true,
+                                          "chrome-extension": true })
     // Se aceptó un certificado no válido de este sitio («Continuar» en el
     // aviso): la conexión está cifrada pero no se sabe con quién
     readonly property bool certificateOverridden: BrowserProfile.certificateExceptions[root._hostOf(root.url.toString())] === true
@@ -841,6 +851,26 @@ Item {
         // Precarga de páginas: también los nombres de dominio de los enlaces
         // (el resto, preload.js); nunca en ventanas privadas
         settings.dnsPrefetchEnabled: Settings.preloadPages && !root.privateMode
+        // Enlaces de aplicaciones externas: de serie, el motor solo deja los
+        // que vienen de un clic y los abre sin preguntar; así llegan todos a
+        // onNavigationRequested (también los que la página lanza sola, como
+        // el «Abrir en la aplicación» de Teams o Zoom) y Mitis pregunta
+        settings.unknownUrlSchemePolicy: WebEngineSettings.AllowAllUnknownUrlSchemes
+
+        onNavigationRequested: request => {
+            const address = request.url.toString()
+            const scheme = address.slice(0, Math.max(0, address.indexOf(":"))).toLowerCase()
+            if (scheme === "" || root._webSchemes[scheme] === true)
+                return
+            // Rechazada, el motor no la abre; la abre Mitis si se acepta
+            request.reject()
+            root.externalAppRequested({
+                url: address,
+                scheme: scheme,
+                site: root._hostOf(view.url.toString()).replace(/^www\./, ""),
+                open: () => Qt.openUrlExternally(address)
+            })
+        }
 
         onFindTextFinished: result => {
             findState.matches = result.numberOfMatches

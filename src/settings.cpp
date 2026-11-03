@@ -1,4 +1,5 @@
 #include "settings.h"
+#include <QRegularExpression>
 
 namespace {
 const QString SearchEngineKey = QStringLiteral("Search/engine");
@@ -44,9 +45,12 @@ const QString SuspendAfterKey = QStringLiteral("Performance/suspendAfter");
 const QString CacheSizeKey = QStringLiteral("Performance/cacheSize");
 const QString MemorySaverKey = QStringLiteral("Performance/memorySaver");
 const QString InstantBackPagesKey = QStringLiteral("Performance/instantBackPages");
+const QString GraphicsCompatibilityKey = QStringLiteral("Performance/graphicsCompatibility");
 const QString ControlsSizeKey = QStringLiteral("Appearance/controlsSize");
 const QString SecureDnsKey = QStringLiteral("Privacy/secureDns");
 const QString SecureDnsProviderKey = QStringLiteral("Privacy/secureDnsProvider");
+const QString ProxyEnabledKey = QStringLiteral("Privacy/proxyEnabled");
+const QString ProxyAddressKey = QStringLiteral("Privacy/proxyAddress");
 
 // Servidores de DNS sobre HTTPS: conocidos, sin cuenta y con política de no
 // guardar datos. AdGuard y el de Mullvad con filtro bloquean además anuncios
@@ -64,8 +68,12 @@ const DnsProvider DnsProviders[] = {
 };
 // Con qué arrancó el motor ("modo:servidor" o "off"); vacío = aún no se sabe
 QString secureDnsStarted;
+// Proxy con el que arrancó el motor ("" = ninguno); sin arrancar aún, nulo
+QString proxyStarted;
 // Páginas guardadas por pestaña con las que arrancó el motor (0 = aún no)
 int instantBackStarted = 0;
+// Con qué arrancó el motor la compatibilidad gráfica (-1 = aún no se sabe)
+int graphicsCompatibilityStarted = -1;
 
 // Solo 0, 1 o 3 (lo que ofrece Configuración); cualquier otro, el de serie
 int validInstantBackPages(int value)
@@ -621,6 +629,37 @@ void Settings::setInstantBackStarted(int pages)
     instantBackStarted = pages;
 }
 
+bool Settings::graphicsCompatibility() const
+{
+    return m_settings.value(GraphicsCompatibilityKey, false).toBool();
+}
+
+void Settings::setGraphicsCompatibility(bool value)
+{
+    if (graphicsCompatibility() == value)
+        return;
+    m_settings.setValue(GraphicsCompatibilityKey, value);
+    emit graphicsCompatibilityChanged();
+    emit proxyChanged();
+}
+
+bool Settings::graphicsCompatibilityPending() const
+{
+    return graphicsCompatibilityStarted >= 0 && graphicsCompatibility() != (graphicsCompatibilityStarted == 1);
+}
+
+bool Settings::graphicsCompatibilitySaved()
+{
+    // Antes de que exista la aplicación: QSettings con los nombres explícitos
+    return QSettings(QStringLiteral("Mitis"), QStringLiteral("Mitis"))
+        .value(GraphicsCompatibilityKey, false).toBool();
+}
+
+void Settings::setGraphicsCompatibilityStarted(bool enabled)
+{
+    graphicsCompatibilityStarted = enabled ? 1 : 0;
+}
+
 QString Settings::secureDns() const
 {
     // De serie, automático: cifrado y, si el servidor no responde, el del sistema
@@ -685,6 +724,65 @@ void Settings::setSecureDnsStarted(const QString &modeAndProvider)
     secureDnsStarted = modeAndProvider;
 }
 
+bool Settings::proxyEnabled() const
+{
+    return m_settings.value(ProxyEnabledKey, false).toBool();
+}
+
+void Settings::setProxyEnabled(bool value)
+{
+    if (proxyEnabled() == value)
+        return;
+    m_settings.setValue(ProxyEnabledKey, value);
+    emit proxyChanged();
+}
+
+QString Settings::proxyAddress() const
+{
+    return m_settings.value(ProxyAddressKey).toString();
+}
+
+void Settings::setProxyAddress(const QString &value)
+{
+    const QString address = value.trimmed();
+    if (proxyAddress() == address)
+        return;
+    m_settings.setValue(ProxyAddressKey, address);
+    emit proxyChanged();
+}
+
+bool Settings::proxyPending() const
+{
+    if (proxyStarted.isNull())
+        return false;
+    const QString chosen = proxyEnabled() && validProxyAddress(proxyAddress()) ? proxyAddress() : QStringLiteral("");
+    return chosen != proxyStarted;
+}
+
+bool Settings::validProxyAddress(const QString &address)
+{
+    // Nombre o IPv4 («127.0.0.1:9050») o IPv6 entre corchetes («[::1]:1080»)
+    static const QRegularExpression pattern(QStringLiteral(R"(^(?:[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?|\[[0-9A-Fa-f:.]+\]):(\d{1,5})$)"));
+    const QRegularExpressionMatch match = pattern.match(address);
+    if (!match.hasMatch())
+        return false;
+    const int port = match.captured(1).toInt();
+    return port > 0 && port <= 65535;
+}
+
+QString Settings::proxyServerSaved()
+{
+    // Antes de que exista la aplicación: QSettings con los nombres explícitos
+    const QSettings saved(QStringLiteral("Mitis"), QStringLiteral("Mitis"));
+    const QString address = saved.value(ProxyAddressKey).toString();
+    return saved.value(ProxyEnabledKey, false).toBool() && validProxyAddress(address) ? address : QStringLiteral("");
+}
+
+void Settings::setProxyStarted(const QString &address)
+{
+    proxyStarted = address.isNull() ? QStringLiteral("") : address;
+}
+
 void Settings::setValue(const QString &key, const QVariant &value)
 {
     m_settings.setValue(key, value);
@@ -699,6 +797,7 @@ void Settings::resetPreferences()
         JavascriptKey, ImagesKey, BlockPopupsKey, AutoplayKey, BlockedPermissionsKey, AskDownloadFolderKey,
         SuspendAfterKey, BlockAdsKey, StripTrackingParamsKey, ThemeKey, SecureDnsKey, SecureDnsProviderKey,
         CacheSizeKey, MemorySaverKey, InstantBackPagesKey, ControlsSizeKey,
+        GraphicsCompatibilityKey, ProxyEnabledKey, ProxyAddressKey,
     };
     for (const QString &key : keys)
         m_settings.remove(key);
@@ -741,4 +840,5 @@ void Settings::resetPreferences()
     emit memorySaverChanged();
     emit instantBackPagesChanged();
     emit controlsSizeChanged();
+    emit graphicsCompatibilityChanged();
 }

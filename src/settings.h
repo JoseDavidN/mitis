@@ -85,6 +85,12 @@ class Settings : public QObject
     Q_PROPERTY(QVariantList secureDnsProviders READ secureDnsProviders CONSTANT)
     // Lo elegido no es lo que usa el motor desde que arrancó: falta reiniciar
     Q_PROPERTY(bool secureDnsPending READ secureDnsPending NOTIFY secureDnsPendingChanged)
+    // Proxy SOCKS5 de las páginas (solo SOCKS): encendido y «servidor:puerto».
+    // El motor lo toma al arrancar (main.cpp, setupChromiumFlags) y vale para
+    // todas las ventanas; la red de la interfaz no lo usa
+    Q_PROPERTY(bool proxyEnabled READ proxyEnabled WRITE setProxyEnabled NOTIFY proxyChanged)
+    Q_PROPERTY(QString proxyAddress READ proxyAddress WRITE setProxyAddress NOTIFY proxyChanged)
+    Q_PROPERTY(bool proxyPending READ proxyPending NOTIFY proxyChanged)
 
     // ── Contenido y permisos ──
     Q_PROPERTY(bool javascript READ javascript WRITE setJavascript NOTIFY javascriptChanged)
@@ -132,6 +138,12 @@ class Settings : public QObject
     // (instantBackPending); apagarla y encenderla, al momento (BrowserTab)
     Q_PROPERTY(int instantBackPages READ instantBackPages WRITE setInstantBackPages NOTIFY instantBackPagesChanged)
     Q_PROPERTY(bool instantBackPending READ instantBackPending NOTIFY instantBackPagesChanged)
+    // Compatibilidad gráfica (solo Windows): el motor dibuja las páginas con
+    // OpenGL en vez de Direct3D. Evita el parpadeo de las páginas animadas
+    // (WebGL, vídeo) con algunas tarjetas (QTBUG-123181). El motor lo toma al
+    // arrancar (main.cpp, setupChromiumFlags): vale desde el siguiente arranque
+    Q_PROPERTY(bool graphicsCompatibility READ graphicsCompatibility WRITE setGraphicsCompatibility NOTIFY graphicsCompatibilityChanged)
+    Q_PROPERTY(bool graphicsCompatibilityPending READ graphicsCompatibilityPending NOTIFY graphicsCompatibilityChanged)
     // Tamaño de los controles de abajo (botones y campo de dirección):
     // "normal" (de serie), "large" o "larger" (Theme.controlsScales)
     Q_PROPERTY(QString controlsSize READ controlsSize WRITE setControlsSize NOTIFY controlsSizeChanged)
@@ -225,6 +237,12 @@ public:
     // Lo que se le pasó al motor al arrancar (lo llama main.cpp)
     static int instantBackPagesSaved();
     static void setInstantBackStarted(int pages);
+    bool graphicsCompatibility() const;
+    void setGraphicsCompatibility(bool value);
+    bool graphicsCompatibilityPending() const;
+    // Lo que se le pasó al motor al arrancar (lo llama main.cpp)
+    static bool graphicsCompatibilitySaved();
+    static void setGraphicsCompatibilityStarted(bool enabled);
     QString controlsSize() const;
     void setControlsSize(const QString &value);
     QString secureDns() const;
@@ -233,6 +251,17 @@ public:
     void setSecureDnsProvider(const QString &value);
     QVariantList secureDnsProviders() const;
     bool secureDnsPending() const;
+    bool proxyEnabled() const;
+    void setProxyEnabled(bool value);
+    QString proxyAddress() const;
+    void setProxyAddress(const QString &value);
+    bool proxyPending() const;
+    // «servidor:puerto» válido (lo comprueba también Configuración antes de guardar)
+    Q_INVOKABLE static bool validProxyAddress(const QString &address);
+    // Para main.cpp, antes de iniciar el motor: el proxy que debe usar ("" =
+    // ninguno) y, una vez aplicado, con cuál arrancó
+    static QString proxyServerSaved();
+    static void setProxyStarted(const QString &address);
 
     // Para main.cpp, antes de crear los perfiles: dirección (plantilla de
     // DNS sobre HTTPS) del servidor elegido y, una vez aplicado, con qué
@@ -289,10 +318,12 @@ signals:
     void cacheSizeChanged();
     void memorySaverChanged();
     void instantBackPagesChanged();
+    void graphicsCompatibilityChanged();
     void controlsSizeChanged();
     void secureDnsChanged();
     void secureDnsProviderChanged();
     void secureDnsPendingChanged();
+    void proxyChanged();
 
 private:
     // Guarda `value` en `key` y avisa si cambió

@@ -111,8 +111,27 @@ void setupChromiumFlags()
                              .value(QStringLiteral("Appearance/theme")).toString() == QLatin1String("claro")
                          ? "--blink-settings=preferredColorScheme=1"
                          : "--blink-settings=preferredColorScheme=0");
+    QByteArray engine = flags;
+#ifdef Q_OS_WIN
+    // Compatibilidad gráfica (Configuración → Rendimiento): con Direct3D, a
+    // veces Qt muestra imágenes de la página a medio componer (solo el fondo
+    // WebGL o en negro) y las páginas animadas parpadean, sobre todo con la
+    // ventana sin foco (QTBUG-123181, Windows 10 y tarjetas NVIDIA). Con OpenGL no
+    const bool compatibility = Settings::graphicsCompatibilitySaved();
+    Settings::setGraphicsCompatibilityStarted(compatibility);
+    if (compatibility)
+        engine += " --use-angle=opengl";
+#endif
+    // Proxy SOCKS5 (Configuración → Privacidad): todas las páginas, también
+    // las de las ventanas privadas; con SOCKS5 los nombres los resuelve el
+    // proxy (el DNS cifrado no se usa). Chromium no admite usuario y
+    // contraseña en SOCKS
+    const QString proxy = Settings::proxyServerSaved();
+    Settings::setProxyStarted(proxy);
+    if (!proxy.isEmpty())
+        engine += " --proxy-server=socks5://" + proxy.toLatin1();
     const QByteArray user = qgetenv("QTWEBENGINE_CHROMIUM_FLAGS");
-    qputenv("QTWEBENGINE_CHROMIUM_FLAGS", user.isEmpty() ? flags : flags + ' ' + user);
+    qputenv("QTWEBENGINE_CHROMIUM_FLAGS", user.isEmpty() ? engine : engine + ' ' + user);
 }
 
 // DNS cifrado (Configuración → Privacidad): el motor lo toma al crear el

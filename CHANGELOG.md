@@ -5,6 +5,19 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ## [Sin publicar]
 
+> Proxy, enlaces a tus aplicaciones y páginas sin parpadeos
+
+### Añadido
+
+- Proxy SOCKS5: en Configuración → Privacidad puedes hacer que las páginas se conecten a través de un proxy, como el de Tor o un túnel SSH. Actívalo, escribe el servidor y el puerto (por ejemplo, 127.0.0.1:1080) y vuelve a abrir Mitis. Vale para todas las ventanas, también las privadas.
+
+### Corregido
+
+- Los enlaces que abren una aplicación de tu equipo (unirte a una reunión de Microsoft Teams o de Zoom, un enlace de correo…) no hacían nada cuando la página intentaba abrirlos sola. Ahora Mitis pregunta «¿Abrir Microsoft Teams?» (o la aplicación que sea) y, si aceptas, la abre.
+- En Windows, algunas páginas animadas (con fondos en movimiento o vídeo) parpadeaban o se veían en negro a ratos, sobre todo con Mitis en segundo plano. Si te pasa, activa «Compatibilidad gráfica» en Configuración → Rendimiento y vuelve a abrir Mitis.
+
+## [0.17.0] - 2026-10-30
+
 > Tus pestañas esenciales, siempre a mano
 
 ### Añadido
