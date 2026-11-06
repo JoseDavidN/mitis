@@ -19,7 +19,7 @@ QT_DIR=""
 TRABAJO="$HOME/qwe"
 SALIDA=""
 TRABAJOS=0
-# arm64 basta para los Mac con Apple Silicon (y para el runner macos-14).
+# arm64 basta para los Mac con Apple Silicon (y para el runner macos-15).
 # "arm64;x86_64" (universal) sirve también a los Intel, pero compila Chromium dos veces
 ARQUITECTURAS="arm64"
 PDF="OFF"

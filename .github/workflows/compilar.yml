@@ -191,7 +191,7 @@ jobs:
     # Apple Silicon (el runner) e Intel en un solo binario universal. El Qt
     # oficial de macOS (clang_64) ya es universal: basta con pedir las dos
     # arquitecturas al compilar Mitis
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 
