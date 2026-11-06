@@ -5,6 +5,22 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ## [Sin publicar]
 
+> Mitis, tu navegador de siempre
+
+### Añadido
+
+- Ahora puedes hacer de Mitis tu navegador predeterminado desde Configuración → Navegador predeterminado (la opción solo aparece si aún no lo es): los enlaces de otras aplicaciones y las páginas web guardadas en tu equipo se abrirán en Mitis. En Windows se abre la Configuración del sistema, donde lo confirmas con un botón; en Mac, el sistema te pide confirmarlo; en Linux se aplica al momento.
+
+### Quitado
+
+- La opción «Compatibilidad gráfica» de Configuración → Rendimiento: al activarla, las páginas se quedaban en negro. Si la tenías activada, las páginas vuelven a cargar con normalidad.
+
+### Corregido
+
+- Si minimizabas Mitis con la ventana maximizada, al volver a abrirlo la ventana se salía de la pantalla hasta que hacías doble clic en la barra de título. Ahora vuelve maximizada y ajustada a la pantalla. Lo mismo al volver a Mitis desde un enlace o una notificación.
+
+## [0.19.0] - 2026-11-03
+
 > Tu gestor de contraseñas
 
 ### Añadido

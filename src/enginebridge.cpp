@@ -285,6 +285,12 @@ void EngineBridge::setRoundedCorners(QObject *window, bool rounded) const
     setWindowRoundedCorners(qobject_cast<QWindow *>(window), rounded);
 }
 
+void EngineBridge::minimizeWindow(QObject *window) const
+{
+    if (auto *target = qobject_cast<QWindow *>(window))
+        target->setWindowStates(target->windowStates() | Qt::WindowMinimized);
+}
+
 void EngineBridge::requestCertificate(const QString &host, int port)
 {
     if (host.isEmpty())

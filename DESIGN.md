@@ -310,6 +310,9 @@ Window (bgBase, sin marco)
 ### `ExternalAppDialog` — abrir una aplicación del equipo
 - `PageDialog` de `dialogWidth` sobre la página de su pestaña, icono `open-link` en `brandLight1`. Título «¿Abrir Microsoft Teams?» (nombre de las aplicaciones conocidas por su esquema; si no, «¿Abrir la aplicación?»), mensaje «teams.microsoft.com quiere abrir un enlace «msteams:» en una aplicación de tu equipo.» Botones «Cancelar» y «Abrir» (principal). Esc cancela; Enter no abre.
 
+### Navegador predeterminado
+- Configuración → Navegador predeterminado: una `SettingRow` con botón principal «Establecer». La sección y su entrada del índice solo existen si Mitis está instalado y no es el predeterminado.
+
 ### Gestor de contraseñas
 - **Ventana (`PasswordManager`):** sobre toda la ventana de Mitis, velo `backgroundScrim` y tarjeta `PopupBackground` centrada de `passwordManagerWidth` (620) de ancho; con la lista o el formulario de editar, `passwordManagerHeight` (600) de alto; las demás vistas, a su contenido. Cabecera: «Volver» (`back`, plano) fuera de la lista, icono `passwords` en `brandLight1`, título `fontSizeTitle` DemiBold y, a la derecha, cuenta (`user`, solo en la lista), bloquear (`lock`) y cerrar, planos. Etiquetas de los campos en `fontSizeSmall` DemiBold `inkSecondary`; explicaciones en `inkSoft`; errores en `danger`. Campos de contraseña: `FormField` con el botón de mostrar (`show-password`/`hide-password`, `buttonSizeSmall`) dentro, a la derecha; a la vista, en `monospaceFont`.
 - **Lista:** buscador con icono `search` y botones flotantes `add`, `generate`, `import`, `export`. Filas de `passwordRowHeight` (52): favicon sobre círculo `faviconBackdrop` (sin él, la inicial en `brandLight1`), sitio en `ink` y usuario en `inkMuted`; al pasar, `tintHover` y botones planos pequeños copiar usuario (`user`), copiar contraseña (`copy`) y editar (`edit`). Abajo, en `fontSizeSmall` `inkMuted`, el número de guardadas o lo último que pasó.

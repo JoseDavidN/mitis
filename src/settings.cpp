@@ -49,7 +49,6 @@ const QString SuspendAfterKey = QStringLiteral("Performance/suspendAfter");
 const QString CacheSizeKey = QStringLiteral("Performance/cacheSize");
 const QString MemorySaverKey = QStringLiteral("Performance/memorySaver");
 const QString InstantBackPagesKey = QStringLiteral("Performance/instantBackPages");
-const QString GraphicsCompatibilityKey = QStringLiteral("Performance/graphicsCompatibility");
 const QString ControlsSizeKey = QStringLiteral("Appearance/controlsSize");
 const QString SecureDnsKey = QStringLiteral("Privacy/secureDns");
 const QString SecureDnsProviderKey = QStringLiteral("Privacy/secureDnsProvider");
@@ -76,8 +75,6 @@ QString secureDnsStarted;
 QString proxyStarted;
 // Páginas guardadas por pestaña con las que arrancó el motor (0 = aún no)
 int instantBackStarted = 0;
-// Con qué arrancó el motor la compatibilidad gráfica (-1 = aún no se sabe)
-int graphicsCompatibilityStarted = -1;
 
 // Solo 0, 1 o 3 (lo que ofrece Configuración); cualquier otro, el de serie
 int validInstantBackPages(int value)
@@ -668,36 +665,6 @@ void Settings::setInstantBackStarted(int pages)
     instantBackStarted = pages;
 }
 
-bool Settings::graphicsCompatibility() const
-{
-    return m_settings.value(GraphicsCompatibilityKey, false).toBool();
-}
-
-void Settings::setGraphicsCompatibility(bool value)
-{
-    if (graphicsCompatibility() == value)
-        return;
-    m_settings.setValue(GraphicsCompatibilityKey, value);
-    emit graphicsCompatibilityChanged();
-}
-
-bool Settings::graphicsCompatibilityPending() const
-{
-    return graphicsCompatibilityStarted >= 0 && graphicsCompatibility() != (graphicsCompatibilityStarted == 1);
-}
-
-bool Settings::graphicsCompatibilitySaved()
-{
-    // Antes de que exista la aplicación: QSettings con los nombres explícitos
-    return QSettings(QStringLiteral("Mitis"), QStringLiteral("Mitis"))
-        .value(GraphicsCompatibilityKey, false).toBool();
-}
-
-void Settings::setGraphicsCompatibilityStarted(bool enabled)
-{
-    graphicsCompatibilityStarted = enabled ? 1 : 0;
-}
-
 QString Settings::secureDns() const
 {
     // De serie, automático: cifrado y, si el servidor no responde, el del sistema
@@ -835,7 +802,7 @@ void Settings::resetPreferences()
         JavascriptKey, ImagesKey, BlockPopupsKey, AutoplayKey, BlockedPermissionsKey, AskDownloadFolderKey,
         SuspendAfterKey, BlockAdsKey, StripTrackingParamsKey, ThemeKey, SecureDnsKey, SecureDnsProviderKey,
         CacheSizeKey, MemorySaverKey, InstantBackPagesKey, ControlsSizeKey,
-        GraphicsCompatibilityKey, ProxyEnabledKey, ProxyAddressKey,
+        ProxyEnabledKey, ProxyAddressKey,
         PasswordAutofillKey, PasswordOfferSaveKey, PasswordLengthKey,
     };
     for (const QString &key : keys)
@@ -879,7 +846,6 @@ void Settings::resetPreferences()
     emit memorySaverChanged();
     emit instantBackPagesChanged();
     emit controlsSizeChanged();
-    emit graphicsCompatibilityChanged();
     emit proxyChanged();
     emit passwordPreferencesChanged();
 }

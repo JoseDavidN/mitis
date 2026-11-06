@@ -20,6 +20,14 @@ Window {
 
     readonly property bool maximized: visibility === Window.Maximized
 
+    function minimize() {
+        // qmllint disable unqualified
+        if (typeof MitisEngine.minimizeWindow === "function")
+            MitisEngine.minimizeWindow(root)
+        else
+            root.showMinimized()
+        // qmllint enable unqualified
+    }
     function toggleMaximized() {
         if (maximized)
             showNormal()
@@ -124,7 +132,7 @@ Window {
                 WindowButton {
                     icon: "minimize"
                     label: "Minimizar"
-                    onClicked: root.showMinimized()
+                    onClicked: root.minimize()
                 }
                 WindowButton {
                     icon: root.maximized ? "restore" : "maximize"

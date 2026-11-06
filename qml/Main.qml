@@ -111,10 +111,12 @@ Window {
         // cambió la resolución, vuelve a lo de serie
         const centerX = saved.x + saved.width / 2
         const centerY = saved.y + saved.height / 2
-        const visible = Application.screens.some(screen =>
+        const screen = Application.screens.find(screen =>
             centerX >= screen.virtualX && centerX < screen.virtualX + screen.width
             && centerY >= screen.virtualY && centerY < screen.virtualY + screen.height)
-        return visible ? saved : defaultGeometry()
+        // Más grande que su pantalla, tampoco: la 0.19.0 y anteriores podían
+        // guardar un tamaño desbordado al volver de minimizar
+        return screen && saved.width <= screen.width && saved.height <= screen.height ? saved : defaultGeometry()
     }
     // Último tamaño sin maximizar (lo que se guarda aunque se cierre maximizada)
     property var normalGeometry: ({ x: initialGeometry.x, y: initialGeometry.y,
@@ -143,6 +145,19 @@ Window {
     onVisibilityChanged: {
         geometrySaver.restart()
         win.applyCorners()
+        if (visibility === Window.Windowed || visibility === Window.Maximized)
+            lastShownVisibility = visibility
+    }
+    // Cómo estaba antes de minimizarse: un enlace o una notificación la
+    // devuelven igual, sin quitarle el maximizado
+    property int lastShownVisibility: Window.Windowed
+    function restoreIfMinimized() {
+        if (visibility !== Window.Minimized)
+            return
+        if (lastShownVisibility === Window.Maximized)
+            showMaximized()
+        else
+            showNormal()
     }
     // Esquinas redondeadas como las del sistema (Windows 11, macOS); rectas
     // maximizada o en pantalla completa
@@ -218,8 +233,7 @@ Window {
         enabled: !win.privateMode
         function onReceived() {
             win.openLinks(Links.takePending())
-            if (win.visibility === Window.Minimized)
-                win.showNormal()
+            win.restoreIfMinimized()
             win.raise()
             win.requestActivate()
         }
@@ -254,8 +268,7 @@ Window {
             if (found < 0)
                 return
             win.selectTab(found)
-            if (win.visibility === Window.Minimized)
-                win.showNormal()
+            win.restoreIfMinimized()
             win.raise()
             win.requestActivate()
         }

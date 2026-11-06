@@ -25,6 +25,14 @@ Surface {
     // En pantalla completa la ventana no se mueve ni se maximiza desde aquí
     readonly property bool fullScreen: window.visibility === Window.FullScreen
 
+    function minimize() {
+        // qmllint disable unqualified
+        if (typeof MitisEngine.minimizeWindow === "function")
+            MitisEngine.minimizeWindow(window)
+        else
+            window.showMinimized()
+        // qmllint enable unqualified
+    }
     function toggleMaximized() {
         if (maximized)
             window.showNormal()
@@ -84,7 +92,7 @@ Surface {
             tone: Theme.macMinimize
             symbol: "minimize"
             tooltip: "Minimizar"
-            onClicked: root.window.showMinimized()
+            onClicked: root.minimize()
         }
         MacDot {
             groupHovered: macHover.hovered
@@ -217,7 +225,7 @@ Surface {
             tooltip: "Minimizar"
             tooltipBelow: true
             iconSize: Theme.iconSizeSmall
-            onClicked: root.window.showMinimized()
+            onClicked: root.minimize()
         }
         IconButton {
             flat: true

@@ -27,6 +27,11 @@ FocusScope {
     // Página de la pestaña activa (para «Usar la página actual» al iniciar)
     property string currentPageUrl: ""
 
+    // Se puede cambiar fuera de Mitis: se mira al abrir y al volver a Mitis
+    Component.onCompleted: DefaultBrowser.refresh()
+    readonly property bool _windowActive: Window.active
+    on_WindowActiveChanged: if (_windowActive) DefaultBrowser.refresh()
+
     signal closeRequested()
     // «Actualizar» (Acerca de Mitis): lo hace la ventana, que debe cerrarse
     signal updateRequested()
@@ -37,6 +42,7 @@ FocusScope {
     readonly property var sections: [
         { key: "profile", title: "Perfil", icon: "profile" },
         { key: "startup", title: "Al iniciar", icon: "reopen" },
+        { key: "defaultbrowser", title: "Navegador predeterminado", icon: "open-link" },
         { key: "appearance", title: "Apariencia e idioma", icon: "appearance" },
         { key: "search", title: "Búsqueda", icon: "search" },
         { key: "newtab", title: "Nueva pestaña", icon: "new-tab" },
@@ -53,7 +59,10 @@ FocusScope {
         { key: "shortcuts", title: "Atajos de teclado", icon: "keyboard" },
         { key: "developer", title: "Desarrollo", icon: "devtools" },
         { key: "about", title: "Acerca de Mitis", icon: "info" }
-    ]
+    ].filter(section => section.key !== "defaultbrowser" || root.offerDefaultBrowser)
+    // Solo si Mitis no es ya el predeterminado (y está instalado: si no, el
+    // sistema no lo conoce). Nunca se establece sin pulsar «Establecer»
+    readonly property bool offerDefaultBrowser: DefaultBrowser.checked && DefaultBrowser.available && !DefaultBrowser.isDefault
 
     // ── Opciones de los ajustes ──────────────────────────────────────
     readonly property var zoomOptions: [
@@ -347,6 +356,7 @@ FocusScope {
         switch (key) {
         case "profile": return profileSection
         case "startup": return startupSection
+        case "defaultbrowser": return defaultBrowserSection
         case "appearance": return appearanceSection
         case "search": return searchSection
         case "newtab": return newTabSection
@@ -864,6 +874,29 @@ FocusScope {
                             startupField.text = root.currentPageUrl
                             root.saveStartupUrl()
                         }
+                    }
+                }
+            }
+
+            SettingsSection {
+                id: defaultBrowserSection
+                visible: root.offerDefaultBrowser
+                title: "Navegador predeterminado"
+                icon: "open-link"
+
+                SettingRow {
+                    divider: false
+                    title: "Usar Mitis como navegador predeterminado"
+                    description: Qt.platform.os === "windows"
+                                 ? "Se abrirá Configuración de Windows: pulsa «Establecer como predeterminado» en la página de Mitis."
+                                 : Qt.platform.os === "linux"
+                                   ? "Los enlaces de otras aplicaciones y las páginas web guardadas en tu equipo se abrirán en Mitis."
+                                   : "El sistema te pedirá que lo confirmes. Después, los enlaces de otras aplicaciones y las páginas web guardadas se abrirán en Mitis."
+
+                    TextButton {
+                        primary: true
+                        text: "Establecer"
+                        onClicked: DefaultBrowser.makeDefault()
                     }
                 }
             }
@@ -1685,23 +1718,6 @@ FocusScope {
                     icon: "reload"
                     title: "Se aplicará al volver a abrir Mitis"
                     description: "Cuántas páginas se guardan se elige al arrancar. Cierra Mitis y ábrelo de nuevo para usar el cambio."
-                }
-                // Solo Windows: el arreglo es del motor de dibujo de Windows (main.cpp)
-                SettingRow {
-                    visible: Qt.platform.os === "windows"
-                    title: "Compatibilidad gráfica"
-                    description: "Si alguna página animada parpadea o se ve en negro a ratos, sobre todo con Mitis en segundo plano, actívala: Mitis dibujará las páginas de otra forma. Puede gastar algo más de procesador. Se aplica al volver a abrir Mitis."
-
-                    Toggle {
-                        checked: Settings.graphicsCompatibility
-                        onToggled: Settings.graphicsCompatibility = checked
-                    }
-                }
-                SettingRow {
-                    visible: Settings.graphicsCompatibilityPending
-                    icon: "reload"
-                    title: "Se aplicará al volver a abrir Mitis"
-                    description: "La forma de dibujar las páginas se elige al arrancar. Cierra Mitis y ábrelo de nuevo para usar el cambio."
                 }
                 SettingRow {
                     title: "Precargar páginas"

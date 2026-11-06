@@ -144,12 +144,6 @@ class Settings : public QObject
     // (instantBackPending); apagarla y encenderla, al momento (BrowserTab)
     Q_PROPERTY(int instantBackPages READ instantBackPages WRITE setInstantBackPages NOTIFY instantBackPagesChanged)
     Q_PROPERTY(bool instantBackPending READ instantBackPending NOTIFY instantBackPagesChanged)
-    // Compatibilidad gráfica (solo Windows): el motor dibuja las páginas con
-    // OpenGL en vez de Direct3D. Evita el parpadeo de las páginas animadas
-    // (WebGL, vídeo) con algunas tarjetas (QTBUG-123181). El motor lo toma al
-    // arrancar (main.cpp, setupChromiumFlags): vale desde el siguiente arranque
-    Q_PROPERTY(bool graphicsCompatibility READ graphicsCompatibility WRITE setGraphicsCompatibility NOTIFY graphicsCompatibilityChanged)
-    Q_PROPERTY(bool graphicsCompatibilityPending READ graphicsCompatibilityPending NOTIFY graphicsCompatibilityChanged)
     // Tamaño de los controles de abajo (botones y campo de dirección):
     // "normal" (de serie), "large" o "larger" (Theme.controlsScales)
     Q_PROPERTY(QString controlsSize READ controlsSize WRITE setControlsSize NOTIFY controlsSizeChanged)
@@ -249,12 +243,6 @@ public:
     // Lo que se le pasó al motor al arrancar (lo llama main.cpp)
     static int instantBackPagesSaved();
     static void setInstantBackStarted(int pages);
-    bool graphicsCompatibility() const;
-    void setGraphicsCompatibility(bool value);
-    bool graphicsCompatibilityPending() const;
-    // Lo que se le pasó al motor al arrancar (lo llama main.cpp)
-    static bool graphicsCompatibilitySaved();
-    static void setGraphicsCompatibilityStarted(bool enabled);
     QString controlsSize() const;
     void setControlsSize(const QString &value);
     QString secureDns() const;
@@ -331,7 +319,6 @@ signals:
     void cacheSizeChanged();
     void memorySaverChanged();
     void instantBackPagesChanged();
-    void graphicsCompatibilityChanged();
     void controlsSizeChanged();
     void secureDnsChanged();
     void secureDnsProviderChanged();

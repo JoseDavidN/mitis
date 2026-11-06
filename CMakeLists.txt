@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(Mitis
-    VERSION 0.19.0
+    VERSION 0.20.0
     DESCRIPTION "Navegador web ligero, multiplataforma y con interfaz propia"
     LANGUAGES C CXX
 )
@@ -120,6 +120,8 @@ qt_add_qml_module(mitiscore
         src/themecolors.cpp
         src/passwords.h
         src/passwords.cpp
+        src/defaultbrowser.h
+        src/defaultbrowser.cpp
 )
 # Cifrado del gestor de contraseñas (src/passwords.*): Monocypher, en C, copiado
 # en third_party/ (CC0 o BSD de 2 cláusulas: licencias/AVISOS.md)
@@ -127,9 +129,13 @@ target_sources(mitiscore PRIVATE third_party/monocypher/monocypher.c)
 target_include_directories(mitiscore PRIVATE third_party/monocypher)
 # Deslizar entre páginas: el ajuste del sistema (src/navigationgestures_mac.mm)
 if(APPLE)
-    target_sources(mitiscore PRIVATE src/navigationgestures_mac.mm)
-    set_source_files_properties(src/navigationgestures_mac.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
-    target_link_libraries(mitiscore PRIVATE "-framework AppKit")
+    target_sources(mitiscore PRIVATE src/navigationgestures_mac.mm src/defaultbrowser_mac.mm)
+    set_source_files_properties(src/navigationgestures_mac.mm src/defaultbrowser_mac.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+    target_link_libraries(mitiscore PRIVATE "-framework AppKit" "-framework UniformTypeIdentifiers")
+endif()
+# Navegador predeterminado: preguntar a Windows quién abre los enlaces (src/defaultbrowser.cpp)
+if(WIN32)
+    target_link_libraries(mitiscore PRIVATE shlwapi)
 endif()
 # El registro de tipos generado incluye "settings.h" sin ruta
 target_include_directories(mitiscore PRIVATE src)

@@ -167,7 +167,7 @@ void registrarNavegador(const std::wstring &mitis)
     valorUsuario(capacidades + L"\\StartMenu", L"StartMenuInternet", L"Mitis");
     for (const wchar_t *esquema : { L"http", L"https" })
         valorUsuario(capacidades + L"\\URLAssociations", esquema, L"MitisHTML");
-    for (const wchar_t *extension : { L".htm", L".html", L".xhtml" })
+    for (const wchar_t *extension : { L".htm", L".html", L".shtml", L".xht", L".xhtml" })
         valorUsuario(capacidades + L"\\FileAssociations", extension, L"MitisHTML");
     valorUsuario(L"Software\\RegisteredApplications", L"Mitis", capacidades);
 }

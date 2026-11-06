@@ -98,6 +98,10 @@ public:
     // Esquinas redondeadas de la ventana, como las del sistema (Windows 11,
     // macOS); rectas con `rounded` en falso (maximizada, pantalla completa)
     Q_INVOKABLE void setRoundedCorners(QObject *window, bool rounded) const;
+    // Minimiza conservando si estaba maximizada. showMinimized() lo borra: en
+    // Windows, Qt quita entonces la marca de volver maximizada y, al
+    // restaurarla, la ventana sin marco queda sin maximizar y mal de tamaño
+    Q_INVOKABLE void minimizeWindow(QObject *window) const;
 
     // Descarga ahora las listas de filtros
     Q_INVOKABLE void updateFilterLists();
