@@ -33,6 +33,10 @@ class EngineBridge : public QObject
     // Clave al azar de los avisos del gestor de contraseñas en las páginas
     // (BrowserProfile.passwordPrefix); una por arranque
     Q_PROPERTY(QString passwordToken READ passwordToken CONSTANT)
+    // Linux con un gestor de ventanas en mosaico (Hyprland, Sway, i3, niri,
+    // River): él coloca y cierra las ventanas con el teclado, así que sobran
+    // la barra de título y los bordes de redimensionar. Lo mira Main.qml
+    Q_PROPERTY(bool tilingDesktop READ tilingDesktop CONSTANT)
     // El perfil de navegación (cookies, caché, permisos en disco). Lo crea
     // C++ con su nombre de almacenamiento desde el principio: creado en QML,
     // Qt avisa de que quedará obsoleto y arranca un instante sin disco. Vive
@@ -71,6 +75,7 @@ public:
     QString widevinePath() const { return m_widevinePath; }
     QString licensesPath() const;
     QString passwordToken() const { return m_passwordToken; }
+    static bool tilingDesktop();
     bool blockThirdPartyCookies() const { return m_blockThirdPartyCookies; }
     void setBlockThirdPartyCookies(bool value);
     bool doNotTrack() const;

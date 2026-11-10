@@ -19,6 +19,8 @@ Window {
     signal dismissed()
 
     readonly property bool maximized: visibility === Window.Maximized
+    // Gestor de ventanas en mosaico (Hyprland, Sway…): sin barra ni bordes
+    readonly property bool tiling: MitisEngine.tilingDesktop === true
 
     function minimize() {
         // qmllint disable unqualified
@@ -50,9 +52,9 @@ Window {
     Rectangle {
         id: frame
         anchors.fill: parent
-        radius: root.maximized ? 0 : Theme.devtoolsRadius
+        radius: root.maximized || root.tiling ? 0 : Theme.devtoolsRadius
         color: Theme.devtoolsBg
-        border.width: root.maximized ? 0 : 1
+        border.width: root.maximized || root.tiling ? 0 : 1
         border.color: Theme.devtoolsLine
 
         // ── Barra de título ──────────────────────────────────────────
@@ -61,7 +63,9 @@ Window {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
-            height: Theme.devtoolsTitleBarHeight
+            // Con un gestor en mosaico, sin barra: solo el margen del panel
+            height: root.tiling ? Theme.devtoolsInset : Theme.devtoolsTitleBarHeight
+            visible: !root.tiling
 
             DragHandler {
                 target: null
@@ -173,6 +177,7 @@ Window {
 
     ResizeHandles {
         window: root
+        enabled: !root.tiling
     }
 
     // Botón redondo de la barra: gris oscuro; al pasar, acento (o rojo

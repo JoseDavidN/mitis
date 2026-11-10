@@ -54,6 +54,7 @@ const QString SecureDnsKey = QStringLiteral("Privacy/secureDns");
 const QString SecureDnsProviderKey = QStringLiteral("Privacy/secureDnsProvider");
 const QString ProxyEnabledKey = QStringLiteral("Privacy/proxyEnabled");
 const QString ProxyAddressKey = QStringLiteral("Privacy/proxyAddress");
+const QString HardwareVideoDecodeKey = QStringLiteral("Performance/hardwareVideoDecode");
 
 // Servidores de DNS sobre HTTPS: conocidos, sin cuenta y con política de no
 // guardar datos. AdGuard y el de Mullvad con filtro bloquean además anuncios
@@ -73,6 +74,8 @@ const DnsProvider DnsProviders[] = {
 QString secureDnsStarted;
 // Proxy con el que arrancó el motor ("" = ninguno); sin arrancar aún, nulo
 QString proxyStarted;
+// Vídeo por la GPU con el que arrancó el motor: 0 no, 1 sí, -1 aún no arrancó
+int hardwareVideoDecodeStarted = -1;
 // Páginas guardadas por pestaña con las que arrancó el motor (0 = aún no)
 int instantBackStarted = 0;
 
@@ -788,6 +791,35 @@ void Settings::setProxyStarted(const QString &address)
     proxyStarted = address.isNull() ? QStringLiteral("") : address;
 }
 
+bool Settings::hardwareVideoDecode() const
+{
+    return m_settings.value(HardwareVideoDecodeKey, true).toBool();
+}
+
+void Settings::setHardwareVideoDecode(bool value)
+{
+    if (hardwareVideoDecode() == value)
+        return;
+    m_settings.setValue(HardwareVideoDecodeKey, value);
+    emit hardwareVideoDecodeChanged();
+}
+
+bool Settings::hardwareVideoDecodePending() const
+{
+    return hardwareVideoDecodeStarted >= 0 && hardwareVideoDecode() != (hardwareVideoDecodeStarted == 1);
+}
+
+bool Settings::hardwareVideoDecodeSaved()
+{
+    // Antes de que exista la aplicación: QSettings con los nombres explícitos
+    return QSettings(QStringLiteral("Mitis"), QStringLiteral("Mitis")).value(HardwareVideoDecodeKey, true).toBool();
+}
+
+void Settings::setHardwareVideoDecodeStarted(bool on)
+{
+    hardwareVideoDecodeStarted = on ? 1 : 0;
+}
+
 void Settings::setValue(const QString &key, const QVariant &value)
 {
     m_settings.setValue(key, value);
@@ -802,7 +834,7 @@ void Settings::resetPreferences()
         JavascriptKey, ImagesKey, BlockPopupsKey, AutoplayKey, BlockedPermissionsKey, AskDownloadFolderKey,
         SuspendAfterKey, BlockAdsKey, StripTrackingParamsKey, ThemeKey, SecureDnsKey, SecureDnsProviderKey,
         CacheSizeKey, MemorySaverKey, InstantBackPagesKey, ControlsSizeKey,
-        ProxyEnabledKey, ProxyAddressKey,
+        ProxyEnabledKey, ProxyAddressKey, HardwareVideoDecodeKey,
         PasswordAutofillKey, PasswordOfferSaveKey, PasswordLengthKey,
     };
     for (const QString &key : keys)
@@ -847,5 +879,6 @@ void Settings::resetPreferences()
     emit instantBackPagesChanged();
     emit controlsSizeChanged();
     emit proxyChanged();
+    emit hardwareVideoDecodeChanged();
     emit passwordPreferencesChanged();
 }

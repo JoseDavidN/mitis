@@ -97,6 +97,10 @@ class Settings : public QObject
     Q_PROPERTY(bool proxyEnabled READ proxyEnabled WRITE setProxyEnabled NOTIFY proxyChanged)
     Q_PROPERTY(QString proxyAddress READ proxyAddress WRITE setProxyAddress NOTIFY proxyChanged)
     Q_PROPERTY(bool proxyPending READ proxyPending NOTIFY proxyChanged)
+    // Vídeo decodificado por la GPU (VA-API), solo en Linux: en Windows y
+    // macOS el motor ya lo hace siempre. Al arrancar (setupChromiumFlags)
+    Q_PROPERTY(bool hardwareVideoDecode READ hardwareVideoDecode WRITE setHardwareVideoDecode NOTIFY hardwareVideoDecodeChanged)
+    Q_PROPERTY(bool hardwareVideoDecodePending READ hardwareVideoDecodePending NOTIFY hardwareVideoDecodeChanged)
 
     // ── Contenido y permisos ──
     Q_PROPERTY(bool javascript READ javascript WRITE setJavascript NOTIFY javascriptChanged)
@@ -262,6 +266,12 @@ public:
     // ninguno) y, una vez aplicado, con cuál arrancó
     static QString proxyServerSaved();
     static void setProxyStarted(const QString &address);
+    bool hardwareVideoDecode() const;
+    void setHardwareVideoDecode(bool value);
+    bool hardwareVideoDecodePending() const;
+    // Para main.cpp: lo guardado y, una vez aplicado, con qué arrancó
+    static bool hardwareVideoDecodeSaved();
+    static void setHardwareVideoDecodeStarted(bool on);
 
     // Para main.cpp, antes de crear los perfiles: dirección (plantilla de
     // DNS sobre HTTPS) del servidor elegido y, una vez aplicado, con qué
@@ -277,6 +287,7 @@ public:
     Q_INVOKABLE void resetPreferences();
 
 signals:
+    void hardwareVideoDecodeChanged();
     void searchEngineChanged();
     void searchCustomNameChanged();
     void searchCustomUrlChanged();

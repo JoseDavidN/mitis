@@ -310,6 +310,9 @@ QtObject {
     readonly property int updatePopupWidth: 300
     readonly property int textButtonHeight: 32
     readonly property int dialogWidth: 360
+    // Compartir pantalla (ScreenShareDialog): más ancho por los nombres de ventana
+    readonly property int screenShareWidth: 420
+    readonly property int screenShareListHeight: 280
     // Aviso de certificado: más texto que un diálogo normal
     readonly property int certificateDialogWidth: 440
     // Gestor de contraseñas: lista bajo los campos de las páginas (ancho

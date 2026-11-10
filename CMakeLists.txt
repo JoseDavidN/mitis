@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(Mitis
-    VERSION 0.20.0
+    VERSION 0.21.0
     DESCRIPTION "Navegador web ligero, multiplataforma y con interfaz propia"
     LANGUAGES C CXX
 )
@@ -122,6 +122,8 @@ qt_add_qml_module(mitiscore
         src/passwords.cpp
         src/defaultbrowser.h
         src/defaultbrowser.cpp
+        src/screenawake.h
+        src/screenawake.cpp
 )
 # Cifrado del gestor de contraseñas (src/passwords.*): Monocypher, en C, copiado
 # en third_party/ (CC0 o BSD de 2 cláusulas: licencias/AVISOS.md)
@@ -131,7 +133,14 @@ target_include_directories(mitiscore PRIVATE third_party/monocypher)
 if(APPLE)
     target_sources(mitiscore PRIVATE src/navigationgestures_mac.mm src/defaultbrowser_mac.mm)
     set_source_files_properties(src/navigationgestures_mac.mm src/defaultbrowser_mac.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
-    target_link_libraries(mitiscore PRIVATE "-framework AppKit" "-framework UniformTypeIdentifiers")
+    # IOKit: pantalla encendida durante un vídeo (src/screenawake.cpp)
+    target_link_libraries(mitiscore PRIVATE "-framework AppKit" "-framework UniformTypeIdentifiers"
+                          "-framework IOKit" "-framework CoreFoundation")
+endif()
+# Pantalla encendida durante un vídeo, por D-Bus en Linux (src/screenawake.cpp)
+if(UNIX AND NOT APPLE)
+    find_package(Qt6 REQUIRED COMPONENTS DBus)
+    target_link_libraries(mitiscore PRIVATE Qt6::DBus)
 endif()
 # Navegador predeterminado: preguntar a Windows quién abre los enlaces (src/defaultbrowser.cpp)
 if(WIN32)
@@ -260,6 +269,7 @@ set(MITIS_QML_FILES
     qml/PermissionDialog.qml
     qml/CertificateDialog.qml
     qml/ExternalAppDialog.qml
+    qml/ScreenShareDialog.qml
     qml/CredentialPopup.qml
     qml/SavePasswordPrompt.qml
     qml/PasswordManager.qml

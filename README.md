@@ -48,6 +48,30 @@ cmake -S . -B build -DCMAKE_PREFIX_PATH=/ruta/a/Qt/6.x.x/<kit>
 cmake --build build
 ```
 
+## Linux
+
+**Arch:** con el `PKGBUILD` de `packaging/linux/` (compila la rama `main` con el Qt del sistema):
+
+```bash
+mkdir -p ~/mitis-pkg && cd ~/mitis-pkg
+cp /ruta/a/mitis/packaging/linux/PKGBUILD .
+makepkg -si            # para actualizar, otra vez lo mismo
+```
+
+Opcionales: `libva` y el driver de tu GPU (vídeo con la tarjeta gráfica), `pipewire` y el portal de tu escritorio (`xdg-desktop-portal-hyprland` en Hyprland: compartir pantalla y diálogos de archivos). **Otras distribuciones:** el AppImage de cada versión (se actualiza solo).
+
+**Hyprland, Sway, i3, niri, River:** Mitis no muestra barra de título ni bordes; las ventanas se mueven, cambian de tamaño y se cierran con los atajos del escritorio. Su clase (`app_id`) es `mitis`. Ejemplo para Hyprland 0.56 o posterior (configuración en Lua): herramientas de desarrollo (F12) flotando.
+
+```lua
+hl.window_rule({
+    name  = "mitis-devtools",
+    match = { class = "^mitis$", title = ".*Herramientas de desarrollo$" },
+    float = true,
+})
+```
+
+Con la configuración antigua (`hyprland.conf`): `windowrulev2 = float, class:^(mitis)$, title:^(.*Herramientas de desarrollo)$`.
+
 ## Modo desarrollo
 
 Para trabajar la interfaz sin recompilar:
@@ -62,5 +86,5 @@ Solo hay que recompilar al cambiar código C++ o `CMakeLists.txt`.
 
 ## Estado
 
-Versión 0.20.0 (beta, en desarrollo; la última publicada es la 0.19.0). Lo pendiente está en `docs/PLAN.md`; lo hecho en cada versión, en `CHANGELOG.md`. Windows y macOS usan Qt WebEngine con códecs propietarios (H.264, AAC), compilado aparte (`docs/codecs.md`).
+Versión 0.21.0 (beta, en desarrollo; la última publicada es la 0.20.0). Lo pendiente está en `docs/PLAN.md`; lo hecho en cada versión, en `CHANGELOG.md`. Windows y macOS usan Qt WebEngine con códecs propietarios (H.264, AAC), compilado aparte (`docs/codecs.md`).
 

@@ -35,10 +35,11 @@ Historial con este esquema (ver [CHANGELOG.md](../CHANGELOG.md)):
 | 0.17.0 | Pestañas esenciales (hasta 4, en el borde izquierdo, con Ctrl+1…4) | `1ec5434` |
 | 0.18.0 | Proxy SOCKS5, compatibilidad gráfica en Windows, enlaces a aplicaciones (Teams, Zoom) | `f046b11` |
 | 0.19.0 | Gestor de contraseñas cifrado con cuenta propia, autocompletar, aviso para guardar, generador e importar/exportar CSV | `a054829` |
+| 0.20.0 | Elegir Mitis como navegador predeterminado, quita «Compatibilidad gráfica», corrige la ventana al volver de minimizarla | `eab5693` |
 
 Las fases 0–2 van juntas en 0.2.0 porque entraron en un solo commit. Esas versiones no tienen etiqueta ni release: son anteriores al workflow de publicación. Si se quieren marcar, basta con etiquetas ligeras (`git tag v0.4.0 d6cfa89`); al subirlas no se publica nada porque esos commits no tienen `.github/workflows/`.
 
-**Versión actual: 0.20.0-beta** (en desarrollo, en la rama `ajustes`; la 0.19.0 ya tiene commit y se da por publicada). Elegir Mitis como navegador predeterminado desde Configuración; quita «Compatibilidad gráfica», que dejaba las páginas en negro; corrige la ventana que se desbordaba al volver de minimizarla maximizada. Trae una función nueva: sube MENOR. Se publica al subir la etiqueta `v0.20.0`.
+**Versión actual: 0.21.0-beta** (en desarrollo, en la rama `ajustes`; la 0.20.0 ya tiene commit y se da por publicada). Linux (AppImage, con Wayland) en cada compilación y en el servidor de descargas; sin barra de título con gestores de ventanas en mosaico (Hyprland, Sway…). Trae una función nueva: sube MENOR. Se publica al subir la etiqueta `v0.21.0`.
 
 **Regla:** una versión con commit ya está desplegada. Lo siguiente que se haga va en una versión nueva, subida según lo que traiga (MENOR con funciones nuevas, PARCHE con solo correcciones), y su sección del CHANGELOG se escribe en lenguaje claro para quien no sabe de tecnología: es lo que se ve en la pestaña de novedades.
 
@@ -71,6 +72,6 @@ Una sola fuente: `project(Mitis VERSION x.y.z)` en `CMakeLists.txt`. Nunca se es
 5. Commit: `git commit -am "Publica la versión 0.5.0"`.
 6. Etiqueta anotada: `git tag -a v0.5.0 -m "Mitis 0.5.0"`.
 7. Subir el commit y la etiqueta: `git push origin main v0.5.0`.
-8. El workflow compila, comprueba que la etiqueta coincide con `project(VERSION)`, extrae las notas de `CHANGELOG.md` y publica el release con el instalador, el `.dmg`, el `.zip` de macOS y `version.txt`.
-9. **Servidor de descargas** (`MITIS_SERVIDOR`, de momento `http://100.67.58.55/mitis`, servido por `/srv/docker/mitis-releases`): copiar en su carpeta `releases/` el contenido del artefacto `mitis-servidor` (el instalador de Windows, el `.dmg` y el `.zip` de macOS, el AppImage si se compiló y `version.txt`), reemplazando los anteriores. `version.txt` va el último: en cuanto cambia, los Mitis instalados avisan para actualizarse. Los paquetes de la versión anterior se pueden borrar después.
+8. El workflow compila, comprueba que la etiqueta coincide con `project(VERSION)`, extrae las notas de `CHANGELOG.md` y publica el release con el instalador, el `.dmg`, el `.zip` de macOS, el AppImage y `version.txt`.
+9. **Servidor de descargas** (`MITIS_SERVIDOR`, de momento `http://100.67.58.55/mitis`, servido por `/srv/docker/mitis-releases`): copiar en su carpeta `releases/` el contenido del artefacto `mitis-servidor` (el instalador de Windows, el `.dmg` y el `.zip` de macOS, el AppImage de Linux y `version.txt`), reemplazando los anteriores. `version.txt` va el último: en cuanto cambia, los Mitis instalados avisan para actualizarse. Los paquetes de la versión anterior se pueden borrar después.
 10. Revisar el release en GitHub. Si algo falla, corregir en `main`, borrar la etiqueta (`git push --delete origin v0.5.0`, `git tag -d v0.5.0`) y volver a etiquetar; si el release ya se descargó, mejor publicar `0.5.1`.

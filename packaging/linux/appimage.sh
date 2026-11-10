@@ -123,6 +123,35 @@ linuxdeploy-$ARCH.AppImage \
     "${NSS_EXTRA[@]}" \
     --plugin qt
 
+# 1b) Wayland (Hyprland, GNOME, KDE…): sin su plugin, Mitis iría por XWayland
+# (borroso con escala); y el tema del portal, para los diálogos de archivos.
+# libva y PipeWire (vídeo por la GPU, compartir pantalla) no van dentro: el
+# motor los abre del sistema al usarlos. El plugin de Qt solo copia xcb, así
+# que se copia a mano del Qt de la compilación (platforms/libqwayland.so y
+# sus carpetas wayland-*)
+# y linuxdeploy añade lo que enlazan (libQt6WaylandClient, libwayland-*)
+QT_PLUGINS=$("$QMAKE" -query QT_INSTALL_PLUGINS)
+if [[ -f $QT_PLUGINS/platforms/libqwayland.so ]]; then
+    WAYLAND=("$APPDIR/usr/plugins/platforms/libqwayland.so")
+    install -Dm755 "$QT_PLUGINS/platforms/libqwayland.so" "$APPDIR/usr/plugins/platforms/libqwayland.so"
+    for carpeta in "$QT_PLUGINS"/wayland-*; do
+        [[ -d $carpeta ]] || continue
+        cp -r "$carpeta" "$APPDIR/usr/plugins/"
+        WAYLAND+=("$APPDIR/usr/plugins/$(basename "$carpeta")")
+    done
+    # Diálogos de archivos del escritorio por el portal (main.cpp, setupDesktopPortal)
+    if [[ -f $QT_PLUGINS/platformthemes/libqxdgdesktopportal.so ]]; then
+        install -Dm755 "$QT_PLUGINS/platformthemes/libqxdgdesktopportal.so" \
+            "$APPDIR/usr/plugins/platformthemes/libqxdgdesktopportal.so"
+        WAYLAND+=("$APPDIR/usr/plugins/platformthemes/libqxdgdesktopportal.so")
+    fi
+    DEPS=()
+    for ruta in "${WAYLAND[@]}"; do DEPS+=(--deploy-deps-only "$ruta"); done
+    linuxdeploy-$ARCH.AppImage --appdir "$APPDIR" "${DEPS[@]}"
+else
+    echo "Aviso: el Qt de $QT_PLUGINS no trae Wayland; el AppImage irá por XWayland" >&2
+fi
+
 # 2) Comprobar lo que Qt WebEngine necesita en tiempo de ejecución
 falta=0
 for f in usr/libexec/QtWebEngineProcess \

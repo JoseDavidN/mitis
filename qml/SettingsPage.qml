@@ -1719,6 +1719,23 @@ FocusScope {
                     title: "Se aplicará al volver a abrir Mitis"
                     description: "Cuántas páginas se guardan se elige al arrancar. Cierra Mitis y ábrelo de nuevo para usar el cambio."
                 }
+                // Solo en Linux: en Windows y macOS el motor ya usa la tarjeta gráfica
+                SettingRow {
+                    visible: Qt.platform.os === "linux"
+                    title: "Reproducir vídeo con la tarjeta gráfica"
+                    description: "Los vídeos (YouTube, series, páginas con vídeo de fondo) gastan mucho menos procesador y batería, y el equipo se calienta menos. Si algún vídeo se ve en negro o con fallos, apágalo."
+
+                    Toggle {
+                        checked: Settings.hardwareVideoDecode
+                        onToggled: Settings.hardwareVideoDecode = checked
+                    }
+                }
+                SettingRow {
+                    visible: Qt.platform.os === "linux" && Settings.hardwareVideoDecodePending
+                    icon: "reload"
+                    title: "Se aplicará al volver a abrir Mitis"
+                    description: "Cierra Mitis y ábrelo de nuevo para usar el cambio."
+                }
                 SettingRow {
                     title: "Precargar páginas"
                     description: "Cuando dejas el ratón un momento sobre un enlace, Mitis empieza a cargar esa página para que se abra antes al pulsarlo. Gasta algo más de datos y el sitio sabe sobre qué enlaces pasas el ratón. Nunca en las ventanas privadas."

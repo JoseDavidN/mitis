@@ -234,6 +234,8 @@
             artist: (meta && meta.artist) || "",
             artwork: artwork(meta, media),
             playing: playing,
+            // Imagen además de sonido: con ella, la pantalla no se apaga (ScreenAwake)
+            video: media instanceof HTMLVideoElement && media.videoWidth > 0,
             position: point[0],
             duration: point[1],
             hasNext: !!handlers.nexttrack,

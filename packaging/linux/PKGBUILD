@@ -20,13 +20,17 @@ depends=(
   'qt6-declarative'
   'qt6-webengine'
   'qt6-svg'
+  # Ventana nativa en Wayland (Hyprland, GNOME, KDE…); sin él iría por XWayland
+  'qt6-wayland'
   'hicolor-icon-theme'
 )
 makedepends=('git' 'cmake' 'ninja')
 optdepends=(
   'qt6-translations: textos de Qt en español (diálogos del sistema, menús de edición)'
-  'qt6-wayland: ventana nativa en Wayland (sin él, Mitis va por XWayland)'
   'chromium-widevine: contenido protegido (Netflix, Spotify…)'
+  'libva: vídeo con la tarjeta gráfica (con el driver de tu GPU: libva-mesa-driver, intel-media-driver o, en Intel antiguas, libva-intel-driver)'
+  'xdg-desktop-portal-hyprland: compartir pantalla y diálogos de archivos en Hyprland (o el portal de tu escritorio)'
+  'pipewire: compartir pantalla en Wayland'
 )
 provides=('mitis')
 conflicts=('mitis')

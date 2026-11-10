@@ -89,6 +89,19 @@ void setupChromiumFlags()
     // (docs/rendimiento.md)
     const int backPages = qMax(1, Settings::instantBackPagesSaved());
     Settings::setInstantBackStarted(backPages);
+    QByteArray features = "BackForwardCacheSize:cache_size/" + QByteArray::number(backPages)
+        + ",BackForwardCacheTimeToLiveControl:time_to_live_seconds/180";
+#ifdef Q_OS_LINUX
+    // Vídeo por la GPU (VA-API; Configuración → Rendimiento): en Linux
+    // Chromium lo trae apagado y decodifica con el procesador. Necesita Qt
+    // Quick en OpenGL con EGL (Wayland, o X11 con QT_XCB_GL_INTEGRATION=xcb_egl);
+    // si el driver no sirve, el motor vuelve solo al procesador. En la misma
+    // lista: un segundo --enable-features sustituiría al primero
+    const bool hardwareVideo = Settings::hardwareVideoDecodeSaved();
+    Settings::setHardwareVideoDecodeStarted(hardwareVideo);
+    if (hardwareVideo)
+        features += ",AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL";
+#endif
     const QByteArray flags =
         // Peticiones que el motor hace por su cuenta en segundo plano, sin
         // que ninguna página las pida
@@ -101,8 +114,7 @@ void setupChromiumFlags()
         "--disable-features=BrowsingTopics,InterestGroupStorage,AdInterestGroupAPI,Fledge,"
         "AttributionReportingCrossAppWeb,ConversionMeasurement,SharedStorageAPI,"
         "PrivateAggregationApi,FencedFrames,PrivacySandboxAdsAPIsOverride "
-        "--enable-features=BackForwardCacheSize:cache_size/" + QByteArray::number(backPages)
-        + ",BackForwardCacheTimeToLiveControl:time_to_live_seconds/180 "
+        "--enable-features=" + features + " "
         // Las páginas con versión oscura (prefers-color-scheme) la usan con
         // los temas oscuros de Mitis (Theme.qml: todos menos «claro»). Qt
         // WebEngine no deja cambiarlo en marcha: vale desde el próximo arranque.
@@ -122,6 +134,19 @@ void setupChromiumFlags()
         engine += " --proxy-server=socks5://" + proxy.toLatin1();
     const QByteArray user = qgetenv("QTWEBENGINE_CHROMIUM_FLAGS");
     qputenv("QTWEBENGINE_CHROMIUM_FLAGS", user.isEmpty() ? engine : engine + ' ' + user);
+}
+
+// Diálogos de archivos (subir, guardar, elegir carpeta) del escritorio, por el
+// portal (xdg-desktop-portal) en los gestores en mosaico (Hyprland, Sway…):
+// sin GNOME ni KDE, Qt abriría su propio diálogo, distinto del resto del
+// equipo. Si no hay portal, Qt vuelve a su diálogo. Antes de crear la
+// aplicación; un QT_QPA_PLATFORMTHEME del usuario manda
+void setupDesktopPortal()
+{
+#ifdef Q_OS_LINUX
+    if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORMTHEME") && EngineBridge::tilingDesktop())
+        qputenv("QT_QPA_PLATFORMTHEME", "xdgdesktopportal");
+#endif
 }
 
 // DNS cifrado (Configuración → Privacidad): el motor lo toma al crear el
@@ -170,6 +195,7 @@ int main(int argc, char *argv[])
     setupChromiumFlags();
     // WebEngine debe inicializarse antes de crear la aplicación
     QtWebEngineQuick::initialize();
+    setupDesktopPortal();
 
     QGuiApplication app(argc, argv);
     QGuiApplication::setApplicationName("Mitis");

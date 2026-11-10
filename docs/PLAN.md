@@ -50,7 +50,12 @@ Al terminar una tarea, quitarla de aquí y apuntar el cambio en `CHANGELOG.md`
   - Linux: se actualiza solo el AppImage; instalado con el `PKGBUILD`, lo actualiza el sistema de paquetes (Mitis solo avisa).
   - **Antes de publicarlo fuera de Tailscale:** dominio con HTTPS y paquetes firmados. Hoy el SHA-256 solo detecta descargas dañadas: quien controle la red o el servidor podría servir otro programa.
 
-- [ ] Probar en GitHub Actions la compilación de Linux (AppImage): solo a mano (Run workflow → «todos»).
+- [ ] Probar el AppImage que compila GitHub Actions (en cada push) en Wayland (Hyprland): que use el plugin `wayland` y no XWayland (`QT_DEBUG_PLUGINS=1`).
+- [ ] **Linux con Hyprland, por probar en el equipo real** (aquí solo hay Xvnc, sin GPU ni portal):
+  - Vídeo por la GPU: `chrome://gpu` dice «Video Decode: Hardware accelerated» **con y sin** el ajuste (no sirve para comprobarlo); mirar `chrome://media-internals` con un vídeo («kVideoDecoderName»: VaapiVideoDecoder) o `intel_gpu_top`. El equipo de desarrollo (Intel Atom Z37xx, Bay Trail) no tiene su driver: `libva-intel-driver` (i965); con él, `vainfo`. Bay Trail solo decodifica H.264/MPEG-2/VC-1, no VP9 ni AV1 (lo que sirve YouTube): ahí no ayudará en YouTube. Otros: `libva-mesa-driver`, `intel-media-driver`; NVIDIA, `nvidia-vaapi-driver` y la función `VaapiOnNvidiaGPUs`.
+  - Compartir pantalla: **funciona en Hyprland** (probado 2026-11-09, `getDisplayMedia` → «screen 1:0»), pero el selector del portal sale **tres veces**: Qt WebEngine abre una sesión del portal para la lista de pantallas, otra para la de ventanas y otra para la captura. Arreglarlo pide parchear el Qt WebEngine propio (no crear las listas de un `desktopMediaRequested` delegado) o esperar a Qt. Probar en Meet que la otra persona ve la pantalla, y en Windows y macOS el selector de Mitis (nombres de pantallas y ventanas; un solo permiso).
+  - Pantalla encendida: con un vídeo y `hypridle` (no instalado en el equipo de desarrollo: sin servicio `org.freedesktop.ScreenSaver`, Mitis lo anota y no hace nada), que no se bloquee; al pausar, que vuelva a bloquearse.
+  - Diálogos de archivos por el portal al subir un archivo.
 - [ ] Probar el AppImage en una distribución distinta de Arch y el `PKGBUILD` con `makepkg`.
 - [ ] Firmar el instalador de Windows y la app de macOS (y notarizarla): sin firma, SmartScreen y Gatekeeper avisan al abrirlos. Requiere certificados de pago.
 

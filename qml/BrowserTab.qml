@@ -161,6 +161,15 @@ Item {
     // como Chrome. `request`: { url, scheme, site (dominio de la página que
     // lo pide, "" sin él), open() }. Si no se abre, no hay que avisar a nadie
     signal externalAppRequested(var request)
+    // La página quiere compartir la pantalla (getDisplayMedia), ya con el
+    // permiso concedido: hay que elegir qué. `request`: { site, screens,
+    // windows (modelos que se llenan poco a poco; rol `display`: nombre),
+    // selectScreen(fila), selectWindow(fila), cancel() }. Hay que responder
+    // siempre: sin respuesta, la página se queda esperando
+    signal screenShareRequested(var request)
+    // Cuándo se eligió en ScreenShareDialog (ms): el permiso de ver la
+    // pantalla llega justo después y no se vuelve a preguntar
+    property real _screenShareChosen: 0
     // Gestor de contraseñas (assets/scripts/passwords.js), solo en el marco
     // principal. `type`:
     //   "focus"  { kind, rect, text }: el foco entra en un campo de usuario
@@ -879,6 +888,9 @@ Item {
         // Visor de PDF integrado (también lo esperan algunos sitios: un
         // navegador sin él parece un motor embebido)
         settings.pluginsEnabled: true
+        // Compartir pantalla (getDisplayMedia): el motor lo trae apagado y
+        // rechaza toda petición (AbortError en la página)
+        settings.screenCaptureEnabled: true
         settings.pdfViewerEnabled: true
         settings.backForwardCacheEnabled: root.instantBack
         // Sin esto el motor rechaza la pantalla completa de vídeos y páginas
@@ -913,6 +925,34 @@ Item {
                 scheme: scheme,
                 site: root._hostOf(view.url.toString()).replace(/^www\./, ""),
                 open: () => Qt.openUrlExternally(address)
+            })
+        }
+
+        // Qt no elige nada si no se atiende: ScreenShareDialog pregunta
+        onDesktopMediaRequested: request => {
+            const screens = request.screensModel
+            const windows = request.windowsModel
+            // Wayland: la lista la lleva el escritorio (portal; en Hyprland,
+            // hyprland-share-picker): cada una trae una sola fila que no es
+            // una pantalla de verdad y el selector del escritorio sale al
+            // empezar a capturar, tras el permiso. Se responde al momento
+            if (Qt.platform.pluginName === "wayland") {
+                request.selectScreen(screens.index(0, 0))
+                return
+            }
+            root.screenShareRequested({
+                site: root._hostOf(view.url.toString()).replace(/^www\./, ""),
+                screens: screens,
+                windows: windows,
+                selectScreen: row => {
+                    root._screenShareChosen = Date.now()
+                    request.selectScreen(screens.index(row, 0))
+                },
+                selectWindow: row => {
+                    root._screenShareChosen = Date.now()
+                    request.selectWindow(windows.index(row, 0))
+                },
+                cancel: () => request.cancel()
             })
         }
 
@@ -1130,6 +1170,14 @@ Item {
             if ((parts[kind] ?? [kind]).some(part => blocked.includes(part))) {
                 permission.deny()
                 permission.reset()
+                return
+            }
+            // Compartir pantalla: el motor pide el permiso después de elegir
+            // qué en ScreenShareDialog, que ya es la respuesta del usuario
+            if ((kind === "screen" || kind === "screenAudio")
+                    && Date.now() - root._screenShareChosen < 15000) {
+                root._screenShareChosen = 0
+                permission.grant()
                 return
             }
             // Cámara y micrófono los recuerda BrowserProfile (el motor no);

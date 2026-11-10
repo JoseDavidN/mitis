@@ -5,6 +5,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ## [Sin publicar]
 
+> Mitis, más cómodo en Linux
+
+### Añadido
+
+- Mitis para Linux (el archivo AppImage, que funciona en casi cualquier distribución) se publica con cada versión, igual que el de Windows y el de Mac, y se actualiza solo desde el propio Mitis.
+- En Linux con Wayland, Mitis abre su propia ventana sin pasar por la capa de compatibilidad, así que se ve nítido con cualquier escala de pantalla.
+- Compartir pantalla en Meet, Teams, Discord y otras páginas: antes no funcionaba y la página daba error. Ahora Mitis te deja elegir qué pantalla o ventana enseñar. En Linux con Wayland lo eliges en la ventana de tu escritorio, que puede aparecer varias veces seguidas.
+- En Linux, los vídeos se reproducen con la tarjeta gráfica: gastan mucho menos procesador y batería. Si algún vídeo se ve mal, puedes apagarlo en Configuración → Rendimiento → Reproducir vídeo con la tarjeta gráfica.
+- Mientras ves un vídeo, la pantalla ya no se apaga ni se bloquea por estar sin tocar el ratón ni el teclado.
+- En Hyprland, Sway y escritorios parecidos, las ventanas para subir o guardar archivos son las de tu escritorio.
+
+### Cambiado
+
+- Con Hyprland, Sway, i3, niri o River (escritorios que colocan las ventanas en mosaico) Mitis ya no muestra la barra de título ni los bordes para cambiar el tamaño: de eso se encarga tu escritorio con el teclado. Lo mismo en la ventana de herramientas de desarrollo. Tu perfil sigue en Configuración → Perfil.
+
+## [0.20.0] - 2026-11-09
+
 > Mitis, tu navegador de siempre
 
 ### Añadido

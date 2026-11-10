@@ -1255,6 +1255,13 @@ Window {
 
     onMediaViewChanged: if (!mediaView) media = null
 
+    // Pantalla encendida (que el sistema no la apague ni la bloquee) mientras
+    // la pestaña que se ve reproduce un vídeo y la ventana no está minimizada
+    readonly property bool keepScreenAwake: media !== null && media.playing === true
+        && media.video === true && mediaView === currentView && !settingsOpen
+        && visible && visibility !== Window.Minimized
+    onKeepScreenAwakeChanged: ScreenAwake.hold(win, keepScreenAwake)
+
     // Pregunta a la página solo mientras hay algo que mostrar
     Timer {
         interval: 1000
@@ -1276,7 +1283,12 @@ Window {
     // hay página que tapar). Sube y baja moviendo su `y`: lo anclado a su
     // borde inferior (buscar, zoom, panel de memoria) la acompaña.
     property bool titleBarShown: false
-    readonly property bool titleBarPinned: settingsOpen || titleBarHover.hovered || titleRevealHover.hovered
+    // Sin barra de título (ni bordes de redimensionar) con un gestor de
+    // ventanas en mosaico (Hyprland, Sway…): él mueve, cambia el tamaño y
+    // cierra las ventanas. Lo anclado a la barra sube al borde superior
+    readonly property bool noTitleBar: MitisEngine.tilingDesktop === true
+    readonly property bool titleBarPinned: !noTitleBar
+        && (settingsOpen || titleBarHover.hovered || titleRevealHover.hovered)
     onTitleBarPinnedChanged: {
         if (titleBarPinned) {
             titleBarShown = true
@@ -1305,8 +1317,8 @@ Window {
         }
         // En pantalla completa desaparece y lo anclado a la barra (como la
         // búsqueda) sube hasta el borde superior
-        height: win.immersive ? 0 : implicitHeight
-        visible: !win.immersive && y > -height
+        height: win.immersive || win.noTitleBar ? 0 : implicitHeight
+        visible: !win.immersive && !win.noTitleBar && y > -height
         HoverHandler { id: titleBarHover }
     }
 
@@ -1320,7 +1332,7 @@ Window {
         anchors.right: parent.right
         y: windowed ? Theme.resizeGrip : 0
         height: windowed ? Theme.titleBarRevealTolerance : Theme.fullscreenRevealEdge
-        visible: !win.immersive
+        visible: !win.immersive && !win.noTitleBar
         HoverHandler { id: titleRevealHover }
     }
 
@@ -1538,6 +1550,31 @@ Window {
                     onFinished: tab.focusPage()
                 }
 
+                // Compartir pantalla: qué pantalla o ventana (solo existe abierto)
+                onScreenShareRequested: request => {
+                    // Una petición nueva sustituye a la anterior, que se cancela al destruirse
+                    screenShareLoader.active = false
+                    screenShareLoader.request = request
+                    screenShareLoader.active = true
+                }
+                Loader {
+                    id: screenShareLoader
+                    property var request: null
+                    anchors.fill: parent
+                    z: 10
+                    active: false
+                    sourceComponent: ScreenShareDialog {
+                        request: screenShareLoader.request
+                        onFinished: {
+                            tab.focusPage()
+                            Qt.callLater(() => {
+                                screenShareLoader.active = false
+                                screenShareLoader.request = null
+                            })
+                        }
+                    }
+                }
+
                 // Gestor de contraseñas en la página (assets/scripts/passwords.js):
                 // la lista bajo el campo con el foco y el aviso de guardar
                 onPasswordEvent: (type, data) => {
@@ -1654,7 +1691,7 @@ Window {
                 Loader {
                     anchors.top: parent.top
                     anchors.right: parent.right
-                    anchors.topMargin: Theme.titleBarHeight + Theme.floatingMargin
+                    anchors.topMargin: (win.noTitleBar ? 0 : Theme.titleBarHeight) + Theme.floatingMargin
                     anchors.rightMargin: Theme.floatingMargin
                     z: 9
                     active: savePasswordState.shown !== null
@@ -2184,6 +2221,7 @@ Window {
 
     ResizeHandles {
         window: win
+        enabled: !win.noTitleBar
     }
 
     // Pantalla completa. Esc solo se atiende durante la de página (así

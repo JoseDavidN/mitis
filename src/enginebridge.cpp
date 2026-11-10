@@ -119,6 +119,24 @@ void EngineBridge::destroyPrivateProfile(QObject *profile)
 
 // Junto al ejecutable (Windows), en Contents/Resources (macOS) o en
 // share/licenses/mitis (Linux)
+bool EngineBridge::tilingDesktop()
+{
+#ifdef Q_OS_LINUX
+    // Hyprland deja su variable aunque XDG_CURRENT_DESKTOP no se haya puesto;
+    // XDG_CURRENT_DESKTOP puede traer varios nombres separados por «:»
+    if (!qEnvironmentVariableIsEmpty("HYPRLAND_INSTANCE_SIGNATURE")
+        || !qEnvironmentVariableIsEmpty("SWAYSOCK")
+        || !qEnvironmentVariableIsEmpty("NIRI_SOCKET"))
+        return true;
+    static const QStringList tiling = { "hyprland", "sway", "i3", "niri", "river" };
+    const QStringList desktops = qEnvironmentVariable("XDG_CURRENT_DESKTOP").toLower().split(u':');
+    for (const QString &desktop : desktops)
+        if (tiling.contains(desktop.trimmed()))
+            return true;
+#endif
+    return false;
+}
+
 QString EngineBridge::licensesPath() const
 {
     const QDir app(QCoreApplication::applicationDirPath());
