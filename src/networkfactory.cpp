@@ -1,6 +1,7 @@
 #include "networkfactory.h"
 
 #include <QNetworkAccessManager>
+#include <QNetworkProxy>
 #include <QNetworkDiskCache>
 
 namespace {
@@ -22,5 +23,8 @@ QNetworkAccessManager *NetworkFactory::create(QObject *parent)
     cache->setCacheDirectory(m_cacheDir);
     cache->setMaximumCacheSize(MaxCacheSize);
     manager->setCache(cache);
+    // El proxy de las páginas (EngineBridge::applyProxy) es el de la
+    // aplicación: la interfaz no lo usa
+    manager->setProxy(QNetworkProxy::NoProxy);
     return manager;
 }

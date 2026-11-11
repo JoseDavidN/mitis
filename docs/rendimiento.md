@@ -172,3 +172,18 @@ tools/medir_ram.py firefox /ruta/a/firefox --minutos 16
 Cada medición tarda ~20 minutos y escribe una línea JSON con T1 y T2. Mientras
 mide no conviene usar el equipo para otra cosa (ni compilar: la carga de CPU
 cambia lo que da tiempo a cargar).
+
+## Páginas pesadas en un equipo lento (YouTube, 2026-11-10)
+
+Equipo de desarrollo: Intel Celeron N2840 (2 núcleos, 2014), gráfica Bay Trail, 7,8 GB. Mitis 0.21.1 en Xvnc (sin GPU, así que la página se dibuja con el procesador), búsqueda de YouTube recargada 4–5 veces por caso, caché ya llena. Medido por el puerto de depuración (`QTWEBENGINE_REMOTE_DEBUGGING`): tiempo hasta ver 3 miniaturas, LCP y CPU de todos los procesos de Mitis por carga (medianas).
+
+| Caso | Miniaturas | LCP | CPU por carga |
+|---|---|---|---|
+| Sin oscurecer páginas | 17,6 s | 13,9 s | 13,0 s |
+| Oscurecer páginas (`forceDarkMode`) | 14,2 s | 12,9 s | 11,6 s |
+| Oscurecer sin tocar las imágenes (`--dark-mode-settings=ImagePolicy=1`) | 15,8 s | 14,7 s | 12,8 s |
+| Sin bloqueador | 13,7 s | 13,6 s | 13,1 s |
+
+Las diferencias son ruido: ni oscurecer páginas ni el bloqueador (ni su CSS de ocultación) cuestan algo medible. Por proceso: la página ~10 s (hilo principal ~8,4 s: JavaScript y maquetación de YouTube; hilos de dibujo y decodificación de imágenes ~1,5 s) y la interfaz de Mitis ~1 s (incluye el compositor y la GPU en proceso). El hilo de la interfaz no frena las peticiones (el interceptor corre en él, pero Qt Quick dibuja en su propio hilo: `threaded render loop`). Las peticiones de la página que tardan segundos en salir (`requestTime` muy posterior a `requestWillBeSent`) son la cola de Blink con el hilo principal ocupado, no Mitis.
+
+Vídeo: YouTube manda AV1 (`av01`) de serie; con `assets/scripts/h264.js`, H.264 (`avc1`). En Xvnc ambos van por el procesador (480p: ~0,3–0,5 núcleos); la ganancia es con VA-API, que en Bay Trail solo decodifica H.264 (y necesita `libva-intel-driver`, que el equipo no tenía).

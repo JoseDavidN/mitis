@@ -38,6 +38,8 @@ public:
     bool forwardToRunning(const QStringList &urls);
     // Empieza a escuchar a los Mitis que se lancen después
     void listen();
+    // Deja de escuchar (al reiniciar Mitis: el nuevo ya puede hacerlo)
+    void stopListening();
 
     void add(const QStringList &urls);
 

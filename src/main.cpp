@@ -13,7 +13,6 @@
 #include <QTranslator>
 #include <QtQml/qqmlextensionplugin.h>
 #include <QtWebEngineCore/qtwebenginecoreglobal.h>
-#include <QtWebEngineCore/qwebengineglobalsettings.h>
 #include <QtWebEngineQuick/qtwebenginequickglobal.h>
 
 #include "crashreporter.h"
@@ -23,6 +22,7 @@
 #include "links.h"
 #include "updater.h"
 #include "networkfactory.h"
+#include "screencapture.h"
 #include "settings.h"
 #include "widevine.h"
 
@@ -123,15 +123,8 @@ void setupChromiumFlags()
                              .value(QStringLiteral("Appearance/theme")).toString() == QLatin1String("claro")
                          ? "--blink-settings=preferredColorScheme=1"
                          : "--blink-settings=preferredColorScheme=0");
-    QByteArray engine = flags;
-    // Proxy SOCKS5 (Configuración → Privacidad): todas las páginas, también
-    // las de las ventanas privadas; con SOCKS5 los nombres los resuelve el
-    // proxy (el DNS cifrado no se usa). Chromium no admite usuario y
-    // contraseña en SOCKS
-    const QString proxy = Settings::proxyServerSaved();
-    Settings::setProxyStarted(proxy);
-    if (!proxy.isEmpty())
-        engine += " --proxy-server=socks5://" + proxy.toLatin1();
+    // El proxy no va aquí: EngineBridge::applyProxy, que se puede cambiar en marcha
+    const QByteArray engine = flags;
     const QByteArray user = qgetenv("QTWEBENGINE_CHROMIUM_FLAGS");
     qputenv("QTWEBENGINE_CHROMIUM_FLAGS", user.isEmpty() ? engine : engine + ' ' + user);
 }
@@ -147,31 +140,6 @@ void setupDesktopPortal()
     if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORMTHEME") && EngineBridge::tilingDesktop())
         qputenv("QT_QPA_PLATFORMTHEME", "xdgdesktopportal");
 #endif
-}
-
-// DNS cifrado (Configuración → Privacidad): el motor lo toma al crear el
-// primer perfil, así que solo cambia al volver a arrancar. Solo las páginas:
-// la red de la interfaz (noticias, actualizaciones, listas del bloqueador)
-// usa el DNS del sistema
-void setupSecureDns()
-{
-    const Settings settings;
-    const QString mode = settings.secureDns();
-    const QString provider = settings.secureDnsProvider();
-    QWebEngineGlobalSettings::DnsMode dns;
-    if (mode != QLatin1String("off")) {
-        dns.secureMode = mode == QLatin1String("secure") ? QWebEngineGlobalSettings::SecureDnsMode::SecureOnly
-                                                         : QWebEngineGlobalSettings::SecureDnsMode::SecureWithFallback;
-        dns.serverTemplates = { Settings::secureDnsTemplate(provider) };
-    }
-    if (!QWebEngineGlobalSettings::setDnsMode(dns)) {
-        qWarning("DNS cifrado: el motor no aceptó %s", qPrintable(provider));
-        Settings::setSecureDnsStarted(QStringLiteral("off"));
-        return;
-    }
-    Settings::setSecureDnsStarted(mode == QLatin1String("off") ? mode : mode + u':' + provider);
-    if (mode != QLatin1String("off"))
-        qInfo("DNS cifrado (%s): %s", qPrintable(mode), qPrintable(Settings::secureDnsTemplate(provider)));
 }
 
 // El motor se queda con el proveedor y lo destruye con él. La fábrica de
@@ -193,6 +161,8 @@ int main(int argc, char *argv[])
     // Contenido protegido: la ruta de Widevine se da al motor antes de iniciarlo
     widevinePath = Widevine::setup();
     setupChromiumFlags();
+    // Esquemas propios: antes de iniciar el motor
+    ScreenCapture::registerScheme();
     // WebEngine debe inicializarse antes de crear la aplicación
     QtWebEngineQuick::initialize();
     setupDesktopPortal();
@@ -228,7 +198,10 @@ int main(int argc, char *argv[])
 
     // Perfiles del navegador y bloqueador: antes que la interfaz, que los usa,
     // y destruidos después de ella (ver el final)
-    setupSecureDns();
+    // Proxy y DNS cifrado de las páginas: antes de crear los perfiles (y
+    // después, en marcha, desde BrowserProfile)
+    EngineBridge::applyProxy();
+    EngineBridge::applySecureDns();
     auto *bridge = new EngineBridge(widevinePath);
 
     // La interfaz (motor QML o recargador); se destruye a mano al salir
@@ -262,5 +235,7 @@ int main(int argc, char *argv[])
     // Los perfiles, después de las páginas y antes que la aplicación
     delete bridge;
     CrashReporter::instance()->finish();
+    // «Reiniciar ahora» (Configuración): ya cerrado todo, se abre otro Mitis
+    EngineBridge::relaunchIfRequested();
     return result;
 }

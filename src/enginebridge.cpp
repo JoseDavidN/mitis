@@ -5,6 +5,9 @@
 #include <QFileInfo>
 #include <QPointer>
 #include <QDirIterator>
+#include <QNetworkProxy>
+#include <QProcess>
+#include <QWebEngineGlobalSettings>
 #include <QSslCertificate>
 #include <QSslCipher>
 #include <QSslSocket>
@@ -12,6 +15,7 @@
 #include <QTimer>
 #include <QWindow>
 #include <QQmlEngine>
+#include <QQuickItem>
 #include <QQuickWindow>
 #include <QSGRendererInterface>
 #include <QQuickWebEngineProfile>
@@ -19,6 +23,8 @@
 #include <QtDebug>
 
 #include "contentblocker.h"
+#include "screencapture.h"
+#include "links.h"
 #include "settings.h"
 #include "notifier.h"
 #include "windowstyle.h"
@@ -68,6 +74,11 @@ EngineBridge::EngineBridge(const QString &widevinePath, QObject *parent)
     installInterceptor(m_profile, m_interceptor, false);
 
     // Notificaciones de las páginas: del sistema, no dentro de Mitis
+    // Compartir pantalla propio: el esquema mitis-captura:// en los dos perfiles
+    m_screenCapture = new ScreenCapture(this);
+    connect(m_screenCapture, &ScreenCapture::ended, this, &EngineBridge::screenCaptureEnded);
+    m_profile->installUrlSchemeHandler(ScreenCapture::Scheme, m_screenCapture);
+
     m_notifier = new SystemNotifier(this);
     connect(m_notifier, &SystemNotifier::activated, this, &EngineBridge::notificationActivated);
     m_notifier->attach(m_profile);
@@ -77,9 +88,162 @@ EngineBridge::EngineBridge(const QString &widevinePath, QObject *parent)
 // Qt WebEngine se queda bloqueado al cerrar
 EngineBridge::~EngineBridge()
 {
+    // Vistas que guarda keepOpenerView (si quedara alguna): antes que su perfil
+    qDeleteAll(findChildren<QQuickItem *>(Qt::FindDirectChildrenOnly));
     // Las notificaciones abiertas son del motor: se sueltan antes que el perfil
     delete m_notifier;
     delete m_profile;
+}
+
+void EngineBridge::keepOpenerView(QObject *view, const QVariantList &openedTabs)
+{
+    auto *item = qobject_cast<QQuickItem *>(view);
+    if (!item)
+        return;
+    QList<QObject *> alive;
+    for (const QVariant &value : openedTabs) {
+        if (QObject *tab = value.value<QObject *>())
+            alive.append(tab);
+    }
+    if (alive.isEmpty())
+        return;
+
+    // Que no la destruya su pestaña (es su hija) y que deje de verse
+    QObject *tab = item->parent();
+    item->setParent(this);
+    item->setParentItem(nullptr);
+    item->setVisible(false);
+    // Sin la página cerrada: ni sonido ni scripts. No se descarga
+    // (lifecycleState): una vista descargada sirve iconos rotos (ver
+    // CLAUDE.md, cierres por image://favicon). Después de que la pestaña
+    // termine de destruirse: antes, sus señales (dirección, título) aún
+    // llegarían a la interfaz y al historial
+    const auto blank = [item] { item->setProperty("url", QUrl(QStringLiteral("about:blank"))); };
+    if (tab)
+        connect(tab, &QObject::destroyed, item, [item, blank] { QTimer::singleShot(0, item, blank); });
+    else
+        blank();
+
+    auto remaining = std::make_shared<int>(alive.size());
+    const QPointer<QQuickItem> guarded(item);
+    for (QObject *tab : alive) {
+        connect(tab, &QObject::destroyed, this, [guarded, remaining] {
+            // Al momento, no con deleteLater: el perfil privado se destruye
+            // justo después de las pestañas de su ventana
+            if (--*remaining == 0)
+                delete guarded.data();
+        });
+    }
+}
+
+// Qt WebEngine usa el proxy de la aplicación (QNetworkProxy) y lo vuelve a
+// mirar en cada petición (ProxyConfigServiceQt::OnLazyPoll), así que el
+// cambio vale sin volver a arrancar. Con --proxy-server el motor lo ignora y
+// solo lo leía al arrancar. La red de la interfaz pide NoProxy
+// (NetworkFactory, Updater, ContentBlocker); el certificado del sitio sí
+// pasa por él, como la página. Con SOCKS5 los nombres los resuelve el proxy
+void EngineBridge::applyProxy()
+{
+    const QString address = Settings().proxyInUse();
+    QNetworkProxy proxy(QNetworkProxy::NoProxy);
+    if (!address.isEmpty()) {
+        const qsizetype colon = address.lastIndexOf(u':');
+        QString host = address.left(colon);
+        // IPv6 entre corchetes («[::1]:1080»): QNetworkProxy lo quiere sin ellos
+        if (host.startsWith(u'[') && host.endsWith(u']'))
+            host = host.mid(1, host.size() - 2);
+        proxy = QNetworkProxy(QNetworkProxy::Socks5Proxy, host, address.mid(colon + 1).toUShort());
+    }
+    if (proxy == QNetworkProxy::applicationProxy())
+        return;
+    QNetworkProxy::setApplicationProxy(proxy);
+    if (address.isEmpty())
+        qInfo("Proxy: ninguno");
+    else
+        qInfo("Proxy: socks5://%s", qPrintable(address));
+}
+
+// El motor reconfigura su resolución de nombres al momento si su servicio de
+// red ya existe (y, si no, al crearlo). Solo las páginas: la red de la
+// interfaz usa el DNS del sistema
+void EngineBridge::applySecureDns()
+{
+    static QString applied;
+    const Settings settings;
+    const QString mode = settings.secureDns();
+    const QString provider = settings.secureDnsProvider();
+    const QString chosen = mode == QLatin1String("off") ? mode : mode + u':' + provider;
+    if (chosen == applied)
+        return;
+    QWebEngineGlobalSettings::DnsMode dns;
+    if (mode != QLatin1String("off")) {
+        dns.secureMode = mode == QLatin1String("secure") ? QWebEngineGlobalSettings::SecureDnsMode::SecureOnly
+                                                         : QWebEngineGlobalSettings::SecureDnsMode::SecureWithFallback;
+        dns.serverTemplates = { Settings::secureDnsTemplate(provider) };
+    }
+    if (!QWebEngineGlobalSettings::setDnsMode(dns)) {
+        qWarning("DNS cifrado: el motor no aceptó %s", qPrintable(provider));
+        return;
+    }
+    applied = chosen;
+    if (mode == QLatin1String("off"))
+        qInfo("DNS cifrado: no (el del sistema)");
+    else
+        qInfo("DNS cifrado (%s): %s", qPrintable(mode), qPrintable(Settings::secureDnsTemplate(provider)));
+}
+
+void EngineBridge::updateNetworkSettings() const
+{
+    applyProxy();
+    applySecureDns();
+}
+
+namespace {
+bool restartRequested = false;
+}
+
+bool EngineBridge::screenCaptureAvailable()
+{
+    return m_screenCapture->available();
+}
+
+QVariantMap EngineBridge::screenCaptureSources()
+{
+    return m_screenCapture->sources();
+}
+
+QString EngineBridge::startScreenCapture(const QString &kind, quint32 id, const QUrl &page)
+{
+    return m_screenCapture->start(kind, id, page);
+}
+
+void EngineBridge::stopScreenCapture(const QString &token)
+{
+    m_screenCapture->stop(token);
+}
+
+void EngineBridge::restart()
+{
+    restartRequested = true;
+    emit restarting();
+}
+
+void EngineBridge::relaunchIfRequested()
+{
+    if (!restartRequested)
+        return;
+    // Sin el canal de «un solo Mitis»: el nuevo le mandaría sus enlaces a
+    // este, que ya se está cerrando, y terminaría
+    Links::instance()->stopListening();
+    // AppImage: el ejecutable está en una carpeta que se desmonta al salir;
+    // se vuelve a abrir el propio .AppImage
+    const QString appImage = qEnvironmentVariable("APPIMAGE");
+    const QString program = appImage.isEmpty() ? QCoreApplication::applicationFilePath() : appImage;
+    QStringList arguments;
+    if (QCoreApplication::arguments().contains(QStringLiteral("--dev")))
+        arguments.append(QStringLiteral("--dev"));
+    if (!QProcess::startDetached(program, arguments))
+        qWarning("No se pudo volver a abrir Mitis (%s)", qPrintable(program));
 }
 
 QQuickWebEngineProfile *EngineBridge::createPrivateProfile()
@@ -95,6 +259,7 @@ QQuickWebEngineProfile *EngineBridge::createPrivateProfile()
     m_privateInterceptor = new RequestInterceptor(m_blocker, true, this);
     m_blocker->setPrivateActive(true);
     installInterceptor(profile, m_privateInterceptor, true);
+    profile->installUrlSchemeHandler(ScreenCapture::Scheme, m_screenCapture);
     m_notifier->attach(profile);
     // Es de C++: QML no debe recogerlo como basura
     QQmlEngine::setObjectOwnership(profile, QQmlEngine::CppOwnership);

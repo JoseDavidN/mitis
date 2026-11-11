@@ -5,8 +5,8 @@ import Mitis.Core
 
 // ¿Qué compartir? (BrowserTab.screenShareRequested): una página pide ver tu
 // pantalla (Meet, Teams, Discord…), ya con el permiso concedido. Lista las
-// pantallas y ventanas que da el motor; las listas se llenan poco a poco. En
-// Wayland no se usa: elige el selector del escritorio (BrowserTab).
+// pantallas y ventanas que da el motor (se llenan poco a poco) o, en Wayland
+// con la captura propia de Mitis, las suyas (listas { name, detail }).
 // En un Loader del delegado de Main.qml: solo existe abierta.
 PageDialog {
     id: root
@@ -180,13 +180,30 @@ PageDialog {
                     checked: row.chosen
                     hovered: rowHover.hovered
                 }
+                // Listas propias (captura de Mitis en Wayland): { name, detail };
+                // las del motor son modelos con el rol `display`
+                readonly property var own: typeof row.model.modelData?.name === "string" ? row.model.modelData : null
                 Text {
-                    anchors.left: mark.right
-                    anchors.leftMargin: Theme.spacing
+                    id: detail
                     anchors.right: parent.right
                     anchors.rightMargin: Theme.spacing
                     anchors.verticalCenter: parent.verticalCenter
-                    text: row.model.display ? row.model.display
+                    width: Math.min(implicitWidth, row.width / 3)
+                    visible: text !== ""
+                    text: row.own?.detail ?? ""
+                    color: Colors.inkMuted
+                    font.pixelSize: Theme.fontSizeSmall
+                    elide: Text.ElideRight
+                    textFormat: Text.PlainText
+                }
+                Text {
+                    anchors.left: mark.right
+                    anchors.leftMargin: Theme.spacing
+                    anchors.right: detail.visible ? detail.left : parent.right
+                    anchors.rightMargin: Theme.spacing
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: row.own ? row.own.name
+                          : row.model.display ? row.model.display
                           : group.fallback + (rows.count > 1 ? " " + (row.index + 1) : "")
                     color: Colors.ink
                     font.pixelSize: Theme.fontSize

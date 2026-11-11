@@ -161,11 +161,12 @@ Item {
     // como Chrome. `request`: { url, scheme, site (dominio de la página que
     // lo pide, "" sin él), open() }. Si no se abre, no hay que avisar a nadie
     signal externalAppRequested(var request)
-    // La página quiere compartir la pantalla (getDisplayMedia), ya con el
-    // permiso concedido: hay que elegir qué. `request`: { site, screens,
-    // windows (modelos que se llenan poco a poco; rol `display`: nombre),
-    // selectScreen(fila), selectWindow(fila), cancel() }. Hay que responder
-    // siempre: sin respuesta, la página se queda esperando
+    // La página quiere compartir la pantalla (getDisplayMedia): hay que elegir
+    // qué. `request`: { site, screens, windows, selectScreen(fila),
+    // selectWindow(fila), cancel() }. Las listas son modelos del motor que se
+    // llenan poco a poco (rol `display`: nombre) o, con la captura propia de
+    // Wayland, listas [{ id, name, detail }]. Hay que responder siempre: sin
+    // respuesta, la página se queda esperando
     signal screenShareRequested(var request)
     // Cuándo se eligió en ScreenShareDialog (ms): el permiso de ver la
     // pantalla llega justo después y no se vuelve a preguntar
@@ -215,7 +216,7 @@ Item {
     // rellenar. Quién y cuándo la suspende lo decide la interfaz (fijadas no).
     function suspend(discard) {
         if (root.deferred || root.visible || root.audible || root.microphone || root.camera
-                || devTools.item)
+                || devTools.item || root.sharingScreen)
             return
         const State = WebEngineView.LifecycleState
         let target = discard ? State.Discarded : State.Frozen
@@ -317,8 +318,13 @@ Item {
     // Carga en esta pestaña lo que otra pidió abrir (ver newTabRequested)
     function adopt(request) {
         pageState.adopted = true
+        if (openerTab)
+            (openerTab as BrowserTab)._openedTabs.push(root)
         request.openIn(view)
     }
+    // Pestañas que esta abrió (adopt): su página puede seguir usando esta
+    // vista aunque se cierre la pestaña (ver EngineBridge::keepOpenerView)
+    property var _openedTabs: []
 
     QtObject {
         id: pageState
@@ -403,6 +409,76 @@ Item {
     // Corrector: cambia la palabra mal escrita del menú contextual por `word`
     function replaceMisspelledWord(word) {
         view.replaceMisspelledWord(word)
+    }
+
+    // ── Compartir pantalla propio (Wayland sin el portal) ────────────
+    // assets/scripts/screenshare.js pide por consola «request <id>» (la página
+    // llamó a getDisplayMedia) o «stop <clave>» (paró la pista). Se pregunta
+    // con ScreenShareDialog (screenShareRequested, con las listas de Mitis) y
+    // se responde a la página con __mitisScreenShare.answer(). La captura la
+    // hace src/screencapture.*; las de esta pestaña se paran al cerrarla.
+    property var _screenShares: []
+    readonly property bool sharingScreen: _screenShares.length > 0
+    function _screenShareMessage(text) {
+        const space = text.indexOf(" ")
+        const type = text.slice(0, space)
+        const argument = text.slice(space + 1)
+        if (type === "request") {
+            root._ownScreenShare(Number(argument))
+        } else if (type === "stop") {
+            // qmllint disable unqualified
+            MitisEngine.stopScreenCapture(argument)
+            // qmllint enable unqualified
+            root._screenShares = root._screenShares.filter(token => token !== argument)
+        }
+    }
+    function _answerScreenShare(id, answer) {
+        view.runJavaScript("window.__mitisScreenShare && window.__mitisScreenShare.answer("
+                           + id + ", " + JSON.stringify(answer) + ")")
+    }
+    function _ownScreenShare(id) {
+        const denied = { error: "NotAllowedError", message: "Permission denied" }
+        // Bloqueado en Configuración, como el permiso del motor
+        if (Settings.blockedPermissions.includes("screen")) {
+            root._answerScreenShare(id, denied)
+            return
+        }
+        // qmllint disable unqualified
+        const engine = MitisEngine
+        // qmllint enable unqualified
+        // Copia en JavaScript: las listas de C++ no dan sus filas como objetos a un Repeater
+        const sources = JSON.parse(JSON.stringify(engine.screenCaptureSources()))
+        const page = view.url
+        const share = (kind, item, surface) => {
+            const token = item ? engine.startScreenCapture(kind, item.id, page) : ""
+            if (token === "") {
+                root._answerScreenShare(id, { error: "AbortError", message: "Could not start capture" })
+                return
+            }
+            root._screenShares = root._screenShares.concat([token])
+            root._answerScreenShare(id, {
+                token: token,
+                url: "mitis-captura://" + token + "/",
+                surface: surface,
+                label: item.name
+            })
+        }
+        root.screenShareRequested({
+            site: root._hostOf(page.toString()).replace(/^www\./, ""),
+            screens: sources.screens,
+            windows: sources.windows,
+            selectScreen: row => share("screen", sources.screens[row], "monitor"),
+            selectWindow: row => share("window", sources.windows[row], "window"),
+            cancel: () => root._answerScreenShare(id, denied)
+        })
+    }
+    Connections {
+        // qmllint disable unqualified
+        target: MitisEngine
+        // qmllint enable unqualified
+        function onScreenCaptureEnded(token) {
+            root._screenShares = root._screenShares.filter(other => other !== token)
+        }
     }
 
     // ── Herramientas de desarrollo ───────────────────────────────────
@@ -616,8 +692,18 @@ Item {
     }
 
     Component.onDestruction: {
+        // qmllint disable unqualified
+        for (const token of root._screenShares)
+            MitisEngine.stopScreenCapture(token)
+        // qmllint enable unqualified
         root._cancelCertificateError()
         CaptureIndicator.report(root, 0, 0)
+        // Las pestañas que abrió y siguen abiertas necesitan la vista viva
+        const opened = _openedTabs.filter(tab => tab)
+        // qmllint disable unqualified
+        if (opened.length > 0 && typeof MitisEngine.keepOpenerView === "function")
+            MitisEngine.keepOpenerView(view, opened)
+        // qmllint enable unqualified
     }
 
     QtObject {
@@ -1111,6 +1197,8 @@ Item {
                 root._passwordMessage(message.slice(passwords.length))
             } else if (message === "mitis:widevine-unavailable") {
                 root.protectedContentUnavailable()
+            } else if (message.startsWith("mitis:screenshare:")) {
+                root._screenShareMessage(message.slice(18))
             } else if (message.startsWith("mitis:capture ")) {
                 const parts = message.slice(14).split(" ")
                 captureState.set(Number(parts[0]), Number(parts[1]))

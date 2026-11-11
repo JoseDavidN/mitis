@@ -75,6 +75,15 @@ bool Links::forwardToRunning(const QStringList &urls)
     return true;
 }
 
+void Links::stopListening()
+{
+    if (!m_server)
+        return;
+    m_server->close();
+    delete m_server;
+    m_server = nullptr;
+}
+
 void Links::listen()
 {
     if (m_server)

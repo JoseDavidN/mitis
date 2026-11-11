@@ -14,6 +14,7 @@
 
 class ContentBlocker;
 class SystemNotifier;
+class ScreenCapture;
 class RequestInterceptor;
 
 // Lo que BrowserProfile.qml y BrowserTab.qml necesitan del motor y QML no
@@ -72,6 +73,30 @@ public:
     Q_INVOKABLE QQuickWebEngineProfile *createPrivateProfile();
     Q_INVOKABLE void destroyPrivateProfile(QObject *profile);
 
+    // Proxy SOCKS5 y DNS cifrado de las páginas (Configuración → Privacidad),
+    // para todos los perfiles. Se aplican al momento: main.cpp al arrancar
+    // (antes de crear los perfiles) y BrowserProfile en cada cambio. Solo
+    // hacen algo si lo elegido cambió
+    static void applyProxy();
+    static void applySecureDns();
+    Q_INVOKABLE void updateNetworkSettings() const;
+
+    // Reiniciar Mitis, para los ajustes que el motor solo lee al arrancar
+    // (vídeo por la GPU, páginas de «atrás al instante»): emite restarting,
+    // Main.qml se cierra guardando la sesión y main.cpp lo vuelve a abrir
+    // (relaunchIfRequested), con las mismas pestañas
+    Q_INVOKABLE void restart();
+    static void relaunchIfRequested();
+
+    // Compartir pantalla propio (ScreenCapture: Wayland sin el portal). Si no
+    // está disponible, las páginas usan el getDisplayMedia del motor
+    Q_INVOKABLE bool screenCaptureAvailable();
+    // { screens: [{ id, name, detail }], windows: [...] }
+    Q_INVOKABLE QVariantMap screenCaptureSources();
+    // Clave de la sesión para la página `page` ("" si no se pudo empezar)
+    Q_INVOKABLE QString startScreenCapture(const QString &kind, quint32 id, const QUrl &page);
+    Q_INVOKABLE void stopScreenCapture(const QString &token);
+
     QString widevinePath() const { return m_widevinePath; }
     QString licensesPath() const;
     QString passwordToken() const { return m_passwordToken; }
@@ -107,6 +132,13 @@ public:
     // Windows, Qt quita entonces la marca de volver maximizada y, al
     // restaurarla, la ventana sin marco queda sin maximizar y mal de tamaño
     Q_INVOKABLE void minimizeWindow(QObject *window) const;
+    // Una página abierta con window.open nace con la vista de la pestaña que
+    // la abrió y Qt (6.11) la sigue usando para siempre sin comprobar que
+    // exista: cerrada esa pestaña, mover el ratón sobre la nueva tumbaba a
+    // Mitis. Al cerrarse la que abrió, BrowserTab le pasa aquí su vista y la
+    // lista de pestañas que abrió: la vista se queda, fuera de la ventana y
+    // en about:blank (sin la página), hasta que se cierren todas.
+    Q_INVOKABLE void keepOpenerView(QObject *view, const QVariantList &openedTabs);
 
     // Descarga ahora las listas de filtros
     Q_INVOKABLE void updateFilterLists();
@@ -142,6 +174,11 @@ signals:
     // { error: texto } si no se pudo conectar
     void certificateReady(const QString &host, const QVariantMap &certificate);
     void cacheUsageReady(double bytes);
+    // Se pidió reiniciar (restart): la interfaz se cierra guardando la sesión
+    void restarting();
+    // Una captura de pantalla propia terminó por su cuenta (ventana cerrada,
+    // página que ya no pide fotogramas): BrowserTab la olvida
+    void screenCaptureEnded(const QString &token);
 
 private:
     RequestInterceptor *interceptorFor(bool privateProfile) const;
@@ -150,6 +187,7 @@ private:
 
     ContentBlocker *m_blocker;
     SystemNotifier *m_notifier;
+    ScreenCapture *m_screenCapture;
     RequestInterceptor *m_interceptor;
     // El del perfil privado: privacidad siempre activa (existe con él)
     RequestInterceptor *m_privateInterceptor = nullptr;

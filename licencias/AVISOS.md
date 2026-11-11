@@ -64,6 +64,17 @@ licencia que se citan están en esta misma carpeta.
   Vaillant, Michael Savage y Fabio Scotoni.
 - **Enlace:** <https://monocypher.org/>
 
+### Protocolos de captura de Wayland (solo Linux)
+
+- **Qué:** descripciones de los protocolos `ext-image-capture-source-v1`,
+  `ext-image-copy-capture-v1` y `ext-foreign-toplevel-list-v1` de
+  wayland-protocols 1.49 (en el código, `third_party/wayland-protocols/`), con
+  las que se genera el código que usa Mitis para compartir pantalla en Wayland.
+- **Licencia:** MIT (`wayland-protocols-MIT.txt`). Copyright © 2018 Ilia
+  Bozhinov, 2020 Isaac Freund, 2022 wb9688, 2021-2023 Andri Yngvason y 2024
+  Simon Ser.
+- **Enlace:** <https://gitlab.freedesktop.org/wayland/wayland-protocols>
+
 ### Fuente Nunito
 
 - **Licencia:** SIL Open Font License 1.1 (`Nunito-OFL-1.1.txt`; en el

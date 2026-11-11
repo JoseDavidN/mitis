@@ -5,6 +5,25 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ## [Sin publicar]
 
+> Mitis, sin reiniciar
+
+### Añadido
+
+- Nueva opción en Configuración → Rendimiento: «Vídeos de YouTube en un formato más ligero». YouTube manda sus vídeos en un formato que las tarjetas gráficas antiguas no saben leer, así que lo hace el procesador y todo el equipo se frena. Con la opción encendida, los vídeos se piden en un formato que casi cualquier tarjeta gráfica lee: en equipos antiguos van fluidos y las demás páginas no se paran. Como mucho, en 1080p.
+- Las opciones que solo se pueden cambiar al abrir Mitis (reproducir vídeo con la tarjeta gráfica, cuántas páginas guarda «Atrás y adelante al instante») tienen un botón «Reiniciar ahora»: Mitis se cierra y se vuelve a abrir solo, con tus pestañas.
+
+- Compartir pantalla en Linux (Hyprland, Sway y escritorios parecidos) con la ventana de Mitis: eliges una pantalla o una ventana, con su nombre, y se comparte al momento. Antes salía hasta tres veces seguidas la ventana del escritorio.
+
+### Cambiado
+
+- El proxy y el DNS cifrado (Configuración → Privacidad) se aplican al momento: ya no hace falta cerrar y volver a abrir Mitis.
+
+### Corregido
+
+- Mitis se cerraba de golpe al mover el ratón sobre una página que se había abierto desde otra (por ejemplo, la ventana que abre un botón de «Iniciar sesión» o «Compartir») después de cerrar la pestaña de la que salió.
+
+## [0.21.0] - 2026-11-09
+
 > Mitis, más cómodo en Linux
 
 ### Añadido

@@ -5,6 +5,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QNetworkAccessManager>
+#include <QNetworkProxy>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QSaveFile>
@@ -271,6 +272,8 @@ void ContentBlocker::update()
         return;
     QDir().mkpath(filterDir());
     m_network = new QNetworkAccessManager(this);
+    // Sin el proxy de las páginas (EngineBridge::applyProxy)
+    m_network->setProxy(QNetworkProxy::NoProxy);
     m_downloadIndex = 0;
     emit stateChanged();
     downloadNext();

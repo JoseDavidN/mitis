@@ -82,21 +82,18 @@ class Settings : public QObject
     Q_PROPERTY(bool httpsUpgrade READ httpsUpgrade WRITE setHttpsUpgrade NOTIFY httpsUpgradeChanged)
     // DNS cifrado (DNS sobre HTTPS) de las páginas: "off" (el del sistema),
     // "auto" (de serie: cifrado y, si no responde, el del sistema) o "secure"
-    // (solo cifrado). El motor lo lee al arrancar (main.cpp): vale desde el
-    // próximo arranque, y para todas las ventanas
+    // (solo cifrado). Vale al momento (EngineBridge::applySecureDns, enlazado
+    // desde BrowserProfile) y para todas las ventanas
     Q_PROPERTY(QString secureDns READ secureDns WRITE setSecureDns NOTIFY secureDnsChanged)
     // Servidor del DNS cifrado: clave de secureDnsProviders
     Q_PROPERTY(QString secureDnsProvider READ secureDnsProvider WRITE setSecureDnsProvider NOTIFY secureDnsProviderChanged)
     // Servidores que se pueden elegir: [{ key, name, detail }]
     Q_PROPERTY(QVariantList secureDnsProviders READ secureDnsProviders CONSTANT)
-    // Lo elegido no es lo que usa el motor desde que arrancó: falta reiniciar
-    Q_PROPERTY(bool secureDnsPending READ secureDnsPending NOTIFY secureDnsPendingChanged)
     // Proxy SOCKS5 de las páginas (solo SOCKS): encendido y «servidor:puerto».
-    // El motor lo toma al arrancar (main.cpp, setupChromiumFlags) y vale para
-    // todas las ventanas; la red de la interfaz no lo usa
+    // Vale al momento (EngineBridge::applyProxy, enlazado desde BrowserProfile)
+    // y para todas las ventanas; la red de la interfaz no lo usa
     Q_PROPERTY(bool proxyEnabled READ proxyEnabled WRITE setProxyEnabled NOTIFY proxyChanged)
     Q_PROPERTY(QString proxyAddress READ proxyAddress WRITE setProxyAddress NOTIFY proxyChanged)
-    Q_PROPERTY(bool proxyPending READ proxyPending NOTIFY proxyChanged)
     // Vídeo decodificado por la GPU (VA-API), solo en Linux: en Windows y
     // macOS el motor ya lo hace siempre. Al arrancar (setupChromiumFlags)
     Q_PROPERTY(bool hardwareVideoDecode READ hardwareVideoDecode WRITE setHardwareVideoDecode NOTIFY hardwareVideoDecodeChanged)
@@ -141,6 +138,10 @@ class Settings : public QObject
     // Con la memoria del equipo justa, descargar antes las pestañas ocultas
     // (Main.relieveMemory). Encendido de serie: solo actúa cuando hace falta
     Q_PROPERTY(bool memorySaver READ memorySaver WRITE setMemorySaver NOTIFY memorySaverChanged)
+    // Vídeos de YouTube en H.264 (assets/scripts/h264.js), apagado de serie:
+    // AV1 y VP9 los decodifica el procesador en las gráficas sin soporte;
+    // H.264 lo decodifica casi cualquiera. Vale al cargar la página
+    Q_PROPERTY(bool youtubeH264 READ youtubeH264 WRITE setYoutubeH264 NOTIFY youtubeH264Changed)
     // Atrás y adelante al instante: páginas anteriores que cada pestaña guarda
     // congeladas en memoria (caché de páginas anteriores): 0 (apagado), 1 (de
     // serie) o 3. Cuántas, el motor lo toma al arrancar (main.cpp,
@@ -241,6 +242,8 @@ public:
     void setCacheSize(int value);
     bool memorySaver() const;
     void setMemorySaver(bool value);
+    bool youtubeH264() const;
+    void setYoutubeH264(bool value);
     int instantBackPages() const;
     void setInstantBackPages(int value);
     bool instantBackPending() const;
@@ -254,18 +257,14 @@ public:
     QString secureDnsProvider() const;
     void setSecureDnsProvider(const QString &value);
     QVariantList secureDnsProviders() const;
-    bool secureDnsPending() const;
     bool proxyEnabled() const;
     void setProxyEnabled(bool value);
     QString proxyAddress() const;
     void setProxyAddress(const QString &value);
-    bool proxyPending() const;
     // «servidor:puerto» válido (lo comprueba también Configuración antes de guardar)
     Q_INVOKABLE static bool validProxyAddress(const QString &address);
-    // Para main.cpp, antes de iniciar el motor: el proxy que debe usar ("" =
-    // ninguno) y, una vez aplicado, con cuál arrancó
-    static QString proxyServerSaved();
-    static void setProxyStarted(const QString &address);
+    // El proxy que deben usar las páginas: «servidor:puerto» o "" si ninguno
+    QString proxyInUse() const;
     bool hardwareVideoDecode() const;
     void setHardwareVideoDecode(bool value);
     bool hardwareVideoDecodePending() const;
@@ -273,11 +272,8 @@ public:
     static bool hardwareVideoDecodeSaved();
     static void setHardwareVideoDecodeStarted(bool on);
 
-    // Para main.cpp, antes de crear los perfiles: dirección (plantilla de
-    // DNS sobre HTTPS) del servidor elegido y, una vez aplicado, con qué
-    // modo y servidor arrancó el motor ("off" si con el del sistema)
+    // Dirección (plantilla de DNS sobre HTTPS) de un servidor de secureDnsProviders
     static QString secureDnsTemplate(const QString &provider);
-    static void setSecureDnsStarted(const QString &modeAndProvider);
 
     // Valor de `key` ("Categoría/nombre") o `defaultValue` si no está guardado
     Q_INVOKABLE QVariant value(const QString &key, const QVariant &defaultValue = {}) const;
@@ -329,11 +325,11 @@ signals:
     void suspendAfterChanged();
     void cacheSizeChanged();
     void memorySaverChanged();
+    void youtubeH264Changed();
     void instantBackPagesChanged();
     void controlsSizeChanged();
     void secureDnsChanged();
     void secureDnsProviderChanged();
-    void secureDnsPendingChanged();
     void proxyChanged();
 
 private:

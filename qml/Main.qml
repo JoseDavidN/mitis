@@ -314,6 +314,18 @@ Window {
             win.quitForUpdate()
         }
     }
+    // «Reiniciar ahora» (Configuración, ajustes que el motor lee al arrancar):
+    // igual, y main.cpp lo vuelve a abrir (EngineBridge::restart)
+    Connections {
+        // qmllint disable unqualified
+        target: MitisEngine
+        // qmllint enable unqualified
+        enabled: !win.privateMode
+        function onRestarting() {
+            Settings.setValue("Session/restoreOnce", true)
+            win.quitForUpdate()
+        }
+    }
     function quitForUpdate() {
         for (const window of privateWindows) {
             if (window)

@@ -6,6 +6,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QNetworkAccessManager>
+#include <QNetworkProxy>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QProcess>
@@ -143,8 +144,11 @@ void Updater::check()
 {
     if (m_checking || m_installing)
         return;
-    if (!m_network)
+    if (!m_network) {
         m_network = new QNetworkAccessManager(this);
+        // Sin el proxy de las páginas (EngineBridge::applyProxy)
+        m_network->setProxy(QNetworkProxy::NoProxy);
+    }
     m_checking = true;
     emit changed();
 

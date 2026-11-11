@@ -48,6 +48,7 @@ const QString AskDownloadFolderKey = QStringLiteral("Downloads/askFolder");
 const QString SuspendAfterKey = QStringLiteral("Performance/suspendAfter");
 const QString CacheSizeKey = QStringLiteral("Performance/cacheSize");
 const QString MemorySaverKey = QStringLiteral("Performance/memorySaver");
+const QString YoutubeH264Key = QStringLiteral("Performance/youtubeH264");
 const QString InstantBackPagesKey = QStringLiteral("Performance/instantBackPages");
 const QString ControlsSizeKey = QStringLiteral("Appearance/controlsSize");
 const QString SecureDnsKey = QStringLiteral("Privacy/secureDns");
@@ -70,10 +71,6 @@ const DnsProvider DnsProviders[] = {
     { "mullvad", "Mullvad", "Sin filtros ni registros", "https://dns.mullvad.net/dns-query" },
     { "adguard", "AdGuard", "Bloquea además anuncios y rastreadores", "https://dns.adguard-dns.com/dns-query" },
 };
-// Con qué arrancó el motor ("modo:servidor" o "off"); vacío = aún no se sabe
-QString secureDnsStarted;
-// Proxy con el que arrancó el motor ("" = ninguno); sin arrancar aún, nulo
-QString proxyStarted;
 // Vídeo por la GPU con el que arrancó el motor: 0 no, 1 sí, -1 aún no arrancó
 int hardwareVideoDecodeStarted = -1;
 // Páginas guardadas por pestaña con las que arrancó el motor (0 = aún no)
@@ -623,6 +620,17 @@ void Settings::setMemorySaver(bool value)
         emit memorySaverChanged();
 }
 
+bool Settings::youtubeH264() const
+{
+    return flag(YoutubeH264Key, false);
+}
+
+void Settings::setYoutubeH264(bool value)
+{
+    if (storeBool(YoutubeH264Key, value, false))
+        emit youtubeH264Changed();
+}
+
 QString Settings::controlsSize() const
 {
     const QString value = m_settings.value(ControlsSizeKey).toString();
@@ -681,7 +689,6 @@ void Settings::setSecureDns(const QString &value)
         return;
     m_settings.setValue(SecureDnsKey, value);
     emit secureDnsChanged();
-    emit secureDnsPendingChanged();
 }
 
 QString Settings::secureDnsProvider() const
@@ -696,7 +703,6 @@ void Settings::setSecureDnsProvider(const QString &value)
         return;
     m_settings.setValue(SecureDnsProviderKey, value);
     emit secureDnsProviderChanged();
-    emit secureDnsPendingChanged();
 }
 
 QVariantList Settings::secureDnsProviders() const
@@ -709,15 +715,6 @@ QVariantList Settings::secureDnsProviders() const
     return list;
 }
 
-bool Settings::secureDnsPending() const
-{
-    if (secureDnsStarted.isEmpty())
-        return false;
-    const QString chosen = secureDns() == QLatin1String("off") ? QStringLiteral("off")
-                                                               : secureDns() + u':' + secureDnsProvider();
-    return chosen != secureDnsStarted;
-}
-
 QString Settings::secureDnsTemplate(const QString &provider)
 {
     for (const DnsProvider &item : DnsProviders) {
@@ -725,11 +722,6 @@ QString Settings::secureDnsTemplate(const QString &provider)
             return QString::fromLatin1(item.url);
     }
     return {};
-}
-
-void Settings::setSecureDnsStarted(const QString &modeAndProvider)
-{
-    secureDnsStarted = modeAndProvider;
 }
 
 bool Settings::proxyEnabled() const
@@ -759,14 +751,6 @@ void Settings::setProxyAddress(const QString &value)
     emit proxyChanged();
 }
 
-bool Settings::proxyPending() const
-{
-    if (proxyStarted.isNull())
-        return false;
-    const QString chosen = proxyEnabled() && validProxyAddress(proxyAddress()) ? proxyAddress() : QStringLiteral("");
-    return chosen != proxyStarted;
-}
-
 bool Settings::validProxyAddress(const QString &address)
 {
     // Nombre o IPv4 («127.0.0.1:9050») o IPv6 entre corchetes («[::1]:1080»)
@@ -778,17 +762,10 @@ bool Settings::validProxyAddress(const QString &address)
     return port > 0 && port <= 65535;
 }
 
-QString Settings::proxyServerSaved()
+QString Settings::proxyInUse() const
 {
-    // Antes de que exista la aplicación: QSettings con los nombres explícitos
-    const QSettings saved(QStringLiteral("Mitis"), QStringLiteral("Mitis"));
-    const QString address = saved.value(ProxyAddressKey).toString();
-    return saved.value(ProxyEnabledKey, false).toBool() && validProxyAddress(address) ? address : QStringLiteral("");
-}
-
-void Settings::setProxyStarted(const QString &address)
-{
-    proxyStarted = address.isNull() ? QStringLiteral("") : address;
+    const QString address = proxyAddress();
+    return proxyEnabled() && validProxyAddress(address) ? address : QString();
 }
 
 bool Settings::hardwareVideoDecode() const
@@ -833,7 +810,7 @@ void Settings::resetPreferences()
         BlockThirdPartyCookiesKey, ClearOnExitKey, DoNotTrackKey, HideLocalIpKey, HttpsUpgradeKey,
         JavascriptKey, ImagesKey, BlockPopupsKey, AutoplayKey, BlockedPermissionsKey, AskDownloadFolderKey,
         SuspendAfterKey, BlockAdsKey, StripTrackingParamsKey, ThemeKey, SecureDnsKey, SecureDnsProviderKey,
-        CacheSizeKey, MemorySaverKey, InstantBackPagesKey, ControlsSizeKey,
+        CacheSizeKey, MemorySaverKey, YoutubeH264Key, InstantBackPagesKey, ControlsSizeKey,
         ProxyEnabledKey, ProxyAddressKey, HardwareVideoDecodeKey,
         PasswordAutofillKey, PasswordOfferSaveKey, PasswordLengthKey,
     };
@@ -873,9 +850,9 @@ void Settings::resetPreferences()
     emit themeChanged();
     emit secureDnsChanged();
     emit secureDnsProviderChanged();
-    emit secureDnsPendingChanged();
     emit cacheSizeChanged();
     emit memorySaverChanged();
+    emit youtubeH264Changed();
     emit instantBackPagesChanged();
     emit controlsSizeChanged();
     emit proxyChanged();

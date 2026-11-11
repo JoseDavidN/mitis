@@ -61,9 +61,14 @@
     function watchCapture(owner, name, isDevice) {
         if (!owner || typeof owner[name] !== "function")
             return;
+        // La del prototipo en cada llamada, no la de ahora: otro script de
+        // Mitis puede sustituirla después (screenshare.js, compartir pantalla
+        // propio en Wayland) y esta copia la taparía
+        var proto = Object.getPrototypeOf(owner);
         var original = owner[name];
         owner[name] = function () {
-            return original.apply(this, arguments).then(function (stream) {
+            var current = proto && typeof proto[name] === "function" ? proto[name] : original;
+            return current.apply(this, arguments).then(function (stream) {
                 captures.push(stream);
                 if (isDevice) {
                     devices.push(stream);

@@ -1165,13 +1165,6 @@ FocusScope {
                     isSelected: value => Settings.secureDnsProvider === value
                     onChosen: value => Settings.secureDnsProvider = value
                 }
-                // El motor solo lo cambia al arrancar
-                SettingRow {
-                    visible: Settings.secureDnsPending
-                    icon: "reload"
-                    title: "Se aplicará al volver a abrir Mitis"
-                    description: "El DNS cifrado se elige al arrancar. Cierra Mitis y ábrelo de nuevo para usar el cambio."
-                }
                 SettingRow {
                     title: "Proxy SOCKS5"
                     description: Settings.proxyEnabled && Settings.validProxyAddress(Settings.proxyAddress)
@@ -1220,13 +1213,6 @@ FocusScope {
                     visible: Settings.proxyEnabled && root.proxyError
                     title: "Dirección no válida"
                     description: "Escribe el servidor y el puerto separados por dos puntos, p. ej. 127.0.0.1:1080 o proxy.ejemplo.com:1080."
-                }
-                // El motor solo lo cambia al arrancar
-                SettingRow {
-                    visible: Settings.proxyPending
-                    icon: "reload"
-                    title: "Se aplicará al volver a abrir Mitis"
-                    description: "El proxy se elige al arrancar. Cierra Mitis y ábrelo de nuevo para usar el cambio."
                 }
             }
 
@@ -1716,8 +1702,10 @@ FocusScope {
                 SettingRow {
                     visible: Settings.instantBackPending
                     icon: "reload"
-                    title: "Se aplicará al volver a abrir Mitis"
-                    description: "Cuántas páginas se guardan se elige al arrancar. Cierra Mitis y ábrelo de nuevo para usar el cambio."
+                    title: "Falta reiniciar Mitis"
+                    description: "Cuántas páginas se guardan se elige al arrancar. Tus pestañas se vuelven a abrir."
+
+                    RestartButton {}
                 }
                 // Solo en Linux: en Windows y macOS el motor ya usa la tarjeta gráfica
                 SettingRow {
@@ -1731,10 +1719,21 @@ FocusScope {
                     }
                 }
                 SettingRow {
+                    title: "Vídeos de YouTube en un formato más ligero"
+                    description: "YouTube envía sus vídeos en un formato moderno que las tarjetas gráficas anteriores a 2020 no saben leer, así que lo hace el procesador. Con esto los pide en uno que casi cualquier tarjeta gráfica lee: en equipos antiguos los vídeos van fluidos y el resto de páginas no se frena. Como mucho en 1080p. Vale al volver a cargar la página."
+
+                    Toggle {
+                        checked: Settings.youtubeH264
+                        onToggled: Settings.youtubeH264 = checked
+                    }
+                }
+                SettingRow {
                     visible: Qt.platform.os === "linux" && Settings.hardwareVideoDecodePending
                     icon: "reload"
-                    title: "Se aplicará al volver a abrir Mitis"
-                    description: "Cierra Mitis y ábrelo de nuevo para usar el cambio."
+                    title: "Falta reiniciar Mitis"
+                    description: "La tarjeta gráfica se elige al arrancar. Tus pestañas se vuelven a abrir."
+
+                    RestartButton {}
                 }
                 SettingRow {
                     title: "Precargar páginas"
@@ -2116,6 +2115,19 @@ FocusScope {
     }
 
     // Un ajuste: título y descripción a la izquierda, controles a la derecha
+    // Botón de las filas «Falta reiniciar Mitis»: se cierra guardando las
+    // pestañas y se vuelve a abrir solo (EngineBridge::restart)
+    component RestartButton: TextButton {
+        text: "Reiniciar ahora"
+        primary: true
+        onClicked: {
+            // qmllint disable unqualified
+            if (typeof MitisEngine.restart === "function")
+                MitisEngine.restart()
+            // qmllint enable unqualified
+        }
+    }
+
     component SettingRow: Item {
         id: row
 

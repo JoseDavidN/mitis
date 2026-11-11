@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(Mitis
-    VERSION 0.21.0
+    VERSION 0.22.0
     DESCRIPTION "Navegador web ligero, multiplataforma y con interfaz propia"
     LANGUAGES C CXX
 )
@@ -66,6 +66,8 @@ qt_add_executable(mitis
     src/notifier.cpp
     src/windowstyle.h
     src/windowstyle.cpp
+    src/screencapture.h
+    src/screencapture.cpp
 )
 
 # Notificaciones del sistema (src/notifier.*): D-Bus en Linux,
@@ -83,6 +85,35 @@ else()
     find_package(Qt6 REQUIRED COMPONENTS DBus)
     target_link_libraries(mitis PRIVATE Qt6::DBus)
     target_compile_definitions(mitis PRIVATE MITIS_DBUS_NOTIFICATIONS)
+
+    # Compartir pantalla propio en Wayland (src/waylandcapture.*): protocolos
+    # estándar de captura, en third_party/wayland-protocols (las distribuciones
+    # con wayland-protocols < 1.37 no los traen). Sin wayland-client o
+    # wayland-scanner, Mitis se compila sin él (el portal de siempre)
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(WAYLAND_CLIENT IMPORTED_TARGET wayland-client)
+    endif()
+    find_program(WAYLAND_SCANNER wayland-scanner)
+    if(WAYLAND_CLIENT_FOUND AND WAYLAND_SCANNER)
+        set(MITIS_WL_DIR "${CMAKE_CURRENT_BINARY_DIR}/wayland")
+        file(MAKE_DIRECTORY "${MITIS_WL_DIR}")
+        foreach(protocol ext-image-capture-source-v1 ext-image-copy-capture-v1 ext-foreign-toplevel-list-v1)
+            set(xml "${CMAKE_CURRENT_SOURCE_DIR}/third_party/wayland-protocols/${protocol}.xml")
+            add_custom_command(
+                OUTPUT "${MITIS_WL_DIR}/${protocol}-client-protocol.h" "${MITIS_WL_DIR}/${protocol}-protocol.c"
+                COMMAND ${WAYLAND_SCANNER} client-header "${xml}" "${MITIS_WL_DIR}/${protocol}-client-protocol.h"
+                COMMAND ${WAYLAND_SCANNER} private-code "${xml}" "${MITIS_WL_DIR}/${protocol}-protocol.c"
+                DEPENDS "${xml}")
+            target_sources(mitis PRIVATE "${MITIS_WL_DIR}/${protocol}-client-protocol.h" "${MITIS_WL_DIR}/${protocol}-protocol.c")
+        endforeach()
+        target_sources(mitis PRIVATE src/waylandcapture.h src/waylandcapture.cpp)
+        target_include_directories(mitis PRIVATE "${MITIS_WL_DIR}")
+        target_link_libraries(mitis PRIVATE PkgConfig::WAYLAND_CLIENT)
+        target_compile_definitions(mitis PRIVATE MITIS_WAYLAND_CAPTURE)
+    else()
+        message(WARNING "Sin wayland-client o wayland-scanner: compartir pantalla en Wayland usará el portal del escritorio")
+    endif()
 endif()
 
 # Tipos de C++ para QML (Settings…), en un módulo propio, Mitis.Core: el modo
@@ -184,6 +215,7 @@ qt_add_resources(mitis "scripts"
     BASE assets/scripts
     FILES assets/scripts/media.js assets/scripts/devtools.js assets/scripts/drm.js assets/scripts/google.js
           assets/scripts/swipe.js assets/scripts/preload.js assets/scripts/passwords.js
+          assets/scripts/h264.js assets/scripts/screenshare.js
 )
 
 # Cambios de cada versión: la pestaña de novedades tras actualizarse

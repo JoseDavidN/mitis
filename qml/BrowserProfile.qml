@@ -316,6 +316,73 @@ QtObject {
             root._updatePreload()
         }
     }
+    // Proxy y DNS cifrado (Configuración → Privacidad): el motor los cambia
+    // al momento, para todas las ventanas (EngineBridge::applyProxy/applySecureDns)
+    readonly property Connections _networkSettings: Connections {
+        target: Settings
+        function onProxyChanged() { root._updateNetwork() }
+        function onSecureDnsChanged() { root._updateNetwork() }
+        function onSecureDnsProviderChanged() { root._updateNetwork() }
+    }
+    function _updateNetwork() {
+        // qmllint disable unqualified
+        if (typeof MitisEngine.updateNetworkSettings !== "function")
+            return
+        MitisEngine.updateNetworkSettings()
+        // qmllint enable unqualified
+        root._pokeNetwork(root.profile)
+        if (root.privateProfile)
+            root._pokeNetwork(root.privateProfile)
+    }
+    // Al quitar el proxy, Chromium no lo nota hasta que alguna página de ese
+    // perfil pide algo, y esa primera petición aún sale por el proxy (medido:
+    // al ponerlo, en cambio, vale al momento). Una vista sin ventana pide al
+    // instante una dirección que no existe nunca (.invalid, reservada) y con
+    // eso el motor ya usa lo nuevo para lo que venga; luego se destruye.
+    // (Dentro de un QtObject: una vista suelta como raíz avisa de que no está
+    // en ninguna ventana)
+    readonly property Component _networkPoke: Component {
+        QtObject {
+            id: poke
+            required property WebEngineProfile profile
+            readonly property WebEngineView view: WebEngineView {
+                profile: poke.profile
+                onLoadingChanged: info => {
+                    if (info.status !== WebEngineView.LoadStartedStatus)
+                        poke.destroy()
+                }
+                Component.onCompleted: url = "https://mitis-red.invalid/"
+            }
+        }
+    }
+    function _pokeNetwork(profile) {
+        _networkPoke.createObject(root, { profile: profile })
+    }
+
+    // Vídeos de YouTube en H.264 (Settings.youtubeH264, assets/scripts/h264.js):
+    // en los dos perfiles; vale para las páginas que se carguen desde el cambio
+    readonly property Connections _h264Setting: Connections {
+        target: Settings
+        function onYoutubeH264Changed() {
+            root._updateH264(root.profile)
+            if (root.privateProfile)
+                root._updateH264(root.privateProfile)
+        }
+    }
+    function _updateH264(profile) {
+        for (const old of profile.userScripts.find("mitis-h264"))
+            profile.userScripts.remove(old)
+        if (!Settings.youtubeH264)
+            return
+        const h264 = WebEngine.script()
+        h264.name = "mitis-h264"
+        h264.sourceUrl = "qrc:/scripts/h264.js"
+        h264.injectionPoint = WebEngineScript.DocumentCreation
+        // En el mundo de la página: cambia lo que pregunta su reproductor
+        h264.worldId = WebEngineScript.MainWorld
+        h264.runsOnSubFrames = true
+        root._insertScript(profile, h264)
+    }
     function _updatePreload() {
         const scripts = root.profile.userScripts
         for (const old of scripts.find("mitis-preload"))
@@ -395,6 +462,18 @@ QtObject {
         google.worldId = WebEngineScript.MainWorld
         google.runsOnSubFrames = true
         root._insertScript(profile, google)
+        root._updateH264(profile)
+        // Compartir pantalla propio (Wayland sin el portal; src/screencapture.*):
+        // getDisplayMedia lo atiende Mitis (assets/scripts/screenshare.js,
+        // BrowserTab). Solo en el marco principal; donde no se puede, el del motor
+        if (typeof engine.screenCaptureAvailable === "function" && engine.screenCaptureAvailable()) {
+            const share = WebEngine.script()
+            share.name = "mitis-screenshare"
+            share.sourceUrl = "qrc:/scripts/screenshare.js"
+            share.injectionPoint = WebEngineScript.DocumentCreation
+            share.worldId = WebEngineScript.MainWorld
+            root._insertScript(profile, share)
+        }
 
         // Gestor de contraseñas: autocompletar, guardar y generar
         // (assets/scripts/passwords.js), en el mundo de Mitis y solo en el

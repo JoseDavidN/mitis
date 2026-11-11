@@ -36,10 +36,11 @@ Historial con este esquema (ver [CHANGELOG.md](../CHANGELOG.md)):
 | 0.18.0 | Proxy SOCKS5, compatibilidad gráfica en Windows, enlaces a aplicaciones (Teams, Zoom) | `f046b11` |
 | 0.19.0 | Gestor de contraseñas cifrado con cuenta propia, autocompletar, aviso para guardar, generador e importar/exportar CSV | `a054829` |
 | 0.20.0 | Elegir Mitis como navegador predeterminado, quita «Compatibilidad gráfica», corrige la ventana al volver de minimizarla | `eab5693` |
+| 0.21.0 | Linux (AppImage, Wayland nativo) en el workflow, sin barra de título con gestores en mosaico, vídeo por la GPU en Linux, pantalla encendida con vídeo, compartir pantalla | `dfc876e` |
 
 Las fases 0–2 van juntas en 0.2.0 porque entraron en un solo commit. Esas versiones no tienen etiqueta ni release: son anteriores al workflow de publicación. Si se quieren marcar, basta con etiquetas ligeras (`git tag v0.4.0 d6cfa89`); al subirlas no se publica nada porque esos commits no tienen `.github/workflows/`.
 
-**Versión actual: 0.21.0-beta** (en desarrollo, en la rama `ajustes`; la 0.20.0 ya tiene commit y se da por publicada). Linux (AppImage, con Wayland) en cada compilación y en el servidor de descargas; sin barra de título con gestores de ventanas en mosaico (Hyprland, Sway…). Trae una función nueva: sube MENOR. Se publica al subir la etiqueta `v0.21.0`.
+**Versión actual: 0.22.0-beta** (en desarrollo; la 0.21.0 ya tiene commit y se da por publicada). Proxy y DNS cifrado en marcha, «Reiniciar ahora» para lo que el motor lee al arrancar, vídeos de YouTube en H.264, compartir pantalla propio en Wayland (sin el portal) y corrige la caída al mover el ratón sobre una página abierta con `window.open` tras cerrar la pestaña que la abrió. Trae funciones nuevas: sube MENOR. Se publica al subir la etiqueta `v0.22.0`.
 
 **Regla:** una versión con commit ya está desplegada. Lo siguiente que se haga va en una versión nueva, subida según lo que traiga (MENOR con funciones nuevas, PARCHE con solo correcciones), y su sección del CHANGELOG se escribe en lenguaje claro para quien no sabe de tecnología: es lo que se ve en la pestaña de novedades.
 
