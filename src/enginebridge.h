@@ -97,6 +97,16 @@ public:
     Q_INVOKABLE QString startScreenCapture(const QString &kind, quint32 id, const QUrl &page);
     Q_INVOKABLE void stopScreenCapture(const QString &token);
 
+    // Llaves de acceso con el móvil (src/hybrid.*, solo Linux; en Windows y
+    // macOS las atiende el sistema). Ver assets/scripts/webauthn.js
+    Q_INVOKABLE bool passkeysAvailable() const;
+    // { session, qr } o { error }: `optionsJson`, el publicKey de la página
+    Q_INVOKABLE QVariantMap startPasskey(const QString &kind, const QString &optionsJson, const QUrl &page);
+    Q_INVOKABLE void cancelPasskey(int session);
+    Q_INVOKABLE void passkeyBluetoothOn(int session);
+    // Módulos de un código QR: { size, modules: "0101…" (fila a fila) }
+    Q_INVOKABLE QVariantMap qrCode(const QString &text) const;
+
     QString widevinePath() const { return m_widevinePath; }
     QString licensesPath() const;
     QString passwordToken() const { return m_passwordToken; }
@@ -179,6 +189,10 @@ signals:
     // Una captura de pantalla propia terminó por su cuenta (ventana cerrada,
     // página que ya no pide fotogramas): BrowserTab la olvida
     void screenCaptureEnded(const QString &token);
+    // Llave de acceso con el móvil: "scanning", "bluetoothOff", "noBluetooth",
+    // "connecting", "confirm"; y el final ({ ok, … } o { error, message })
+    void passkeyState(int session, const QString &state);
+    void passkeyFinished(int session, const QVariantMap &result);
 
 private:
     RequestInterceptor *interceptorFor(bool privateProfile) const;
@@ -188,6 +202,8 @@ private:
     ContentBlocker *m_blocker;
     SystemNotifier *m_notifier;
     ScreenCapture *m_screenCapture;
+    QHash<int, QObject *> m_passkeys;
+    int m_nextPasskey = 1;
     RequestInterceptor *m_interceptor;
     // El del perfil privado: privacidad siempre activa (existe con él)
     RequestInterceptor *m_privateInterceptor = nullptr;

@@ -22,6 +22,7 @@
 #include "links.h"
 #include "updater.h"
 #include "networkfactory.h"
+#include "profiles.h"
 #include "screencapture.h"
 #include "settings.h"
 #include "widevine.h"
@@ -118,8 +119,8 @@ void setupChromiumFlags()
         // Las páginas con versión oscura (prefers-color-scheme) la usan con
         // los temas oscuros de Mitis (Theme.qml: todos menos «claro»). Qt
         // WebEngine no deja cambiarlo en marcha: vale desde el próximo arranque.
-        // La aplicación aún no existe: QSettings con los nombres explícitos.
-        + QByteArray(QSettings(QStringLiteral("Mitis"), QStringLiteral("Mitis"))
+        // La aplicación aún no existe: QSettings con los nombres del perfil.
+        + QByteArray(QSettings(QCoreApplication::organizationName(), QCoreApplication::applicationName())
                              .value(QStringLiteral("Appearance/theme")).toString() == QLatin1String("claro")
                          ? "--blink-settings=preferredColorScheme=1"
                          : "--blink-settings=preferredColorScheme=0");
@@ -158,6 +159,13 @@ void setupEngine(QQmlApplicationEngine *engine, const QString &iconDir, EngineBr
 
 int main(int argc, char *argv[])
 {
+    // Perfil (Profiles): antes de nada, porque de él salen la carpeta de datos
+    // y los ajustes que el motor lee al arrancar
+    QStringList arguments;
+    for (int i = 0; i < argc; ++i)
+        arguments.append(QString::fromLocal8Bit(argv[i]));
+    Profiles::select(arguments);
+
     // Contenido protegido: la ruta de Widevine se da al motor antes de iniciarlo
     widevinePath = Widevine::setup();
     setupChromiumFlags();
@@ -168,10 +176,9 @@ int main(int argc, char *argv[])
     setupDesktopPortal();
 
     QGuiApplication app(argc, argv);
-    QGuiApplication::setApplicationName("Mitis");
+    // Nombre y organización ya los puso Profiles::select (según el perfil)
     QGuiApplication::setApplicationVersion(MITIS_VERSION);
     QGuiApplication::setWindowIcon(QIcon(QStringLiteral(":/branding/mitis.png")));
-    QGuiApplication::setOrganizationName("Mitis");
     // Con Wayland, el escritorio asocia la ventana a su entrada e icono (mitis.desktop)
     QGuiApplication::setDesktopFileName(QStringLiteral("mitis"));
     setupFont();

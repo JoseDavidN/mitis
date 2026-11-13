@@ -106,7 +106,7 @@ Popup {
                     x: parent.width + Theme.spacing
                     y: (parent.height - height) / 2
                     text: essential.title || essential.url.toString() || "Nueva pestaña"
-                    shortcut: "Ctrl+" + (essential.index + 1)
+                    shortcut: "Ctrl+Shift+" + (essential.index + 1)
                     visible: essential.hovered && !removeButton.hovered
                 }
 

@@ -5,6 +5,26 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ## [Sin publicar]
 
+> Mitis, con varios perfiles
+
+### Añadido
+
+- Perfiles: puedes tener varios Mitis abiertos a la vez, cada uno en su ventana y con sus propias pestañas, historial, marcadores, contraseñas y sesiones iniciadas. Lo que haces en uno no afecta a los demás (por ejemplo, una cuenta personal y otra del trabajo en la misma página). Para crear uno, abre Mitis otra vez cuando ya lo tengas abierto, pulsa Ctrl+N o elige «Nueva ventana con otro perfil» en Opciones. Tus perfiles salen en Opciones para abrirlos, y en Configuración → Perfiles puedes abrirlos o eliminarlos. Cada perfil tiene su nombre y color en Configuración → Perfil.
+- Atajos para ir a tus pestañas: Ctrl+1 a Ctrl+8 te llevan a la pestaña de ese número en la lista (las fijadas cuentan, las esenciales no) y Ctrl+9, a la última. En Mac, con Cmd.
+
+- Llaves de acceso con el móvil en Linux: cuando un sitio (Google, GitHub y muchos más) te pide tu llave de acceso, Mitis muestra un código QR. Escanéalo con la cámara del iPhone (o del Android), confirma en el móvil y listo, como en Chrome. Hace falta tener el Bluetooth encendido en el equipo y en el móvil; si está apagado, Mitis te ofrece encenderlo. También puedes elegir «Usar una llave de seguridad» para las llaves USB.
+
+### Cambiado
+
+- Las pestañas esenciales ahora se abren con Ctrl+Mayús+1 a Ctrl+Mayús+4 (antes, Ctrl+1 a Ctrl+4, que pasan a ser los de la lista).
+
+### Corregido
+
+- Las notificaciones de WhatsApp, el correo y páginas parecidas no llegaban después de abrir Mitis hasta que entrabas en su pestaña. Ahora, si una pestaña esencial o fijada tiene permiso para avisarte, Mitis la prepara sola al abrirse y te llegan sus avisos desde el principio.
+- Las páginas que piden una llave de acceso o una llave de seguridad ya no se quedan esperando sin mostrar nada: Mitis te enseña su ventana para tocar la llave, escribir su PIN, elegir la cuenta o cancelar (y entonces el sitio te ofrece entrar de otra forma).
+
+## [0.22.0] - 2026-11-10
+
 > Mitis, sin reiniciar
 
 ### Añadido

@@ -1,4 +1,5 @@
 #include "settings.h"
+#include <QCoreApplication>
 #include <QRegularExpression>
 #include <algorithm>
 
@@ -667,7 +668,7 @@ bool Settings::instantBackPending() const
 int Settings::instantBackPagesSaved()
 {
     // Antes de que exista la aplicación: QSettings con los nombres explícitos
-    return validInstantBackPages(QSettings(QStringLiteral("Mitis"), QStringLiteral("Mitis"))
+    return validInstantBackPages(QSettings(QCoreApplication::organizationName(), QCoreApplication::applicationName())
                                      .value(InstantBackPagesKey, 1).toInt());
 }
 
@@ -789,7 +790,7 @@ bool Settings::hardwareVideoDecodePending() const
 bool Settings::hardwareVideoDecodeSaved()
 {
     // Antes de que exista la aplicación: QSettings con los nombres explícitos
-    return QSettings(QStringLiteral("Mitis"), QStringLiteral("Mitis")).value(HardwareVideoDecodeKey, true).toBool();
+    return QSettings(QCoreApplication::organizationName(), QCoreApplication::applicationName()).value(HardwareVideoDecodeKey, true).toBool();
 }
 
 void Settings::setHardwareVideoDecodeStarted(bool on)

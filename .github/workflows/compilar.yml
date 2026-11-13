@@ -79,6 +79,13 @@ jobs:
             libegl1 libfontconfig1 libdbus-1-3 \
             libwayland-client0 libwayland-cursor0 libwayland-egl1
 
+      # linuxdeploy-plugin-qt copia todos los controladores SQL de Qt y falla
+      # si falta lo que enlazan (libqsqlmimer → libmimerapi.so, que no está en
+      # el runner). Mitis solo usa SQLite: los demás se quitan del Qt de esta
+      # compilación (también aligera el AppImage)
+      - name: Solo el controlador SQL de SQLite
+        run: find "$QT_ROOT_DIR/plugins/sqldrivers" -name 'libqsql*.so' ! -name 'libqsqlite.so' -print -delete
+
       # El script calcula la versión desde CMakeLists.txt
       - name: Empaquetar (AppImage)
         run: packaging/linux/appimage.sh build .

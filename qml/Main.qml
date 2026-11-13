@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Window
+import QtQml.Models
 import Mitis.Core
 
 import "urls.js" as Urls
@@ -414,7 +415,29 @@ Window {
         }
         if (showingNewTabPage)
             Qt.callLater(newTabPage.focusSearch)
+        notifyingTabsLoader.start()
         return true
+    }
+    // Las restauradas no cargan hasta que se abren (ahorra memoria al
+    // arrancar), pero una esencial o fijada con permiso de notificaciones
+    // (WhatsApp, el correo…) tiene que estar viva para avisar. Se cargan en
+    // segundo plano, tras la activa y de una en una (equipos lentos). Las
+    // demás siguen esperando a que se abran
+    Timer {
+        id: notifyingTabsLoader
+        interval: 4000
+        repeat: true
+        onTriggered: {
+            for (let i = 0; i < tabs.count; i++) {
+                const row = tabs.get(i)
+                const tab = views.itemAt(i) as BrowserTab
+                if ((row.essential || row.pinned) && tab && tab.deferred && tab.canNotify()) {
+                    tab.load()
+                    return
+                }
+            }
+            stop()
+        }
     }
 
     Timer {
@@ -1089,10 +1112,17 @@ Window {
             moveRow(essentialCount, essentialCount + pinnedCount)
         }
     }
-    // Ctrl+1…4: la esencial `n` (desde 0), si la hay
+    // Ctrl+Mayús+1…4: la esencial `n` (desde 0), si la hay
     function selectEssential(n) {
         if (n < essentialCount)
             selectTab(n)
+    }
+    // Ctrl+1…8: la pestaña `n` (desde 0) de la lista, sin las esenciales;
+    // Ctrl+9 (`n` = 8), la última
+    function selectListTab(n) {
+        const index = n === 8 ? tabs.count - 1 : essentialCount + n
+        if (index >= essentialCount && index < tabs.count)
+            selectTab(index)
     }
     // Ctrl+Tab y Ctrl+Mayús+Tab: recorren la lista de pestañas (sin las
     // esenciales); desde una esencial, a la primera o la última de la lista
@@ -1587,6 +1617,17 @@ Window {
                     }
                 }
 
+                // Llave de acceso (BrowserTab.passkey): con el móvil o con una
+                // llave física (solo existe abierta)
+                Loader {
+                    anchors.fill: parent
+                    z: 10
+                    active: tab.passkey.active
+                    sourceComponent: PasskeyDialog {
+                        tab: tab
+                    }
+                }
+
                 // Gestor de contraseñas en la página (assets/scripts/passwords.js):
                 // la lista bajo el campo con el foco y el aviso de guardar
                 onPasswordEvent: (type, data) => {
@@ -1971,6 +2012,10 @@ Window {
                         win.togglePerformancePanel()
                     else if (key === "passwords")
                         win.openPasswordManager()
+                    else if (key === "newProfile")
+                        Profiles.openNew()
+                    else if (key.startsWith("profile:"))
+                        Profiles.open(key.slice(8))
                 }
             }
         }
@@ -2320,30 +2365,30 @@ Window {
         onActivated: win.stepTab(-1)
         onActivatedAmbiguously: win.stepTab(-1)
     }
-    // Esenciales: Ctrl+1…4 (en macOS, Cmd)
-    Shortcut {
-        sequence: "Ctrl+1"
-        context: Qt.ApplicationShortcut
-        enabled: win.ownsShortcuts && win.essentialCount > 0
-        onActivated: win.selectEssential(0)
+    // Ctrl+1…8: la pestaña n de la lista (sin las esenciales; las fijadas,
+    // primero, como se ven); Ctrl+9, la última, como en Chrome. Ctrl+Mayús+1…4:
+    // las esenciales (en macOS, Cmd). En distribuciones como la española,
+    // Mayús+1 es «!»: Qt también reconoce la tecla sin Mayús (xkb)
+    Instantiator {
+        model: 9
+        delegate: Shortcut {
+            required property int index
+            sequence: "Ctrl+" + (index + 1)
+            context: Qt.ApplicationShortcut
+            enabled: win.ownsShortcuts && (index === 8 ? tabs.count > win.essentialCount
+                                                       : index < tabs.count - win.essentialCount)
+            onActivated: win.selectListTab(index)
+        }
     }
-    Shortcut {
-        sequence: "Ctrl+2"
-        context: Qt.ApplicationShortcut
-        enabled: win.ownsShortcuts && win.essentialCount > 1
-        onActivated: win.selectEssential(1)
-    }
-    Shortcut {
-        sequence: "Ctrl+3"
-        context: Qt.ApplicationShortcut
-        enabled: win.ownsShortcuts && win.essentialCount > 2
-        onActivated: win.selectEssential(2)
-    }
-    Shortcut {
-        sequence: "Ctrl+4"
-        context: Qt.ApplicationShortcut
-        enabled: win.ownsShortcuts && win.essentialCount > 3
-        onActivated: win.selectEssential(3)
+    Instantiator {
+        model: Theme.essentialsMax
+        delegate: Shortcut {
+            required property int index
+            sequence: "Ctrl+Shift+" + (index + 1)
+            context: Qt.ApplicationShortcut
+            enabled: win.ownsShortcuts && index < win.essentialCount
+            onActivated: win.selectEssential(index)
+        }
     }
     Shortcut {
         sequence: "Ctrl+Shift+A"
@@ -2460,5 +2505,12 @@ Window {
         context: Qt.ApplicationShortcut
         enabled: win.ownsShortcuts
         onActivated: win.openPrivateWindow()
+    }
+    // Otra ventana con un perfil nuevo (otro Mitis, sus propios datos: Profiles)
+    Shortcut {
+        sequence: "Ctrl+N"
+        context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
+        onActivated: Profiles.openNew()
     }
 }

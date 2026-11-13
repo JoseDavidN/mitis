@@ -53,9 +53,16 @@ signals:
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
+public:
+    // Canal del Mitis de la carpeta de datos `dataDir` (= un perfil)
+    static QString serverNameFor(const QString &dataDir);
+    // Hay un Mitis abierto en ese canal. Sin mandarle nada: no se entera
+    static bool isRunning(const QString &serverName);
+    // El de este proceso (perfil elegido en main.cpp)
+    static QString serverName();
+
 private:
     explicit Links(QObject *parent = nullptr);
-    static QString serverName();
 
     QStringList m_pending;
     QLocalServer *m_server = nullptr;

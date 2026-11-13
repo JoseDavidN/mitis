@@ -37,12 +37,27 @@ Links *Links::create(QQmlEngine *, QJSEngine *)
     return links;
 }
 
-QString Links::serverName()
+QString Links::serverNameFor(const QString &dataDir)
 {
     // Uno por usuario y carpeta de datos (= perfil de Mitis)
-    const QByteArray data = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toUtf8();
     return QStringLiteral("mitis-")
-        + QString::fromLatin1(QCryptographicHash::hash(data, QCryptographicHash::Sha1).toHex().left(16));
+        + QString::fromLatin1(QCryptographicHash::hash(dataDir.toUtf8(), QCryptographicHash::Sha1).toHex().left(16));
+}
+
+QString Links::serverName()
+{
+    return serverNameFor(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+}
+
+bool Links::isRunning(const QString &serverName)
+{
+    QLocalSocket socket;
+    socket.connectToServer(serverName);
+    if (!socket.waitForConnected(TimeoutMs))
+        return false;
+    // Se cierra sin escribir nada: el otro no hace nada (ver listen)
+    socket.abort();
+    return true;
 }
 
 QStringList Links::fromArguments(const QStringList &arguments)
@@ -51,6 +66,11 @@ QStringList Links::fromArguments(const QStringList &arguments)
     // El primero es el propio ejecutable; las opciones empiezan por «-»
     for (qsizetype i = 1; i < arguments.size(); ++i) {
         const QString &argument = arguments.at(i);
+        // --perfil <id> (main.cpp, Profiles): su valor no es un enlace
+        if (argument == QLatin1String("--perfil")) {
+            ++i;
+            continue;
+        }
         if (argument.isEmpty() || argument.startsWith(QLatin1Char('-')))
             continue;
         const QUrl url = QUrl::fromUserInput(argument, QDir::currentPath(), QUrl::AssumeLocalFile);
@@ -102,8 +122,12 @@ void Links::listen()
             connect(socket, &QLocalSocket::disconnected, socket, &QObject::deleteLater);
             // Se lee todo al desconectarse el otro Mitis (el mensaje es corto)
             connect(socket, &QLocalSocket::readChannelFinished, this, [this, socket] {
+                const QByteArray message = socket->readAll();
+                // Sin nada: solo comprobaba si este perfil está abierto (isRunning)
+                if (message.isEmpty())
+                    return;
                 QStringList urls;
-                for (const QByteArray &line : socket->readAll().split('\n')) {
+                for (const QByteArray &line : message.split('\n')) {
                     if (!line.trimmed().isEmpty())
                         urls.append(QString::fromUtf8(line.trimmed()));
                 }

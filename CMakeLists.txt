@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(Mitis
-    VERSION 0.22.0
+    VERSION 0.23.0
     DESCRIPTION "Navegador web ligero, multiplataforma y con interfaz propia"
     LANGUAGES C CXX
 )
@@ -68,7 +68,10 @@ qt_add_executable(mitis
     src/windowstyle.cpp
     src/screencapture.h
     src/screencapture.cpp
+    third_party/qrcodegen/qrcodegen.hpp
+    third_party/qrcodegen/qrcodegen.cpp
 )
+target_include_directories(mitis PRIVATE third_party/qrcodegen)
 
 # Notificaciones del sistema (src/notifier.*): D-Bus en Linux,
 # UserNotifications en macOS; en Windows, Shell_NotifyIcon (shell32)
@@ -114,6 +117,17 @@ else()
     else()
         message(WARNING "Sin wayland-client o wayland-scanner: compartir pantalla en Wayland usará el portal del escritorio")
     endif()
+
+    # Llaves de acceso con el móvil (src/hybrid.*): OpenSSL (P-256, AES) y
+    # BlueZ por D-Bus. Qt WebEngine no trae el modo «usar un teléfono» en Linux
+    find_package(OpenSSL QUIET COMPONENTS Crypto)
+    if(OpenSSL_FOUND)
+        target_sources(mitis PRIVATE src/hybrid.h src/hybrid.cpp)
+        target_link_libraries(mitis PRIVATE OpenSSL::Crypto)
+        target_compile_definitions(mitis PRIVATE MITIS_HYBRID)
+    else()
+        message(WARNING "Sin OpenSSL: las llaves de acceso del móvil no estarán disponibles")
+    endif()
 endif()
 
 # Tipos de C++ para QML (Settings…), en un módulo propio, Mitis.Core: el modo
@@ -135,6 +149,8 @@ qt_add_qml_module(mitiscore
         src/memorymonitor.cpp
         src/links.h
         src/links.cpp
+        src/profiles.h
+        src/profiles.cpp
         src/captureindicator.h
         src/captureindicator.cpp
         src/screenshot.h
@@ -215,7 +231,7 @@ qt_add_resources(mitis "scripts"
     BASE assets/scripts
     FILES assets/scripts/media.js assets/scripts/devtools.js assets/scripts/drm.js assets/scripts/google.js
           assets/scripts/swipe.js assets/scripts/preload.js assets/scripts/passwords.js
-          assets/scripts/h264.js assets/scripts/screenshare.js
+          assets/scripts/h264.js assets/scripts/screenshare.js assets/scripts/webauthn.js
 )
 
 # Cambios de cada versión: la pestaña de novedades tras actualizarse
@@ -302,6 +318,7 @@ set(MITIS_QML_FILES
     qml/CertificateDialog.qml
     qml/ExternalAppDialog.qml
     qml/ScreenShareDialog.qml
+    qml/PasskeyDialog.qml
     qml/CredentialPopup.qml
     qml/SavePasswordPrompt.qml
     qml/PasswordManager.qml

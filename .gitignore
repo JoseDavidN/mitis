@@ -35,3 +35,6 @@ compile_commands.json
 # Sistema
 .DS_Store
 Thumbs.db
+
+# Capturas y vídeos de pruebas (no se suben)
+capturas/

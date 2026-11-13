@@ -24,7 +24,14 @@
 
 #include "contentblocker.h"
 #include "screencapture.h"
+#ifdef MITIS_HYBRID
+#include "hybrid.h"
+#endif
+#include "qrcodegen.hpp"
+
+#include <QJsonDocument>
 #include "links.h"
+#include "profiles.h"
 #include "settings.h"
 #include "notifier.h"
 #include "windowstyle.h"
@@ -202,6 +209,77 @@ namespace {
 bool restartRequested = false;
 }
 
+bool EngineBridge::passkeysAvailable() const
+{
+#ifdef MITIS_HYBRID
+    return true;
+#else
+    return false;
+#endif
+}
+
+QVariantMap EngineBridge::startPasskey(const QString &kind, const QString &optionsJson, const QUrl &page)
+{
+#ifdef MITIS_HYBRID
+    const QJsonObject options = QJsonDocument::fromJson(optionsJson.toUtf8()).object();
+    auto *hybrid = new HybridAuthenticator(this);
+    QString error;
+    if (!hybrid->start(kind, options, page, &error)) {
+        delete hybrid;
+        return { { QStringLiteral("error"), error } };
+    }
+    const int session = m_nextPasskey++;
+    m_passkeys.insert(session, hybrid);
+    connect(hybrid, &HybridAuthenticator::stateChanged, this, [this, session](const QString &state) {
+        emit passkeyState(session, state);
+    });
+    connect(hybrid, &HybridAuthenticator::finished, this, [this, session, hybrid](const QJsonObject &result) {
+        m_passkeys.remove(session);
+        hybrid->deleteLater();
+        emit passkeyFinished(session, result.toVariantMap());
+    });
+    return { { QStringLiteral("session"), session }, { QStringLiteral("qr"), hybrid->qrText() } };
+#else
+    Q_UNUSED(kind)
+    Q_UNUSED(optionsJson)
+    Q_UNUSED(page)
+    return { { QStringLiteral("error"), QStringLiteral("NotSupportedError") } };
+#endif
+}
+
+void EngineBridge::cancelPasskey(int session)
+{
+#ifdef MITIS_HYBRID
+    if (auto *hybrid = qobject_cast<HybridAuthenticator *>(m_passkeys.value(session)))
+        hybrid->cancel();
+#else
+    Q_UNUSED(session)
+#endif
+}
+
+void EngineBridge::passkeyBluetoothOn(int session)
+{
+#ifdef MITIS_HYBRID
+    if (auto *hybrid = qobject_cast<HybridAuthenticator *>(m_passkeys.value(session)))
+        hybrid->powerOnBluetooth();
+#else
+    Q_UNUSED(session)
+#endif
+}
+
+QVariantMap EngineBridge::qrCode(const QString &text) const
+{
+    // Corrección media (M): legible en pantalla aunque haya reflejos
+    const qrcodegen::QrCode qr = qrcodegen::QrCode::encodeText(text.toUtf8().constData(), qrcodegen::QrCode::Ecc::MEDIUM);
+    QString modules;
+    modules.reserve(qr.getSize() * qr.getSize());
+    for (int y = 0; y < qr.getSize(); ++y) {
+        for (int x = 0; x < qr.getSize(); ++x)
+            modules += qr.getModule(x, y) ? u'1' : u'0';
+    }
+    return { { QStringLiteral("size"), qr.getSize() }, { QStringLiteral("modules"), modules } };
+}
+
 bool EngineBridge::screenCaptureAvailable()
 {
     return m_screenCapture->available();
@@ -239,7 +317,8 @@ void EngineBridge::relaunchIfRequested()
     // se vuelve a abrir el propio .AppImage
     const QString appImage = qEnvironmentVariable("APPIMAGE");
     const QString program = appImage.isEmpty() ? QCoreApplication::applicationFilePath() : appImage;
-    QStringList arguments;
+    // El mismo perfil (sin él, con otro Mitis abierto se crearía uno nuevo)
+    QStringList arguments = Profiles::launchArguments();
     if (QCoreApplication::arguments().contains(QStringLiteral("--dev")))
         arguments.append(QStringLiteral("--dev"));
     if (!QProcess::startDetached(program, arguments))

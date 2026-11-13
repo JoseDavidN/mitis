@@ -16,7 +16,17 @@ Popup {
     // Cada opción: { key, label, icon, available, shortcut (opcional) }
     readonly property var options: [
         // Con el nombre del perfil, si tiene; el icono es su avatar
-        { key: "profile", label: Settings.profileName || "Perfil", icon: "profile", available: true },
+        { key: "profile", label: Settings.profileName || "Perfil", icon: "profile", available: true,
+          avatar: { name: Settings.profileName, photo: Settings.profilePhoto, color: Settings.profileColor } },
+        // Los demás perfiles (otro Mitis cada uno: Profiles), para abrirlos.
+        // La lista se lee al abrir el menú (solo existe abierto)
+        ...(privateMode ? [] : Profiles.list().filter(profile => !profile.current).map(profile => ({
+            key: "profile:" + profile.id,
+            label: profile.name || (profile.id === "" ? "Perfil principal" : "Perfil"),
+            icon: "profile", available: true, shortcut: profile.running ? "Abierto" : "",
+            avatar: { name: profile.name, photo: profile.photo, color: profile.color }
+        }))),
+        { key: "newProfile", label: "Nueva ventana con otro perfil", icon: "add", available: true, shortcut: "Ctrl+N" },
         { key: "private", label: "Nueva ventana privada", icon: "private", available: true, shortcut: "Ctrl+Shift+N" },
         { key: "history", label: "Historial", icon: "history", available: true },
         { key: "downloads", label: "Descargas", icon: "downloads", available: true },
@@ -24,7 +34,7 @@ Popup {
         { key: "performance", label: "Monitor de rendimiento", icon: "memory", available: true, shortcut: "Shift+Esc" },
         { key: "settings", label: "Configuración", icon: "settings", available: true }
     ].filter(option => (performanceMonitor || option.key !== "performance")
-                       && !(privateMode && ["profile", "history", "settings"].includes(option.key)))
+                       && !(privateMode && ["profile", "newProfile", "history", "settings"].includes(option.key)))
 
     signal optionSelected(string key)
 
@@ -68,15 +78,15 @@ Popup {
                     anchors.verticalCenter: parent.verticalCenter
                     name: row.modelData.icon ?? ""
                     color: row.modelData.available ? Colors.inkSoft : Colors.inkMuted
-                    opacity: row.modelData.key === "profile" ? 0 : 1
+                    opacity: row.modelData.avatar ? 0 : 1
                 }
                 Avatar {
-                    visible: row.modelData.key === "profile"
+                    visible: row.modelData.avatar !== undefined
                     anchors.centerIn: optionIcon
                     size: Theme.logoSize
-                    name: Settings.profileName
-                    photo: Settings.profilePhoto
-                    colorKey: Settings.profileColor
+                    name: row.modelData.avatar?.name ?? ""
+                    photo: row.modelData.avatar?.photo ?? ""
+                    colorKey: row.modelData.avatar?.color ?? ""
                 }
 
                 Text {

@@ -481,6 +481,205 @@ Item {
         }
     }
 
+    // ── Llaves de acceso (passkeys) ──────────────────────────────────
+    // Lo que muestra PasskeyDialog (en el delegado de Main), sin tipos del
+    // motor. mode: "phone" (QR: Mitis habla con el móvil, src/hybrid.*) o
+    // "key" (llave física: la pide el motor, webAuthUxRequested).
+    // state, en "phone": scanning, bluetoothOff, noBluetooth, connecting,
+    // confirm; en "key": account, pin, touch, failed
+    readonly property QtObject passkey: QtObject {
+        property bool active: false
+        property string mode: ""
+        property string kind: "get"
+        property string site: ""
+        property string qr: ""
+        property string state: ""
+        property var accounts: []
+        // en "failed": timeout, notRegistered, alreadyRegistered, pinBlocked,
+        // removed, unsupported, storageFull, denied
+        property string failure: ""
+        // en "pin": set, change o challenge; y el error del intento anterior
+        property string pinReason: ""
+        property string pinError: ""
+        property int pinMinLength: 4
+        property int pinAttempts: -1
+    }
+    property int _passkeyRequestId: 0
+    property int _passkeySession: 0
+    property string _passkeyOrigin: ""
+    property bool _passkeySwitching: false
+    property var _passkeyNative: null
+
+    function _originOf(url) {
+        const match = /^[a-z]+:\/\/[^\/?#]+/i.exec(url.toString())
+        return match ? match[0].toLowerCase() : ""
+    }
+    // assets/scripts/webauthn.js: «request <id> <get|create> <publicKey JSON>»
+    // o «cancel <id>» (la página abortó)
+    function _passkeyMessage(text) {
+        const parts = text.split(" ")
+        if (parts[0] === "request") {
+            root._passkeyRequest(Number(parts[1]), parts[2], parts.slice(3).join(" "))
+        } else if (parts[0] === "cancel" && Number(parts[1]) === root._passkeyRequestId) {
+            if (root._passkeySession !== 0) {
+                // qmllint disable unqualified
+                MitisEngine.cancelPasskey(root._passkeySession)
+                // qmllint enable unqualified
+            } else if (passkey.mode === "key" && !root._passkeyNative) {
+                root._passkeyRequestId = 0
+                passkey.active = false
+            }
+        } else if (parts[0] === "done" && Number(parts[1]) === root._passkeyRequestId && passkey.mode === "key") {
+            // La llave física terminó (bien o mal) por el motor
+            root._passkeyRequestId = 0
+            if (!root._passkeyNative)
+                passkey.active = false
+        }
+    }
+    function _answerPasskey(id, answer) {
+        view.runJavaScript("window.__mitisWebAuthn && window.__mitisWebAuthn.answer(" + id + ", " + JSON.stringify(answer) + ")")
+    }
+    function _passkeyRequest(id, kind, json) {
+        // Una a la vez, como el motor
+        if (passkey.active) {
+            root._answerPasskey(id, { error: "NotAllowedError", message: "A request is already pending." })
+            return
+        }
+        // qmllint disable unqualified
+        const started = MitisEngine.startPasskey(kind, json, view.url)
+        // qmllint enable unqualified
+        if (started.error) {
+            root._answerPasskey(id, { error: started.error })
+            return
+        }
+        root._passkeyRequestId = id
+        root._passkeySession = started.session
+        root._passkeyOrigin = root._originOf(view.url)
+        passkey.mode = "phone"
+        passkey.kind = kind === "create" ? "create" : "get"
+        passkey.site = root._hostOf(view.url.toString()).replace(/^www\./, "")
+        passkey.qr = started.qr
+        passkey.state = "scanning"
+        passkey.active = true
+    }
+    Connections {
+        // qmllint disable unqualified
+        target: MitisEngine
+        // qmllint enable unqualified
+        function onPasskeyState(session, state) {
+            if (session === root._passkeySession)
+                root.passkey.state = state
+        }
+        function onPasskeyFinished(session, result) {
+            if (session !== root._passkeySession)
+                return
+            root._passkeySession = 0
+            // Mismo sitio que al pedirlo: si la página navegó, ya no espera
+            const samePage = root._originOf(view.url) === root._passkeyOrigin
+            if (root._passkeySwitching) {
+                // «Usar una llave de seguridad»: la petición sigue por el
+                // motor. La ventana sigue abierta: sin llave conectada, el
+                // motor no avisa de nada hasta que la conectas
+                root._passkeySwitching = false
+                if (samePage) {
+                    root.passkey.mode = "key"
+                    root.passkey.state = "touch"
+                    root._answerPasskey(root._passkeyRequestId, { native: true })
+                } else {
+                    root.passkey.active = false
+                }
+                return
+            }
+            if (samePage)
+                root._answerPasskey(root._passkeyRequestId, result)
+            root.passkey.active = false
+        }
+    }
+    // Acciones de PasskeyDialog
+    function passkeyUseKey() {
+        root._passkeySwitching = true
+        // qmllint disable unqualified
+        MitisEngine.cancelPasskey(root._passkeySession)
+        // qmllint enable unqualified
+    }
+    function passkeyBluetoothOn() {
+        // qmllint disable unqualified
+        MitisEngine.passkeyBluetoothOn(root._passkeySession)
+        // qmllint enable unqualified
+    }
+    function passkeyCancel() {
+        if (passkey.mode === "phone" && root._passkeySession !== 0) {
+            // qmllint disable unqualified
+            MitisEngine.cancelPasskey(root._passkeySession)
+            // qmllint enable unqualified
+        } else if (root._passkeyNative) {
+            root._passkeyNative.cancel()
+        }
+        // Sin respuesta del motor (no hay llave conectada): la página recibe NotAllowedError
+        if (passkey.mode === "key" && root._passkeyRequestId !== 0)
+            root._answerPasskey(root._passkeyRequestId, { cancel: true })
+        root._passkeyRequestId = 0
+        passkey.active = false
+    }
+    function passkeySelectAccount(name) {
+        if (root._passkeyNative)
+            root._passkeyNative.setSelectedAccount(name)
+    }
+    function passkeySetPin(pin) {
+        if (root._passkeyNative)
+            root._passkeyNative.setPin(pin)
+    }
+    function passkeyRetry() {
+        if (root._passkeyNative)
+            root._passkeyNative.retry()
+    }
+    // Llave física: el motor pide la ventana (si no se atiende, la página
+    // espera hasta que caduca, sin nada en pantalla)
+    function _nativePasskey(request) {
+        root._passkeyNative = request
+        passkey.mode = "key"
+        passkey.site = request.relyingPartyId
+        passkey.active = true
+        request.stateChanged.connect(root._nativePasskeyState)
+        root._nativePasskeyState()
+    }
+    function _nativePasskeyState() {
+        const request = root._passkeyNative
+        if (!request)
+            return
+        const State = WebEngineWebAuthUxRequest.WebAuthUxState
+        switch (request.state) {
+        case State.SelectAccount:
+            passkey.accounts = request.userNames
+            passkey.state = "account"
+            break
+        case State.CollectPin: {
+            const pin = request.pinRequest
+            passkey.pinReason = ["set", "change", "challenge"][pin.reason] ?? "challenge"
+            passkey.pinError = ["", "locked", "wrong", "short", "characters", "same"][pin.error] ?? ""
+            passkey.pinMinLength = pin.minPinLength
+            passkey.pinAttempts = pin.remainingAttempts
+            passkey.state = "pin"
+            break
+        }
+        case State.RequestFailed:
+            passkey.failure = ["timeout", "notRegistered", "alreadyRegistered", "pinBlocked", "pinBlocked", "removed",
+                               "unsupported", "unsupported", "unsupported", "unsupported", "storageFull", "denied",
+                               "denied"][request.requestFailureReason] ?? "denied"
+            passkey.state = "failed"
+            break
+        case State.Cancelled:
+        case State.Completed:
+            request.stateChanged.disconnect(root._nativePasskeyState)
+            root._passkeyNative = null
+            root._passkeyRequestId = 0
+            passkey.active = false
+            break
+        default:
+            passkey.state = "touch"
+        }
+    }
+
     // ── Herramientas de desarrollo ───────────────────────────────────
     // La interfaz pone la ventana; la pestaña pone dentro la vista del motor
     // (otra página web: el panel de DevTools de Chromium). Solo existe
@@ -881,9 +1080,14 @@ Item {
                 view.lifecycleState = WebEngineView.LifecycleState.Discarded
         }
     }
-    // El sitio tiene permiso para mandar notificaciones
+    // El sitio tiene permiso para mandar notificaciones (también en una
+    // restaurada sin cargar: mira la dirección guardada). Main carga al
+    // arrancar las esenciales y fijadas que pueden avisar (WhatsApp…)
+    function canNotify() {
+        return root._canNotify()
+    }
     function _canNotify() {
-        const origin = /^https?:\/\/[^\/?#]+/i.exec(view.url.toString())
+        const origin = /^https?:\/\/[^\/?#]+/i.exec((root.deferred ? root.initialUrl : view.url).toString())
         return origin !== null && view.profile.queryPermission(origin[0], WebEnginePermission.PermissionType.Notifications)
                                       .state === WebEnginePermission.State.Granted
     }
@@ -1013,6 +1217,8 @@ Item {
                 open: () => Qt.openUrlExternally(address)
             })
         }
+
+        onWebAuthUxRequested: request => root._nativePasskey(request)
 
         // Qt no elige nada si no se atiende: ScreenShareDialog pregunta
         onDesktopMediaRequested: request => {
@@ -1197,6 +1403,8 @@ Item {
                 root._passwordMessage(message.slice(passwords.length))
             } else if (message === "mitis:widevine-unavailable") {
                 root.protectedContentUnavailable()
+            } else if (message.startsWith("mitis:webauthn:")) {
+                root._passkeyMessage(message.slice(15))
             } else if (message.startsWith("mitis:screenshare:")) {
                 root._screenShareMessage(message.slice(18))
             } else if (message.startsWith("mitis:capture ")) {

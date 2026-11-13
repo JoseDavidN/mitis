@@ -313,6 +313,12 @@ QtObject {
     // Compartir pantalla (ScreenShareDialog): más ancho por los nombres de ventana
     readonly property int screenShareWidth: 420
     readonly property int screenShareListHeight: 280
+    // Llave de acceso (PasskeyDialog): ancho y QR. El QR va siempre negro
+    // sobre blanco, con cualquier tema: así lo leen las cámaras
+    readonly property int passkeyWidth: 400
+    readonly property int passkeyQrSize: 220
+    readonly property color qrDark: "#000000"
+    readonly property color qrLight: "#ffffff"
     // Aviso de certificado: más texto que un diálogo normal
     readonly property int certificateDialogWidth: 440
     // Gestor de contraseñas: lista bajo los campos de las páginas (ancho

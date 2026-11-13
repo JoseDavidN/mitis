@@ -75,6 +75,14 @@ licencia que se citan están en esta misma carpeta.
   Simon Ser.
 - **Enlace:** <https://gitlab.freedesktop.org/wayland/wayland-protocols>
 
+### QR Code generator (Project Nayuki)
+
+- **Qué:** genera el código QR que Mitis muestra para usar las llaves de acceso
+  del móvil, versión 1.8.0, compilada dentro de Mitis (en el código,
+  `third_party/qrcodegen/`).
+- **Licencia:** MIT (`qrcodegen-MIT.txt`). Copyright (c) Project Nayuki.
+- **Enlace:** <https://www.nayuki.io/page/qr-code-generator-library>
+
 ### Fuente Nunito
 
 - **Licencia:** SIL Open Font License 1.1 (`Nunito-OFL-1.1.txt`; en el

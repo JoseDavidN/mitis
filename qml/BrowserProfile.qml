@@ -463,6 +463,16 @@ QtObject {
         google.runsOnSubFrames = true
         root._insertScript(profile, google)
         root._updateH264(profile)
+        // Llaves de acceso del móvil (src/hybrid.*, solo Linux): Mitis atiende
+        // navigator.credentials (assets/scripts/webauthn.js, marco principal)
+        if (typeof engine.passkeysAvailable === "function" && engine.passkeysAvailable()) {
+            const webauthn = WebEngine.script()
+            webauthn.name = "mitis-webauthn"
+            webauthn.sourceUrl = "qrc:/scripts/webauthn.js"
+            webauthn.injectionPoint = WebEngineScript.DocumentCreation
+            webauthn.worldId = WebEngineScript.MainWorld
+            root._insertScript(profile, webauthn)
+        }
         // Compartir pantalla propio (Wayland sin el portal; src/screencapture.*):
         // getDisplayMedia lo atiende Mitis (assets/scripts/screenshare.js,
         // BrowserTab). Solo en el marco principal; donde no se puede, el del motor

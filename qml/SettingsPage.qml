@@ -41,6 +41,7 @@ FocusScope {
     // Secciones del índice, en el orden de la página
     readonly property var sections: [
         { key: "profile", title: "Perfil", icon: "profile" },
+        { key: "profiles", title: "Perfiles", icon: "user" },
         { key: "startup", title: "Al iniciar", icon: "reopen" },
         { key: "defaultbrowser", title: "Navegador predeterminado", icon: "open-link" },
         { key: "appearance", title: "Apariencia e idioma", icon: "appearance" },
@@ -252,11 +253,13 @@ FocusScope {
             { action: "Pestaña anterior", keys: ["Ctrl+Shift+Tab"] },
             { action: "Lista de pestañas", keys: ["Ctrl+Shift+A"] }
         ] },
-        { title: "Esenciales", items: [
-            { action: "Primera esencial", keys: ["Ctrl+1"] },
-            { action: "Segunda esencial", keys: ["Ctrl+2"] },
-            { action: "Tercera esencial", keys: ["Ctrl+3"] },
-            { action: "Cuarta esencial", keys: ["Ctrl+4"] }
+        { title: "Ir a una pestaña", items: [
+            { action: "Pestaña 1 a 8 de la lista", note: "Ctrl+1 a Ctrl+8, sin contar las esenciales", keys: ["Ctrl+1"] },
+            { action: "Última pestaña", keys: ["Ctrl+9"] },
+            { action: "Primera esencial", keys: ["Ctrl+Shift+1"] },
+            { action: "Segunda esencial", keys: ["Ctrl+Shift+2"] },
+            { action: "Tercera esencial", keys: ["Ctrl+Shift+3"] },
+            { action: "Cuarta esencial", keys: ["Ctrl+Shift+4"] }
         ] },
         { title: "Navegar", items: [
             { action: "Escribir una dirección o buscar", keys: ["Ctrl+L"] },
@@ -274,9 +277,12 @@ FocusScope {
             { action: "Alejar", keys: ["Ctrl+-"] },
             { action: "Tamaño normal", keys: ["Ctrl+0"] }
         ] },
-        { title: "Ventana y herramientas", items: [
+        { title: "Ventanas", items: [
+            { action: "Nueva ventana con otro perfil", keys: ["Ctrl+N"] },
             { action: "Nueva ventana privada", keys: ["Ctrl+Shift+N"] },
-            { action: "Pantalla completa", keys: ["F11"] },
+            { action: "Pantalla completa", keys: ["F11"] }
+        ] },
+        { title: "Herramientas", items: [
             { action: "Imprimir o guardar como PDF", keys: ["Ctrl+P"] },
             { action: "Captura de pantalla", keys: ["Ctrl+Shift+S"] },
             { action: "Monitor de rendimiento", note: "Si está activado en Desarrollo", keys: ["Shift+Esc"] },
@@ -355,6 +361,7 @@ FocusScope {
     function sectionItem(key) {
         switch (key) {
         case "profile": return profileSection
+        case "profiles": return profilesSection
         case "startup": return startupSection
         case "defaultbrowser": return defaultBrowserSection
         case "appearance": return appearanceSection
@@ -816,6 +823,73 @@ FocusScope {
                     }
                 }
                 AvatarColorRow {}
+            }
+
+            // Cada perfil es otro Mitis con su propia carpeta (Profiles): se
+            // abre en su ventana y no comparte nada con los demás
+            SettingsSection {
+                id: profilesSection
+                title: "Perfiles"
+                icon: "user"
+                description: "Cada perfil se abre en su propia ventana, con sus pestañas, historial, contraseñas y sesiones iniciadas: lo que haces en uno no afecta a los demás. Abrir Mitis con otro ya abierto crea uno nuevo."
+
+                // Se lee al abrir Configuración y tras cada cambio
+                property var profiles: Profiles.list()
+                Connections {
+                    target: Profiles
+                    function onChanged() { profilesSection.profiles = Profiles.list() }
+                }
+
+                Repeater {
+                    model: profilesSection.profiles
+                    delegate: SettingRow {
+                        id: profileRow
+                        required property var modelData
+                        required property int index
+                        // Eliminar pide confirmación (se borran todos sus datos)
+                        property bool confirming: false
+                        divider: index > 0
+                        title: (modelData.name || (modelData.id === "" ? "Perfil principal" : "Perfil"))
+                               + (modelData.id === "" && modelData.name ? " (principal)" : "")
+                        description: profileRow.confirming
+                                     ? "Se borrarán sus pestañas, historial, marcadores, contraseñas y sesiones iniciadas. No se puede deshacer."
+                                     : modelData.current ? "Este perfil" : modelData.running ? "Abierto en otra ventana" : "Cerrado"
+
+                        TextButton {
+                            visible: profileRow.confirming
+                            text: "Cancelar"
+                            onClicked: profileRow.confirming = false
+                        }
+                        TextButton {
+                            visible: profileRow.modelData.id !== "" && !profileRow.modelData.current && !profileRow.modelData.running
+                            text: profileRow.confirming ? "Eliminar" : "Eliminar…"
+                            danger: profileRow.confirming
+                            onClicked: {
+                                if (!profileRow.confirming) {
+                                    profileRow.confirming = true
+                                    return
+                                }
+                                profileRow.confirming = false
+                                Profiles.remove(profileRow.modelData.id)
+                            }
+                        }
+                        TextButton {
+                            visible: !profileRow.modelData.current && !profileRow.confirming
+                            text: "Abrir"
+                            onClicked: Profiles.open(profileRow.modelData.id)
+                        }
+                    }
+                }
+                SettingRow {
+                    title: "Nueva ventana con otro perfil"
+                    description: "Crea un perfil vacío y lo abre en otra ventana."
+
+                    TextButton {
+                        text: "Crear"
+                        primary: true
+                        onClicked: Profiles.openNew()
+                    }
+                }
             }
 
             SettingsSection {
