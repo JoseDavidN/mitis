@@ -20,8 +20,10 @@ class QThread;
 // RequestInterceptor en cada petición, en el hilo de la interfaz.
 //
 // Listas: EasyList y EasyPrivacy (anuncios y rastreadores), EasyList en
-// español, HaGeZi Pro (dominios, la lista que se usa con Pi-hole) y
-// uBlock Origin Unbreak (excepciones que arreglan sitios rotos por las demás).
+// español, HaGeZi Pro (dominios, la lista que se usa con Pi-hole), las de
+// uBlock Origin (uBlock filters, con sus «!#include», y Quick fixes, los
+// arreglos del día para YouTube y los avisos anti-bloqueador) y uBlock
+// Origin Unbreak (excepciones que arreglan sitios rotos por las demás).
 class ContentBlocker : public QObject
 {
     Q_OBJECT
@@ -48,6 +50,8 @@ public:
     QUrl withoutTrackingParams(const QUrl &url, bool strict = false) const;
     // CSS que oculta los huecos de anuncios en la página `page` ("" si nada)
     QString cosmeticCss(const QUrl &page, bool strict = false) const;
+    // Scriptlets de la página `page`: array JSON para scriptlets.js ("" si nada)
+    QByteArray scriptlets(const QUrl &page, bool strict = false) const;
     // Sitio de una dirección para la lista de permitidos ("www.a.com" → "a.com")
     static QString siteOf(const QUrl &url);
 
@@ -57,8 +61,8 @@ public:
     QDateTime updated() const { return m_updated; }
     bool updating() const { return m_network != nullptr || m_compiling; }
 
-    // Vuelve a descargar las listas ahora
-    void update();
+    // Vuelve a descargar las listas ahora (`onlyStale`: solo las caducadas)
+    void update(bool onlyStale = false);
 
 signals:
     // Reglas, fecha o estado de actualización
@@ -69,6 +73,13 @@ signals:
 private:
     void compile();
     void downloadNext();
+    // Descarga los «!#include» de una lista y la guarda con ellos dentro
+    struct PendingList;
+    void downloadIncludes(const QString &path, const QUrl &base, const QByteArray &text);
+    void downloadNextInclude(const std::shared_ptr<PendingList> &pending);
+    void saveList(const QString &path, const QByteArray &data);
+    // Alguna lista falta o pasó de su caducidad
+    bool listsStale() const;
     bool allowedSite(const QByteArray &pageHost) const;
     QString filterDir() const;
 
@@ -85,7 +96,7 @@ private:
 
     // Descarga en curso (solo existe mientras dura)
     QNetworkAccessManager *m_network = nullptr;
-    int m_downloadIndex = 0;
+    QList<int> m_downloadQueue; // posiciones en Lists[]
     // Ya se intentó renovar al compilar (sin conexión no se reintenta en bucle)
     bool m_autoUpdated = false;
 

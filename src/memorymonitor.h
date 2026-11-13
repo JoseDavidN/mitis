@@ -54,6 +54,11 @@ public:
     // Para probar, MITIS_MEMORIA_LIBRE=<MB> en el entorno finge la disponible.
     Q_INVOKABLE QVariantMap systemMemory() const;
 
+    // Memoria de un proceso (bytes, como en measure(); -1 si no se sabe). Para
+    // elegir qué pestaña suspender con el equipo justo, sin tocar las medidas
+    // de CPU del monitor de rendimiento
+    Q_INVOKABLE double processMemory(qint64 pid) const;
+
 private:
     // Tiempos de la medición anterior, para calcular los porcentajes
     QElapsedTimer m_clock;

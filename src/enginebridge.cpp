@@ -5,6 +5,7 @@
 #include <QFileInfo>
 #include <QPointer>
 #include <QDirIterator>
+#include <QFile>
 #include <QNetworkProxy>
 #include <QProcess>
 #include <QWebEngineGlobalSettings>
@@ -628,6 +629,22 @@ void EngineBridge::updateFilterLists()
 QString EngineBridge::cosmeticCss(const QUrl &url, bool strict) const
 {
     return m_blocker->cosmeticCss(url, strict);
+}
+
+QString EngineBridge::scriptlets(const QUrl &url, bool strict) const
+{
+    const QByteArray rules = m_blocker->scriptlets(url, strict);
+    if (rules.isEmpty())
+        return QString();
+    // Se lee al primer sitio con scriptlets y se guarda (unos 120 KB)
+    static const QString code = [] {
+        QFile file(QStringLiteral(":/scripts/scriptlets.js"));
+        return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString();
+    }();
+    if (code.isEmpty())
+        return QString();
+    // El archivo es una función entre paréntesis: se llama con las reglas
+    return code + QStringLiteral("\n(") + QString::fromUtf8(rules) + QStringLiteral(");\n");
 }
 
 QString EngineBridge::siteOf(const QUrl &url) const

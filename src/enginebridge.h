@@ -155,6 +155,10 @@ public:
     // CSS que oculta los huecos de anuncios en la página `url` ("" si nada).
     // `strict`: de una ventana privada (siempre, sin sitios permitidos)
     Q_INVOKABLE QString cosmeticCss(const QUrl &url, bool strict = false) const;
+    // Scriptlets de uBlock Origin para la página `url`: el código listo para
+    // inyectar en el mundo de la página (assets/scripts/scriptlets.js con las
+    // reglas del sitio) o "" si el sitio no tiene ninguno
+    Q_INVOKABLE QString scriptlets(const QUrl &url, bool strict = false) const;
     // Sitio de una dirección para permitir anuncios ("https://www.a.com/x" → "a.com")
     Q_INVOKABLE QString siteOf(const QUrl &url) const;
 

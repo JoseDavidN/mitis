@@ -487,6 +487,11 @@ QVariantMap MemoryMonitor::measure()
     };
 }
 
+double MemoryMonitor::processMemory(qint64 pid) const
+{
+    return pid > 0 ? double(processBytes(pid)) : -1;
+}
+
 QVariantMap MemoryMonitor::systemMemory() const
 {
     qint64 total = -1, available = -1;

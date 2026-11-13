@@ -187,3 +187,25 @@ Equipo de desarrollo: Intel Celeron N2840 (2 núcleos, 2014), gráfica Bay Trail
 Las diferencias son ruido: ni oscurecer páginas ni el bloqueador (ni su CSS de ocultación) cuestan algo medible. Por proceso: la página ~10 s (hilo principal ~8,4 s: JavaScript y maquetación de YouTube; hilos de dibujo y decodificación de imágenes ~1,5 s) y la interfaz de Mitis ~1 s (incluye el compositor y la GPU en proceso). El hilo de la interfaz no frena las peticiones (el interceptor corre en él, pero Qt Quick dibuja en su propio hilo: `threaded render loop`). Las peticiones de la página que tardan segundos en salir (`requestTime` muy posterior a `requestWillBeSent`) son la cola de Blink con el hilo principal ocupado, no Mitis.
 
 Vídeo: YouTube manda AV1 (`av01`) de serie; con `assets/scripts/h264.js`, H.264 (`avc1`). En Xvnc ambos van por el procesador (480p: ~0,3–0,5 núcleos); la ganancia es con VA-API, que en Bay Trail solo decodifica H.264 (y necesita `libva-intel-driver`, que el equipo no tenía).
+
+## Liberar memoria de las páginas a la fuerza (2026-11-12, versión 0.23.0)
+
+¿Merece la pena parchear Qt WebEngine para avisar a las páginas de que falta
+memoria (como Chrome con la presión de memoria)? Se midió sin parche, por el
+puerto de depuración, con YouTube, Wikipedia, GitHub y la entrada de Claude
+(Celeron N2840, PSS de Mitis y sus procesos):
+
+| Prueba | Antes | Después |
+|---|---|---|
+| `Memory.simulatePressureNotification` crítico (páginas y navegador) | 1519 MB | 1534 MB |
+| `Memory.forciblyPurgeJavaScriptMemory`, tras 6 min quietas | 1239 MB | 1023 MB (casi todo Claude: JavaScript 81 → 16 MB) |
+| Lo mismo, tras navegar un poco | 1136 MB | 1112 MB |
+| `gc()` con `--js-flags=--expose-gc-as=…` | 915 MB | 901 MB (Claude soltó basura, 60 → 18 MB, pero se quedó con los 60 reservados) |
+
+- El aviso de presión de la depuración solo llega al proceso principal, que
+  tampoco bajó.
+- La limpieza de JavaScript solo rinde en una página que acumula basura; si no,
+  10–25 MB entre todas, y no siempre devuelve la memoria al sistema.
+- `--expose-gc` deja la función a la vista de todas las páginas (detectable).
+- Conclusión: no se parchea. Lo que libera de verdad es descargar la pestaña;
+  desde la 0.24.0, con la memoria justa, se empieza por la que más ocupa.

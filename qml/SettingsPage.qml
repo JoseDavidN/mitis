@@ -266,8 +266,7 @@ FocusScope {
             { action: "Atrás", keys: ["Alt+Left"] },
             { action: "Adelante", keys: ["Alt+Right"] },
             { action: "Recargar la página", keys: ["Ctrl+R", "F5"] },
-            { action: "Guardar en marcadores", keys: ["Ctrl+D"] },
-            { action: "Historial", keys: ["Ctrl+H"] }
+            { action: "Recargar sin la copia guardada", note: "Descarga la página entera otra vez", keys: ["Ctrl+Shift+R", "Ctrl+F5"] }
         ] },
         { title: "Buscar y zoom", items: [
             { action: "Buscar en la página", keys: ["Ctrl+F"] },
@@ -283,6 +282,8 @@ FocusScope {
             { action: "Pantalla completa", keys: ["F11"] }
         ] },
         { title: "Herramientas", items: [
+            { action: "Guardar en marcadores", keys: ["Ctrl+D"] },
+            { action: "Historial", keys: ["Ctrl+H"] },
             { action: "Imprimir o guardar como PDF", keys: ["Ctrl+P"] },
             { action: "Captura de pantalla", keys: ["Ctrl+Shift+S"] },
             { action: "Monitor de rendimiento", note: "Si está activado en Desarrollo", keys: ["Shift+Esc"] },

@@ -5,6 +5,20 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); l
 
 ## [Sin publicar]
 
+> Mitis, con menos anuncios
+
+### Añadido
+
+- El bloqueador de anuncios quita también los anuncios de los vídeos de YouTube y los avisos de las páginas que te piden desactivarlo. Usa las mismas reglas que uBlock Origin y se pone al día varias veces al día, porque YouTube cambia a menudo. Si una página deja de funcionar bien, puedes permitir los anuncios en ese sitio desde el candado de la barra de direcciones.
+- Nuevo atajo para recargar una página descargándola entera otra vez: Ctrl+Mayús+R (o Ctrl+F5). Sirve cuando una página se queda rara o enseña algo viejo.
+
+### Cambiado
+
+- Cuando el equipo va justo de memoria, Mitis duerme primero las pestañas que más ocupan (un vídeo, un chat con mucho contenido) en vez de la más antigua, así que libera mucha más memoria de una vez y tienes que recargar menos pestañas.
+- En Configuración → Atajos de teclado, «Guardar en marcadores» e «Historial» pasan al grupo «Herramientas».
+
+## [0.23.0] - 2026-11-12
+
 > Mitis, con varios perfiles
 
 ### Añadido

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(Mitis
-    VERSION 0.23.0
+    VERSION 0.24.0
     DESCRIPTION "Navegador web ligero, multiplataforma y con interfaz propia"
     LANGUAGES C CXX
 )
@@ -231,7 +231,7 @@ qt_add_resources(mitis "scripts"
     BASE assets/scripts
     FILES assets/scripts/media.js assets/scripts/devtools.js assets/scripts/drm.js assets/scripts/google.js
           assets/scripts/swipe.js assets/scripts/preload.js assets/scripts/passwords.js
-          assets/scripts/h264.js assets/scripts/screenshare.js assets/scripts/webauthn.js
+          assets/scripts/h264.js assets/scripts/screenshare.js assets/scripts/webauthn.js assets/scripts/scriptlets.js
 )
 
 # Cambios de cada versión: la pestaña de novedades tras actualizarse

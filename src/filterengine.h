@@ -18,7 +18,10 @@
 // first-party/third-party, domain=, important y badfilter. Una regla con
 // una opción desconocida o que no se puede cumplir (redirect, csp,
 // removeparam…) se descarta entera: aplicarla a medias rompe páginas. De la
-// ocultación de elementos («##») solo las reglas de un sitio concreto.
+// ocultación de elementos («##») y de los scriptlets de uBlock Origin
+// («##+js(…)») solo las reglas de un sitio concreto. Los bloques
+// «!#if … !#else … !#endif» de las listas de uBlock Origin se evalúan como
+// uBlock Origin en Chromium de escritorio.
 class FilterEngine
 {
 public:
@@ -58,6 +61,10 @@ public:
     // Reglas de ocultación para la página de `host`: CSS listo para inyectar
     // (vacío si no hay ninguna o la página las tiene desactivadas)
     QByteArray cosmeticCss(const QByteArray &pageUrl, const QByteArray &host) const;
+    // Scriptlets de uBlock Origin para la página de `host`: un array JSON
+    // [["nombre", "arg1"…], …] para assets/scripts/scriptlets.js (vacío si
+    // no hay ninguno o la página tiene una excepción total)
+    QByteArray scriptlets(const QByteArray &pageUrl, const QByteArray &host) const;
 
     // Reglas aceptadas (de red y de ocultación)
     int ruleCount() const { return m_ruleCount; }
@@ -98,6 +105,10 @@ private:
     void parseLine(QByteArray line, const QSet<QByteArray> &badFilters);
     bool parseNetwork(QByteArray line);
     void parseCosmetic(const QByteArray &domains, const QByteArray &selector, bool exception);
+    void parseScriptlet(const QByteArray &domains, const QByteArray &body, bool exception);
+    // Claves de las reglas por sitio que valen para `host`: el host, los
+    // dominios por encima y las entidades («google.*»)
+    static QList<QByteArray> hostKeys(const QByteArray &host);
     static quint64 hostHash(const QByteArray &host);
     static bool matchFilter(const Filter &filter, const Request &request);
     static std::vector<quint32> tokenize(const QByteArray &url);
@@ -112,5 +123,11 @@ private:
     FilterSet m_allowElemHide;     // @@…$elemhide: sin ocultar elementos
     QHash<QByteArray, QList<QByteArray>> m_cosmetic;          // dominio → selectores
     QHash<QByteArray, QSet<QByteArray>> m_cosmeticExceptions; // dominio → selectores
+    // Scriptlets: cada uno (nombre y argumentos, ya en JSON) se guarda una
+    // vez; los dominios apuntan a su posición. -1 en las excepciones: todos.
+    std::vector<QByteArray> m_scriptletCodes;
+    QHash<QByteArray, std::vector<int>> m_scriptlets;
+    QHash<QByteArray, std::vector<int>> m_scriptletExceptions;
+    QHash<QByteArray, int> m_scriptletIndex; // solo mientras se compila
     int m_ruleCount = 0;
 };

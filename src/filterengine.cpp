@@ -1,6 +1,7 @@
 #include "filterengine.h"
 
 #include <algorithm>
+#include <cstdio>
 
 namespace {
 
@@ -84,9 +85,20 @@ bool isSameOrSubdomain(const QByteArray &host, const QByteArray &domain)
 
 bool matchesAnyDomain(const QByteArray &host, const QList<QByteArray> &domains)
 {
+    // Sin el sufijo público, para las entidades («kat.*»): «www.kat.» de www.kat.co.uk
+    QByteArray withoutSuffix;
     for (const QByteArray &domain : domains) {
-        if (isSameOrSubdomain(host, domain))
+        if (domain.endsWith(".*")) {
+            if (withoutSuffix.isEmpty()) {
+                const QByteArray base = FilterEngine::baseDomain(host);
+                const qsizetype dot = base.indexOf('.');
+                withoutSuffix = dot > 0 ? host.left(host.size() - (base.size() - dot - 1)) : QByteArray("-");
+            }
+            if (isSameOrSubdomain(withoutSuffix, domain.chopped(1)))
+                return true;
+        } else if (isSameOrSubdomain(host, domain)) {
             return true;
+        }
     }
     return false;
 }
@@ -117,6 +129,272 @@ bool isPlainCss(const QByteArray &selector)
     }
     // Llaves: podrían cerrar la regla CSS e inyectar otras
     return !selector.contains('{') && !selector.contains('}');
+}
+
+// ── Preprocesado de las listas de uBlock Origin ──────────────────────
+// «!#if expresión» / «!#else» / «!#endif», como uBlock Origin en Chromium
+// de escritorio (static-filtering-parser.js de uBlock Origin, GPL-3).
+// Valor de un término: 1 verdadero, 0 falso, -1 desconocido.
+int conditionToken(QByteArray token)
+{
+    const bool negated = token.startsWith('!');
+    if (negated)
+        token = token.mid(1);
+    static const QSet<QByteArray> trueTokens = {
+        "ext_ublock", "env_chromium", "adguard_ext_chromium", "adguard_ext_opera",
+    };
+    static const QSet<QByteArray> falseTokens = {
+        "ext_ubol", "ext_devbuild", "env_brave", "env_edge", "env_firefox", "env_legacy",
+        "env_mobile", "env_mv3", "env_safari", "false", "ext_abp", "adguard",
+        "adguard_app_android", "adguard_app_cli", "adguard_app_ios", "adguard_app_mac",
+        "adguard_app_windows", "adguard_ext_android_cb", "adguard_ext_chromium_mv3",
+        "adguard_ext_edge", "adguard_ext_firefox", "adguard_ext_safari",
+    };
+    bool value;
+    if (trueTokens.contains(token))
+        value = true;
+    // Capacidades que Mitis no tiene (filtrado de HTML, IP…): falsas
+    else if (falseTokens.contains(token) || token.startsWith("cap_"))
+        value = false;
+    else
+        return -1;
+    return value != negated ? 1 : 0;
+}
+
+// De izquierda a derecha, sin precedencia (como uBlock Origin)
+int conditionValue(QByteArray expression)
+{
+    expression = expression.trimmed();
+    if (expression.startsWith('(') && expression.endsWith(')'))
+        expression = expression.mid(1, expression.size() - 2);
+    const QList<QByteArray> parts = expression.simplified().split(' ');
+    // Término, y después pares «operador término»
+    if (parts.first().isEmpty() || parts.size() % 2 == 0)
+        return -1;
+    int result = conditionToken(parts.first());
+    for (qsizetype i = 1; i < parts.size() && result >= 0; i += 2) {
+        const int value = conditionToken(parts.at(i + 1));
+        if (value < 0)
+            return -1;
+        if (parts.at(i) == "||")
+            result = result || value;
+        else if (parts.at(i) == "&&")
+            result = result && value;
+        else
+            return -1;
+    }
+    return result;
+}
+
+// Llama a `handle` con cada línea (sin espacios en los extremos) que no
+// esté en un bloque «!#if» falso. Uno que no se entiende se deja pasar.
+template<typename Handler>
+void forEachLine(const QByteArray &list, Handler &&handle)
+{
+    struct Block {
+        bool known;
+        bool discard;
+    };
+    std::vector<Block> blocks;
+    bool discarding = false;
+    const auto update = [&] {
+        discarding = std::any_of(blocks.begin(), blocks.end(), [](const Block &b) { return b.known && b.discard; });
+    };
+    qsizetype start = 0;
+    const qsizetype size = list.size();
+    while (start < size) {
+        qsizetype end = list.indexOf('\n', start);
+        if (end < 0)
+            end = size;
+        const QByteArray line = list.mid(start, end - start).trimmed();
+        start = end + 1;
+        if (line.startsWith("!#")) {
+            if (line.startsWith("!#if ") || line.startsWith("!#if\t")) {
+                const int value = conditionValue(line.mid(4));
+                blocks.push_back({ value >= 0, value == 0 });
+                update();
+            } else if (line == "!#else" || line.startsWith("!#else ")) {
+                if (!blocks.empty())
+                    blocks.back().discard = !blocks.back().discard;
+                update();
+            } else if (line == "!#endif" || line.startsWith("!#endif ")) {
+                if (!blocks.empty())
+                    blocks.pop_back();
+                update();
+            }
+            continue;
+        }
+        if (!discarding)
+            handle(line);
+    }
+}
+
+// ── Scriptlets ───────────────────────────────────────────────────────
+// Texto en una cadena JSON (los bytes UTF-8 tal cual)
+QByteArray jsonString(const QByteArray &text)
+{
+    QByteArray out;
+    out.reserve(text.size() + 2);
+    out += '"';
+    for (const char c : text) {
+        switch (c) {
+        case '"': out += "\\\""; break;
+        case '\\': out += "\\\\"; break;
+        case '\n': out += "\\n"; break;
+        case '\r': out += "\\r"; break;
+        case '\t': out += "\\t"; break;
+        default:
+            if (quint8(c) < 0x20) {
+                char escaped[8];
+                std::snprintf(escaped, sizeof(escaped), "\\u%04x", quint8(c));
+                out += escaped;
+            } else {
+                out += c;
+            }
+        }
+    }
+    out += '"';
+    return out;
+}
+
+// Quita la «\» que escapa a `separator` (una sola de un número impar de
+// «\» seguidas; ArglistParser.normalizeArg de uBlock Origin)
+QByteArray unescapeArg(const QByteArray &arg, char separator)
+{
+    QByteArray out;
+    out.reserve(arg.size());
+    for (qsizetype i = 0; i < arg.size(); ++i) {
+        const char c = arg.at(i);
+        if (c == '\\') {
+            qsizetype run = 0;
+            while (i + run < arg.size() && arg.at(i + run) == '\\')
+                ++run;
+            const bool escapes = i + run < arg.size() && arg.at(i + run) == separator && (run & 1);
+            out.append(escapes ? run - 1 : run, '\\');
+            i += run - 1;
+            continue;
+        }
+        out += c;
+    }
+    return out;
+}
+
+bool isSpace(char c)
+{
+    return c == ' ' || c == '\t';
+}
+
+// Argumentos de «+js(…)» como los separa uBlock Origin (ArglistParser):
+// por comas que no vayan tras «\», recortados, y entre comillas ('…', "…"
+// o `…`) si van así; dentro de ellas, la coma no separa
+QList<QByteArray> scriptletArgs(const QByteArray &body)
+{
+    QList<QByteArray> args;
+    const qsizetype size = body.size();
+    // Siguiente `separator` no escapado desde `from` (o el final)
+    const auto nextSeparator = [&](qsizetype from, char separator) {
+        for (qsizetype i = from; i < size; ++i) {
+            if (body.at(i) != separator)
+                continue;
+            qsizetype run = 0;
+            while (i - run - 1 >= 0 && body.at(i - run - 1) == '\\')
+                ++run;
+            if (!(run & 1))
+                return i;
+        }
+        return size;
+    };
+    qsizetype pos = 0;
+    while (pos < size) {
+        while (pos < size && isSpace(body.at(pos)))
+            ++pos;
+        if (pos < size) {
+            const char quote = body.at(pos);
+            if (quote == '"' || quote == '\'' || quote == '`') {
+                const qsizetype close = nextSeparator(pos + 1, quote);
+                qsizetype after = close + 1;
+                while (after < size && isSpace(body.at(after)))
+                    ++after;
+                if (close < size && (after >= size || body.at(after) == ',')) {
+                    args.append(unescapeArg(body.mid(pos + 1, close - pos - 1), quote));
+                    pos = after + 1;
+                    continue;
+                }
+            }
+        }
+        // Sin comillas (o mal cerradas): hasta la coma
+        const qsizetype comma = nextSeparator(pos, ',');
+        args.append(unescapeArg(body.mid(pos, comma - pos).trimmed(), ','));
+        pos = comma + 1;
+    }
+    return args;
+}
+
+// Nombre de los scriptlets que implementa assets/scripts/scriptlets.js, a
+// partir del de la regla (sin «.js» ni «ubo-», y con los alias de uBlock
+// Origin resueltos). Vacío si Mitis no lo tiene: la regla se descarta.
+QByteArray scriptletName(QByteArray name)
+{
+    if (name.endsWith(".js"))
+        name.chop(3);
+    if (name.startsWith("ubo-"))
+        name = name.mid(4);
+    static const QHash<QByteArray, QByteArray> aliases = {
+        { "set", "set-constant" },
+        { "trusted-set", "trusted-set-constant" },
+        { "aopr", "abort-on-property-read" },
+        { "aopw", "abort-on-property-write" },
+        { "acs", "abort-current-script" },
+        { "acis", "abort-current-script" },
+        { "abort-current-inline-script", "abort-current-script" },
+        { "aost", "abort-on-stack-trace" },
+        { "nostif", "prevent-setTimeout" },
+        { "no-setTimeout-if", "prevent-setTimeout" },
+        { "setTimeout-defuser", "prevent-setTimeout" },
+        { "nosiif", "prevent-setInterval" },
+        { "no-setInterval-if", "prevent-setInterval" },
+        { "setInterval-defuser", "prevent-setInterval" },
+        { "norafif", "prevent-requestAnimationFrame" },
+        { "no-requestAnimationFrame-if", "prevent-requestAnimationFrame" },
+        { "nano-stb", "adjust-setTimeout" },
+        { "nano-setTimeout-booster", "adjust-setTimeout" },
+        { "nano-sib", "adjust-setInterval" },
+        { "nano-setInterval-booster", "adjust-setInterval" },
+        { "no-fetch-if", "prevent-fetch" },
+        { "no-xhr-if", "prevent-xhr" },
+        { "aeld", "prevent-addEventListener" },
+        { "addEventListener-defuser", "prevent-addEventListener" },
+        { "ra", "remove-attr" },
+        { "rc", "remove-class" },
+        { "prevent-eval-if", "noeval-if" },
+        { "nowoif", "prevent-window-open" },
+        { "no-window-open-if", "prevent-window-open" },
+        { "window.open-defuser", "prevent-window-open" },
+        { "rmnt", "remove-node-text" },
+        // replace-node-text solo existe como de confianza
+        { "rpnt", "trusted-replace-node-text" },
+        { "replace-node-text", "trusted-replace-node-text" },
+        { "trusted-rpnt", "trusted-replace-node-text" },
+        { "trusted-rpfr", "trusted-replace-fetch-response" },
+    };
+    static const QSet<QByteArray> implemented = {
+        "set-constant", "trusted-set-constant",
+        "abort-on-property-read", "abort-on-property-write", "abort-current-script", "abort-on-stack-trace",
+        "json-prune", "json-prune-fetch-response", "json-prune-xhr-response",
+        "trusted-prune-inbound-object", "trusted-prune-outbound-object",
+        "json-edit", "trusted-json-edit", "json-edit-fetch-response", "trusted-json-edit-fetch-response",
+        "json-edit-xhr-response", "trusted-json-edit-xhr-response",
+        "edit-inbound-object", "trusted-edit-inbound-object",
+        "prevent-setTimeout", "prevent-setInterval", "prevent-requestAnimationFrame",
+        "adjust-setTimeout", "adjust-setInterval",
+        "prevent-fetch", "trusted-prevent-fetch", "prevent-xhr", "trusted-prevent-xhr",
+        "prevent-addEventListener", "remove-attr", "remove-class", "noeval-if", "prevent-window-open", "nowebrtc",
+        "remove-node-text", "trusted-replace-node-text",
+        "trusted-replace-fetch-response", "trusted-replace-xhr-response",
+        "trusted-prevent-dom-bypass", "trusted-replace-argument", "trusted-replace-outbound-text",
+    };
+    name = aliases.value(name, name);
+    return implemented.contains(name) ? name : QByteArray();
 }
 
 } // namespace
@@ -302,20 +580,20 @@ void FilterEngine::build(const QList<QByteArray> &lists)
     // «badfilter» anula una regla de cualquier lista: se recogen antes
     QSet<QByteArray> badFilters;
     for (const QByteArray &list : lists) {
-        for (const QByteArray &raw : list.split('\n')) {
-            const QByteArray line = raw.trimmed();
+        forEachLine(list, [&badFilters](const QByteArray &line) {
             if (line.contains("badfilter") && line.contains('$') && !line.startsWith('!'))
                 badFilters.insert(withoutBadFilter(line));
-        }
+        });
     }
-    for (const QByteArray &list : lists) {
-        for (const QByteArray &raw : list.split('\n'))
-            parseLine(raw.trimmed(), badFilters);
-    }
+    for (const QByteArray &list : lists)
+        forEachLine(list, [this, &badFilters](const QByteArray &line) { parseLine(line, badFilters); });
     m_blockHosts.finish();
     m_blockThirdPartyHosts.finish();
     m_allowHosts.finish();
     m_cosmetic.squeeze();
+    m_scriptlets.squeeze();
+    m_scriptletCodes.shrink_to_fit();
+    m_scriptletIndex = {};
 }
 
 void FilterEngine::parseLine(QByteArray line, const QSet<QByteArray> &badFilters)
@@ -331,8 +609,14 @@ void FilterEngine::parseLine(QByteArray line, const QSet<QByteArray> &badFilters
             const bool exception = rest.startsWith("#@#");
             const QByteArray selector = rest.mid(exception ? 3 : 2).trimmed();
             const QByteArray domains = line.left(hash);
+            // Scriptlets de uBlock Origin: «+js(nombre, args…)»
+            if (selector.startsWith("+js(")) {
+                if (!domains.isEmpty() && selector.endsWith(')'))
+                    parseScriptlet(domains, selector.mid(4, selector.size() - 5), exception);
+                return;
+            }
             // Las genéricas (sin dominio) no: costarían memoria en cada página.
-            // «+js(…)» y «^…» son de uBlock Origin y no son CSS.
+            // «^…» es filtrado de HTML de uBlock Origin y no es CSS.
             if (!domains.isEmpty() && !selector.isEmpty() && !selector.startsWith('+')
                 && !selector.startsWith('^') && isPlainCss(selector))
                 parseCosmetic(domains, selector, exception);
@@ -421,12 +705,19 @@ bool FilterEngine::parseNetwork(QByteArray line)
                 for (const QByteArray &entry : option.mid(equals + 1).split('|')) {
                     const bool exclude = entry.startsWith('~');
                     const QByteArray domain = exclude ? entry.mid(1) : entry;
-                    // «google.*» (entidades de uBlock Origin): no se entienden
-                    if (domain.isEmpty() || domain.contains('*') || domain.contains('/'))
+                    // Entidades de uBlock Origin («google.*»: google.com,
+                    // google.es…) sí; otros comodines, rutas o expresiones no
+                    if (domain.isEmpty() || domain.indexOf('*') != (domain.endsWith(".*") ? domain.size() - 1 : -1)
+                        || domain.contains('/')) {
+                        // Un sitio de la regla que no se entiende: sin él, la
+                        // regla valdría para todos los demás (o para todos, si
+                        // solo quedan los excluidos). Mejor descartarla
+                        if (!exclude)
+                            return false;
                         continue;
+                    }
                     (exclude ? filter.notDomains : filter.domains).append(domain);
                 }
-                // Solo había entidades: la regla no se puede cumplir bien
                 if (filter.domains.isEmpty() && filter.notDomains.isEmpty())
                     return false;
                 continue;
@@ -518,7 +809,9 @@ void FilterEngine::parseCosmetic(const QByteArray &domains, const QByteArray &se
         const bool negated = domain.startsWith('~');
         if (negated)
             domain = domain.mid(1);
-        if (domain.isEmpty() || domain.contains('*') || domain.contains('/'))
+        // Entidades («google.*»: google.com, google.es…) sí; otros comodines no
+        if (domain.isEmpty() || domain.indexOf('*') != (domain.endsWith(".*") ? domain.size() - 1 : -1)
+            || domain.contains('/'))
             continue;
         // «~sub.ejemplo.com» en una regla: allí no se aplica
         if (exception || negated)
@@ -574,13 +867,9 @@ QByteArray FilterEngine::cosmeticCss(const QByteArray &pageUrl, const QByteArray
         return QByteArray();
     QList<QByteArray> selectors;
     QSet<QByteArray> exceptions;
-    qsizetype from = 0;
-    while (from >= 0 && from < host.size()) {
-        const QByteArray suffix = host.mid(from);
-        selectors += m_cosmetic.value(suffix);
-        exceptions += m_cosmeticExceptions.value(suffix);
-        const qsizetype dot = host.indexOf('.', from);
-        from = dot < 0 ? -1 : dot + 1;
+    for (const QByteArray &key : hostKeys(host)) {
+        selectors += m_cosmetic.value(key);
+        exceptions += m_cosmeticExceptions.value(key);
     }
     if (selectors.isEmpty())
         return QByteArray();
@@ -603,4 +892,119 @@ QByteArray FilterEngine::cosmeticCss(const QByteArray &pageUrl, const QByteArray
         css += selector + "{display:none!important}\n";
     }
     return css;
+}
+
+QList<QByteArray> FilterEngine::hostKeys(const QByteArray &host)
+{
+    QList<QByteArray> keys;
+    qsizetype from = 0;
+    while (from >= 0 && from < host.size()) {
+        keys.append(host.mid(from));
+        const qsizetype dot = host.indexOf('.', from);
+        from = dot < 0 ? -1 : dot + 1;
+    }
+    // Entidades: lo que va antes del sufijo público (com, com.co…) con «*»
+    // («www.google.com.co» → «www.google.*», «google.*»). No en las IP.
+    const QByteArray base = baseDomain(host);
+    const qsizetype dot = base.indexOf('.');
+    if (dot > 0 && !(host.back() >= '0' && host.back() <= '9') && !host.contains(':')) {
+        const qsizetype suffixSize = base.size() - dot - 1;
+        const qsizetype count = keys.size();
+        for (qsizetype i = 0; i < count; ++i) {
+            const QByteArray &key = keys.at(i);
+            if (key.size() > suffixSize + 1)
+                keys.append(key.left(key.size() - suffixSize) + '*');
+        }
+    }
+    return keys;
+}
+
+void FilterEngine::parseScriptlet(const QByteArray &domains, const QByteArray &body, bool exception)
+{
+    int index = -1;
+    if (!body.trimmed().isEmpty()) {
+        const QList<QByteArray> args = scriptletArgs(body);
+        if (args.isEmpty())
+            return;
+        const QByteArray name = scriptletName(args.first());
+        if (name.isEmpty())
+            return;
+        // Nombre y argumentos en JSON: la entrada de scriptlets.js
+        QByteArray code = '[' + jsonString(name);
+        for (qsizetype i = 1; i < args.size(); ++i)
+            code += ',' + jsonString(args.at(i));
+        code += ']';
+        const auto found = m_scriptletIndex.constFind(code);
+        if (found != m_scriptletIndex.constEnd()) {
+            index = *found;
+        } else {
+            index = int(m_scriptletCodes.size());
+            m_scriptletCodes.push_back(code);
+            m_scriptletIndex.insert(code, index);
+        }
+    } else if (!exception) {
+        return;
+    }
+    // «#@#+js()»: ningún scriptlet en esos dominios
+    QList<QByteArray> positive;
+    QList<QByteArray> negative;
+    for (QByteArray domain : domains.toLower().split(',')) {
+        domain = domain.trimmed();
+        const bool negated = domain.startsWith('~');
+        if (negated)
+            domain = domain.mid(1);
+        if (domain.isEmpty() || domain.indexOf('*') != (domain.endsWith(".*") ? domain.size() - 1 : -1)
+            || domain.contains('/'))
+            continue;
+        (negated ? negative : positive).append(domain);
+    }
+    if (exception) {
+        for (const QByteArray &domain : std::as_const(positive))
+            m_scriptletExceptions[domain].push_back(index);
+        if (!positive.isEmpty())
+            ++m_ruleCount;
+        return;
+    }
+    // Solo con «~dominio»: sería genérica
+    if (positive.isEmpty())
+        return;
+    for (const QByteArray &domain : std::as_const(positive))
+        m_scriptlets[domain].push_back(index);
+    for (const QByteArray &domain : std::as_const(negative))
+        m_scriptletExceptions[domain].push_back(index);
+    ++m_ruleCount;
+}
+
+QByteArray FilterEngine::scriptlets(const QByteArray &pageUrl, const QByteArray &host) const
+{
+    if (m_scriptlets.isEmpty() || host.isEmpty())
+        return QByteArray();
+    std::vector<int> found;
+    std::vector<int> exceptions;
+    for (const QByteArray &key : hostKeys(host)) {
+        const auto rules = m_scriptlets.constFind(key);
+        if (rules != m_scriptlets.constEnd())
+            found.insert(found.end(), rules->begin(), rules->end());
+        const auto except = m_scriptletExceptions.constFind(key);
+        if (except != m_scriptletExceptions.constEnd())
+            exceptions.insert(exceptions.end(), except->begin(), except->end());
+    }
+    if (found.empty() || std::find(exceptions.begin(), exceptions.end(), -1) != exceptions.end())
+        return QByteArray();
+    if (documentAllowed(pageUrl, host))
+        return QByteArray();
+    QByteArray json = "[";
+    std::vector<int> seen;
+    for (const int index : found) {
+        if (std::find(exceptions.begin(), exceptions.end(), index) != exceptions.end()
+            || std::find(seen.begin(), seen.end(), index) != seen.end())
+            continue;
+        seen.push_back(index);
+        if (json.size() > 1)
+            json += ',';
+        json += m_scriptletCodes[size_t(index)];
+    }
+    if (seen.empty())
+        return QByteArray();
+    return json + ']';
 }

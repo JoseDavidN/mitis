@@ -14,25 +14,32 @@
 #include <QTimer>
 #include <QUrlQuery>
 
+#include <iterator>
+
 namespace {
 
 struct FilterList {
     const char *file;
     const char *url;
+    // Cada cuánto se renueva
+    qint64 maxAgeSecs;
 };
-
-// El orden no importa: las excepciones de una lista valen para todas
-constexpr FilterList Lists[] = {
-    { "easylist.txt", "https://easylist.to/easylist/easylist.txt" },
-    { "easyprivacy.txt", "https://easylist.to/easylist/easyprivacy.txt" },
-    { "easylist-es.txt", "https://easylist-downloads.adblockplus.org/easylistspanish.txt" },
-    { "hagezi-pro.txt", "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/pro.txt" },
-    { "ublock-unbreak.txt", "https://ublockorigin.github.io/uAssets/filters/unbreak.txt" },
-};
-constexpr int ListCount = int(sizeof(Lists) / sizeof(Lists[0]));
 
 // Como EasyList («Expires: 4 days»)
 constexpr qint64 MaxAgeSecs = 4 * 24 * 3600;
+
+// El orden no importa: las excepciones de una lista valen para todas
+constexpr FilterList Lists[] = {
+    { "easylist.txt", "https://easylist.to/easylist/easylist.txt", MaxAgeSecs },
+    { "easyprivacy.txt", "https://easylist.to/easylist/easyprivacy.txt", MaxAgeSecs },
+    { "easylist-es.txt", "https://easylist-downloads.adblockplus.org/easylistspanish.txt", MaxAgeSecs },
+    { "hagezi-pro.txt", "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/pro.txt", MaxAgeSecs },
+    { "ublock-unbreak.txt", "https://ublockorigin.github.io/uAssets/filters/unbreak.txt", MaxAgeSecs },
+    // Con «!#include» de filters-general.txt, filters-2020.txt…: se guardan dentro
+    { "ublock-filters.txt", "https://ublockorigin.github.io/uAssets/filters/filters.txt", MaxAgeSecs },
+    // Arreglos del día (YouTube cambia a menudo): «Expires: 8 hours»
+    { "ublock-quick-fixes.txt", "https://ublockorigin.github.io/uAssets/filters/quick-fixes.txt", 8 * 3600 },
+};
 // Para sesiones largas: cada cuánto se mira si toca renovar
 constexpr int CheckIntervalMs = 6 * 3600 * 1000;
 
@@ -70,8 +77,8 @@ ContentBlocker::ContentBlocker(QObject *parent)
     auto *timer = new QTimer(this);
     timer->setInterval(CheckIntervalMs);
     connect(timer, &QTimer::timeout, this, [this] {
-        if ((m_enabled || m_privateActive) && !updating() && (!m_updated.isValid() || m_updated.secsTo(QDateTime::currentDateTime()) > MaxAgeSecs))
-            update();
+        if ((m_enabled || m_privateActive) && !updating() && listsStale())
+            update(true);
     });
     timer->start();
     // Una descarga a medias se corta antes de que la aplicación desaparezca
@@ -205,6 +212,27 @@ QString ContentBlocker::cosmeticCss(const QUrl &page, bool strict) const
     return QString::fromUtf8(m_engine->cosmeticCss(page.toEncoded().toLower(), host));
 }
 
+QByteArray ContentBlocker::scriptlets(const QUrl &page, bool strict) const
+{
+    if ((!m_enabled && !strict) || !m_engine)
+        return QByteArray();
+    const QByteArray host = hostOf(page);
+    if (host.isEmpty() || (!strict && allowedSite(host)))
+        return QByteArray();
+    return m_engine->scriptlets(page.toEncoded().toLower(), host);
+}
+
+bool ContentBlocker::listsStale() const
+{
+    const QDateTime now = QDateTime::currentDateTime();
+    for (const FilterList &list : Lists) {
+        const QFileInfo info(filterDir() + QLatin1Char('/') + QLatin1String(list.file));
+        if (!info.exists() || info.lastModified().secsTo(now) > list.maxAgeSecs)
+            return true;
+    }
+    return false;
+}
+
 // Lee las listas guardadas y las compila en otro hilo; al terminar, el
 // motor nuevo sustituye al anterior (en este hilo: el interceptor no
 // necesita cerrojos). Si faltan listas o son viejas, después las descarga.
@@ -245,7 +273,7 @@ void ContentBlocker::compile()
         engine->build(texts);
         *result = engine;
     });
-    connect(m_thread, &QThread::finished, this, [this, result, missing, oldest] {
+    connect(m_thread, &QThread::finished, this, [this, result, missing] {
         m_thread->deleteLater();
         m_thread = nullptr;
         m_compiling = false;
@@ -257,60 +285,167 @@ void ContentBlocker::compile()
             return;
         }
         emit stateChanged();
-        const bool old = !oldest.isValid() || oldest.secsTo(QDateTime::currentDateTime()) > MaxAgeSecs;
-        if ((m_enabled || m_privateActive) && (missing || old) && !m_network && !m_autoUpdated) {
+        if ((m_enabled || m_privateActive) && (missing || listsStale()) && !m_network && !m_autoUpdated) {
             m_autoUpdated = true;
-            update();
+            update(true);
         }
     });
     m_thread->start(QThread::LowPriority);
 }
 
-void ContentBlocker::update()
+void ContentBlocker::update(bool onlyStale)
 {
     if (m_network)
         return;
     QDir().mkpath(filterDir());
+    m_downloadQueue.clear();
+    const QDateTime now = QDateTime::currentDateTime();
+    for (int i = 0; i < int(std::size(Lists)); ++i) {
+        const QFileInfo info(filterDir() + QLatin1Char('/') + QLatin1String(Lists[i].file));
+        if (!onlyStale || !info.exists() || info.lastModified().secsTo(now) > Lists[i].maxAgeSecs)
+            m_downloadQueue.append(i);
+    }
+    if (m_downloadQueue.isEmpty())
+        return;
     m_network = new QNetworkAccessManager(this);
     // Sin el proxy de las páginas (EngineBridge::applyProxy)
     m_network->setProxy(QNetworkProxy::NoProxy);
-    m_downloadIndex = 0;
     emit stateChanged();
     downloadNext();
 }
+
+namespace {
+
+// Una página de error (HTML) o una respuesta vacía no es una lista
+bool looksLikeList(const QNetworkReply *reply, const QByteArray &data, qsizetype minSize)
+{
+    return reply->error() == QNetworkReply::NoError && data.size() > minSize && !data.trimmed().startsWith('<');
+}
+
+QNetworkRequest listRequest(const QUrl &url)
+{
+    QNetworkRequest request(url);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setTransferTimeout(60 * 1000);
+    return request;
+}
+
+// «!#include archivo» de una lista: archivos de la misma carpeta (como
+// uBlock Origin, ni direcciones ni «..»)
+QList<QByteArray> includesOf(const QByteArray &text)
+{
+    QList<QByteArray> names;
+    if (!text.contains("!#include "))
+        return names;
+    for (const QByteArray &raw : text.split('\n')) {
+        const QByteArray line = raw.trimmed();
+        if (!line.startsWith("!#include "))
+            continue;
+        const QByteArray name = line.mid(10).trimmed().split(' ').first();
+        if (!name.isEmpty() && !name.contains(':') && !name.contains("..") && !name.startsWith('/')
+            && !names.contains(name))
+            names.append(name);
+    }
+    return names;
+}
+
+} // namespace
 
 // Una lista tras otra; la que falle se queda como estaba
 void ContentBlocker::downloadNext()
 {
     if (!m_network)
         return;
-    if (m_downloadIndex >= ListCount) {
+    if (m_downloadQueue.isEmpty()) {
         m_network->deleteLater();
         m_network = nullptr;
         compile();
         return;
     }
-    const FilterList &list = Lists[m_downloadIndex++];
-    QNetworkRequest request(QUrl(QString::fromLatin1(list.url)));
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-    request.setTransferTimeout(60 * 1000);
-    QNetworkReply *reply = m_network->get(request);
+    const FilterList &list = Lists[m_downloadQueue.takeFirst()];
+    QNetworkReply *reply = m_network->get(listRequest(QUrl(QString::fromLatin1(list.url))));
     const QString path = filterDir() + QLatin1Char('/') + QLatin1String(list.file);
     connect(reply, &QNetworkReply::finished, this, [this, reply, path] {
         reply->deleteLater();
         const QByteArray data = reply->readAll();
-        // Una página de error (HTML) o una respuesta vacía no es una lista
-        if (reply->error() == QNetworkReply::NoError && data.size() > 1000 && !data.trimmed().startsWith('<')) {
-            QSaveFile file(path);
-            if (file.open(QIODevice::WriteOnly)) {
-                file.write(data);
-                if (!file.commit())
-                    qWarning("[Mitis] No se pudo guardar la lista de filtros %s", qPrintable(path));
-            }
-        } else {
+        if (!looksLikeList(reply, data, 1000)) {
             qWarning("[Mitis] No se pudo descargar la lista de filtros %s: %s", qPrintable(reply->url().toString()),
                      qPrintable(reply->errorString()));
+            downloadNext();
+            return;
         }
-        downloadNext();
+        if (includesOf(data).isEmpty()) {
+            saveList(path, data);
+            downloadNext();
+        } else {
+            downloadIncludes(path, reply->url(), data);
+        }
     });
+}
+
+struct ContentBlocker::PendingList {
+    QString path;
+    QUrl base;
+    QByteArray text;
+    QList<QByteArray> names;
+    QHash<QByteArray, QByteArray> parts;
+};
+
+// Los «!#include» se descargan uno tras otro y se ponen en el lugar de su
+// línea (los «!#if» que los rodean siguen valiendo al compilar). Si falla
+// uno, la lista entera se queda como estaba: a medias perdería reglas.
+void ContentBlocker::downloadIncludes(const QString &path, const QUrl &base, const QByteArray &text)
+{
+    auto pending = std::make_shared<PendingList>();
+    pending->path = path;
+    pending->base = base;
+    pending->text = text;
+    pending->names = includesOf(text);
+    downloadNextInclude(pending);
+}
+
+void ContentBlocker::downloadNextInclude(const std::shared_ptr<PendingList> &pending)
+{
+    if (!m_network)
+        return;
+    if (pending->parts.size() == pending->names.size()) {
+        QByteArray merged;
+        qsizetype total = pending->text.size();
+        for (const QByteArray &part : std::as_const(pending->parts))
+            total += part.size() + 1;
+        merged.reserve(total);
+        for (const QByteArray &raw : pending->text.split('\n')) {
+            const QByteArray line = raw.trimmed();
+            const QByteArray name = line.startsWith("!#include ") ? line.mid(10).trimmed().split(' ').first() : QByteArray();
+            merged += pending->parts.contains(name) ? pending->parts.value(name) : raw;
+            merged += '\n';
+        }
+        saveList(pending->path, merged);
+        downloadNext();
+        return;
+    }
+    const QByteArray name = pending->names.at(pending->parts.size());
+    QNetworkReply *reply = m_network->get(listRequest(pending->base.resolved(QUrl(QString::fromUtf8(name)))));
+    connect(reply, &QNetworkReply::finished, this, [this, reply, pending, name] {
+        reply->deleteLater();
+        const QByteArray data = reply->readAll();
+        if (!looksLikeList(reply, data, 0)) {
+            qWarning("[Mitis] No se pudo descargar la lista de filtros %s: %s", qPrintable(reply->url().toString()),
+                     qPrintable(reply->errorString()));
+            downloadNext();
+            return;
+        }
+        pending->parts.insert(name, data);
+        downloadNextInclude(pending);
+    });
+}
+
+void ContentBlocker::saveList(const QString &path, const QByteArray &data)
+{
+    QSaveFile file(path);
+    if (file.open(QIODevice::WriteOnly)) {
+        file.write(data);
+        if (!file.commit())
+            qWarning("[Mitis] No se pudo guardar la lista de filtros %s", qPrintable(path));
+    }
 }

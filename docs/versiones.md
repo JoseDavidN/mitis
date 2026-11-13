@@ -38,10 +38,11 @@ Historial con este esquema (ver [CHANGELOG.md](../CHANGELOG.md)):
 | 0.20.0 | Elegir Mitis como navegador predeterminado, quita «Compatibilidad gráfica», corrige la ventana al volver de minimizarla | `eab5693` |
 | 0.21.0 | Linux (AppImage, Wayland nativo) en el workflow, sin barra de título con gestores en mosaico, vídeo por la GPU en Linux, pantalla encendida con vídeo, compartir pantalla | `dfc876e` |
 | 0.22.0 | Compartir pantalla propio en Wayland, proxy y DNS cifrado sin reiniciar, «Reiniciar ahora», vídeos de YouTube en H.264, corrige la caída tras cerrar la pestaña que abrió una ventana | `9c997c1` |
+| 0.23.0 | Perfiles (un Mitis por perfil), atajos a las pestañas, notificaciones desde el arranque, llaves de acceso propias y con el móvil en Linux | `a75a089` |
 
 Las fases 0–2 van juntas en 0.2.0 porque entraron en un solo commit. Esas versiones no tienen etiqueta ni release: son anteriores al workflow de publicación. Si se quieren marcar, basta con etiquetas ligeras (`git tag v0.4.0 d6cfa89`); al subirlas no se publica nada porque esos commits no tienen `.github/workflows/`.
 
-**Versión actual: 0.23.0-beta** (en desarrollo; la 0.22.0 ya tiene commit y se da por publicada). Perfiles: un Mitis por perfil, cada uno con su carpeta de datos, para tener varias ventanas sin que se afecten. Trae una función nueva: sube MENOR. Se publica al subir la etiqueta `v0.23.0`.
+**Versión actual: 0.24.0-beta** (en desarrollo; la 0.23.0 ya tiene commit y se da por publicada). Menos anuncios (scriptlets de uBlock, sobre todo en YouTube), recargar sin caché, suspender primero las pestañas que más ocupan. Trae funciones nuevas: sube MENOR. Se publica al subir la etiqueta `v0.24.0`.
 
 **Regla:** una versión con commit ya está desplegada. Lo siguiente que se haga va en una versión nueva, subida según lo que traiga (MENOR con funciones nuevas, PARCHE con solo correcciones), y su sección del CHANGELOG se escribe en lenguaje claro para quien no sabe de tecnología: es lo que se ve en la pestaña de novedades.
 

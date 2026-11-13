@@ -79,12 +79,16 @@ jobs:
             libegl1 libfontconfig1 libdbus-1-3 \
             libwayland-client0 libwayland-cursor0 libwayland-egl1
 
-      # linuxdeploy-plugin-qt copia todos los controladores SQL de Qt y falla
-      # si falta lo que enlazan (libqsqlmimer → libmimerapi.so, que no está en
-      # el runner). Mitis solo usa SQLite: los demás se quitan del Qt de esta
-      # compilación (también aligera el AppImage)
-      - name: Solo el controlador SQL de SQLite
-        run: find "$QT_ROOT_DIR/plugins/sqldrivers" -name 'libqsql*.so' ! -name 'libqsqlite.so' -print -delete
+      # linuxdeploy-plugin-qt copia todos los plugins de cada módulo y falla
+      # si falta lo que enlazan: los controladores SQL (libqsqlmimer →
+      # libmimerapi.so, que no está en el runner) y la ubicación por GPS en
+      # serie (libqtposition_nmea → Qt Serial Port, que no se instala). Mitis
+      # solo usa SQLite, y la ubicación de las páginas va por GeoClue: el resto
+      # se quita del Qt de esta compilación (también aligera el AppImage)
+      - name: Quitar los plugins de Qt que Mitis no usa
+        run: |
+          find "$QT_ROOT_DIR/plugins/sqldrivers" -name 'libqsql*.so' ! -name 'libqsqlite.so' -print -delete
+          find "$QT_ROOT_DIR/plugins/position" -name 'libqtposition_nmea.so' -print -delete
 
       # El script calcula la versión desde CMakeLists.txt
       - name: Empaquetar (AppImage)

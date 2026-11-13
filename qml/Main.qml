@@ -496,7 +496,7 @@ Window {
 
     // Con la memoria del equipo justa (Configuración → Rendimiento, «Liberar
     // memoria cuando el equipo va justo»), además del tiempo: descarga una
-    // pestaña oculta cada vez, la que lleva más tiempo sin verse, hasta que
+    // pestaña oculta cada vez, la que más ocupa (ver abajo), hasta que
     // la memoria se recupera (MemoryMonitor.systemMemory: entre «justa» y
     // «recuperada» hay margen, para no descargar y recargar en bucle). Las
     // excepciones son las de siempre (BrowserTab.suspend). El motor va por
@@ -518,22 +518,44 @@ Window {
             _memoryTried = []
             return
         }
-        let oldest = null
+        // Primero la que más ocupa (YouTube, Claude: cientos de MB de una vez,
+        // en vez de ir de 40 en 40); a igualdad, la que lleva más sin verse.
+        // Lo de un proceso compartido se reparte entre sus pestañas: descargar
+        // una sola no lo libera entero
+        const candidates = []
+        const sharing = {}
         for (let i = 0; i < tabs.count; i++) {
             const tab = views.itemAt(i) as BrowserTab
-            if (!tab || tab.hiddenSince === 0 || kept(i) || tab === mediaView
+            if (!tab)
+                continue
+            if (tab.renderProcessPid > 0 && tab.lifecycle !== "discarded")
+                sharing[tab.renderProcessPid] = (sharing[tab.renderProcessPid] ?? 0) + 1
+            if (tab.hiddenSince === 0 || kept(i) || tab === mediaView
                     || tab.lifecycle === "discarded" || tab.deferred
                     || _memoryTried.some(tried => tried.tab === tab && tried.lifecycle === tab.lifecycle))
                 continue
-            if (!oldest || tab.hiddenSince < oldest.hiddenSince)
-                oldest = tab
+            candidates.push(tab)
         }
-        if (!oldest)
+        const sized = candidates.map(tab => ({ tab, bytes: tab.renderProcessPid > 0
+            ? MemoryMonitor.processMemory(tab.renderProcessPid) / sharing[tab.renderProcessPid] : -1 }))
+        const most = Math.max(-1, ...sized.map(entry => entry.bytes))
+        // Unos MB de diferencia no cuentan: entre esas, la más antigua
+        let chosen = null
+        for (const entry of sized) {
+            if (entry.bytes >= most - 16 * 1048576 && (!chosen || entry.tab.hiddenSince < chosen.tab.hiddenSince))
+                chosen = entry
+        }
+        const heaviest = chosen ? chosen.tab : null
+        const heaviestBytes = chosen ? chosen.bytes : -1
+        if (!heaviest)
             return
-        _memoryTried.push({ tab: oldest, lifecycle: oldest.lifecycle })
+        _memoryTried.push({ tab: heaviest, lifecycle: heaviest.lifecycle })
         console.info("Memoria del equipo justa (" + Math.round(memory.available / 1048576)
-                     + " MB libres): se suspende una pestaña oculta (" + oldest.lifecycle + ")")
-        oldest.suspend(true)
+                     + " MB libres): se suspende la pestaña oculta que más ocupa ("
+                     + Urls.host(heaviest.url.toString()) + ", "
+                     + (heaviestBytes > 0 ? Math.round(heaviestBytes / 1048576) + " MB, " : "")
+                     + heaviest.lifecycle + ")")
+        heaviest.suspend(true)
     }
     Timer {
         interval: 10 * 1000
@@ -2464,6 +2486,13 @@ Window {
         context: Qt.ApplicationShortcut
         enabled: win.ownsShortcuts
         onActivated: win.currentView.reload()
+    }
+    // Sin la caché: para una página que se quedó rara o con algo viejo
+    Shortcut {
+        sequences: ["Ctrl+Shift+R", "Ctrl+F5"]
+        context: Qt.ApplicationShortcut
+        enabled: win.ownsShortcuts
+        onActivated: win.currentView.reloadBypassingCache()
     }
     Shortcut {
         sequence: "Alt+Left"

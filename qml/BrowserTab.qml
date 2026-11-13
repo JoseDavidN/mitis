@@ -266,6 +266,11 @@ Item {
         root._cancelCertificateError()
         view.reload()
     }
+    // Vuelve a descargarlo todo, sin la caché (Ctrl+Mayús+R)
+    function reloadBypassingCache() {
+        root._cancelCertificateError()
+        view.reloadAndBypassCache()
+    }
     function stop() {
         view.stop()
     }
@@ -953,29 +958,47 @@ Item {
     // ocultación del sitio. Al empezar cada carga de la página (también al
     // recargar o ir atrás) se pone en la vista un script con el CSS de ese
     // sitio (solo el suyo: nada que cueste memoria en las demás), que se
-    // aplica al crearse el documento.
+    // aplica al crearse el documento, y otro con sus scriptlets, si tiene.
     function _applyCosmetics(address) {
         // qmllint disable unqualified
         // En las ventanas privadas, siempre (sin mirar Configuración)
         const css = MitisEngine.cosmeticCss(address, root.privateMode)
+        // Scriptlets de uBlock Origin (assets/scripts/scriptlets.js con las
+        // reglas del sitio; "" si no tiene). En --dev el ejecutable puede ser
+        // anterior y no tener la función.
+        const code = typeof MitisEngine.scriptlets === "function"
+            ? MitisEngine.scriptlets(address, root.privateMode) : ""
         // qmllint enable unqualified
         const scripts = view.userScripts
         for (const old of scripts.find("mitis-cosmetic"))
             scripts.remove(old)
-        if (css === "")
-            return
-        const script = WebEngine.script()
-        script.name = "mitis-cosmetic"
-        script.injectionPoint = WebEngineScript.DocumentCreation
-        // Aparte de la página: no puede quitarlo ni lo frena su CSP
-        script.worldId = WebEngineScript.ApplicationWorld
-        script.runsOnSubFrames = false
-        script.sourceCode = "(function (css) {"
-            + "  const sheet = new CSSStyleSheet();"
-            + "  sheet.replaceSync(css);"
-            + "  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];"
-            + "})(" + JSON.stringify(css) + ")"
-        scripts.insert(script)
+        for (const old of scripts.find("mitis-scriptlets"))
+            scripts.remove(old)
+        if (css !== "") {
+            const script = WebEngine.script()
+            script.name = "mitis-cosmetic"
+            script.injectionPoint = WebEngineScript.DocumentCreation
+            // Aparte de la página: no puede quitarlo ni lo frena su CSP
+            script.worldId = WebEngineScript.ApplicationWorld
+            script.runsOnSubFrames = false
+            script.sourceCode = "(function (css) {"
+                + "  const sheet = new CSSStyleSheet();"
+                + "  sheet.replaceSync(css);"
+                + "  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];"
+                + "})(" + JSON.stringify(css) + ")"
+            scripts.insert(script)
+        }
+        if (code !== "") {
+            const scriptlets = WebEngine.script()
+            scriptlets.name = "mitis-scriptlets"
+            scriptlets.injectionPoint = WebEngineScript.DocumentCreation
+            // En el mundo de la página y antes que sus scripts: los scriptlets
+            // cambian su window (JSON.parse, fetch, propiedades…)
+            scriptlets.worldId = WebEngineScript.MainWorld
+            scriptlets.runsOnSubFrames = false
+            scriptlets.sourceCode = code
+            scripts.insert(scriptlets)
+        }
     }
 
     // ── Ocultar la barra de desplazamiento (Settings.hideScrollbars) ──

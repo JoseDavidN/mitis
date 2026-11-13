@@ -54,6 +54,16 @@ licencia que se citan están en esta misma carpeta.
 - Va como archivo aparte, en la carpeta `qtwebengine_dictionaries` (en el
   código, `assets/dictionaries/`).
 
+### Scriptlets de uBlock Origin
+
+- **Qué:** `assets/scripts/scriptlets.js`, los pequeños scripts que el
+  bloqueador pone en algunas páginas (YouTube y otras) para quitar anuncios y
+  avisos contra el bloqueador; adaptado del código de uBlock Origin
+  (`src/js/resources/` y `jsonpath.js`), compilado dentro de Mitis.
+- **Licencia:** GPL v3 (`GPL-3.0.txt`), como Mitis. Copyright Raymond Hill y
+  los colaboradores de uBlock Origin.
+- **Enlace:** <https://github.com/gorhill/uBlock>
+
 ### Monocypher
 
 - **Qué:** cifrado del gestor de contraseñas (Argon2id para la clave y
@@ -122,7 +132,7 @@ licencia que se citan están en esta misma carpeta.
 Mitis **no incluye** estas listas en sus paquetes: si el bloqueador está
 activo, `ContentBlocker` las descarga de sus sitios oficiales directamente al
 equipo del usuario (carpeta de datos de Mitis, `filtros/`) y las renueva cada
-4 días. Cada lista conserva su licencia.
+4 días («Quick fixes», cada 8 horas). Cada lista conserva su licencia.
 
 | Lista | Licencia | Enlace |
 |---|---|---|
@@ -131,6 +141,7 @@ equipo del usuario (carpeta de datos de Mitis, `filtros/`) y las renueva cada
 | EasyList Spanish | GPL v3 o CC BY-SA 3.0, a elegir | <https://easylist-downloads.adblockplus.org/easylistspanish.txt> |
 | HaGeZi DNS Blocklists (Pro) | GPL v3 | <https://github.com/hagezi/dns-blocklists> |
 | uBlock Origin, filtros «Unbreak» (uAssets) | GPL v3 | <https://github.com/uBlockOrigin/uAssets> |
+| uBlock Origin, «uBlock filters» y «Quick fixes» (uAssets) | GPL v3 | <https://github.com/uBlockOrigin/uAssets> |
 
 ### Módulo Widevine
 
